@@ -1,24 +1,16 @@
-//! Writes the generated theme files (`theme/theme.json`, `theme/tailwind.json`)
-//! and the demo's copies, which `nsh.json` points at.
+//! Writes the generated theme files (`theme/theme.json`, `theme/tailwind.json`),
+//! which an app's `nsh.json` points at.
 //!
 //! `cargo run --bin gen-theme` writes them; `--check` exits 1 when the files
 //! on disk differ (CI runs it after a build).
 
 use std::{fs, path::Path, process::ExitCode};
 
-fn targets() -> [(&'static str, String); 4] {
+fn targets() -> [(&'static str, String); 2] {
     [
         ("theme/theme.json", nsh_cupertino::theme_file::theme_json()),
         (
             "theme/tailwind.json",
-            nsh_cupertino::theme_file::tailwind_json(),
-        ),
-        (
-            "examples/demo/theme.json",
-            nsh_cupertino::theme_file::theme_json(),
-        ),
-        (
-            "examples/demo/tailwind.json",
             nsh_cupertino::theme_file::tailwind_json(),
         ),
     ]

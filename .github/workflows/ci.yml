@@ -26,7 +26,22 @@ defaults:
     shell: bash
 
 jobs:
+  changes:
+    name: what is in this commit
+    runs-on: ubuntu-24.04
+    outputs:
+      demo: ${{ steps.check.outputs.demo }}
+      theme: ${{ steps.check.outputs.theme }}
+    steps:
+      - uses: actions/checkout@v7
+      # The scaffold commit has neither; the workflow stays valid there.
+      - id: check
+        run: |
+          echo "demo=$([ -f examples/demo/nsh.json ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          echo "theme=$([ -f src/bin/gen_theme.rs ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
   check:
+    needs: changes
     name: fmt, clippy, tests, theme
     runs-on: ubuntu-24.04
     steps:
@@ -49,13 +64,13 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       # `theme/` is generated: a token changed without regenerating it fails here.
-      - if: hashFiles('src/bin/gen_theme.rs') != ''
+      - if: needs.changes.outputs.theme == 'yes'
         run: cargo run --bin gen-theme -- --check
 
   demo:
     name: demo (check, headless tests)
-    # The scaffold commit has no demo yet: the workflow stays valid there.
-    if: hashFiles('examples/demo/nsh.json') != ''
+    needs: changes
+    if: needs.changes.outputs.demo == 'yes'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -86,7 +101,8 @@ jobs:
 
   web:
     name: demo (web build, screenshots)
-    if: hashFiles('examples/demo/nsh.json') != ''
+    needs: changes
+    if: needs.changes.outputs.demo == 'yes'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -112,9 +128,10 @@ jobs:
         with:
           tool: wasm-bindgen@0.2.130
       # The runner's image has Google Chrome, which `nsh test --target web` uses.
+      # `docs/screenshots/` is not in the repository: the script makes it, the
+      # test writes into it.
       - name: Screenshots of every demo page
-        working-directory: examples/demo
-        run: nsh test screenshots.test.tsx --target web
+        run: tools/shots.sh
       - run: tools/check-screenshots.sh docs/screenshots
       - uses: actions/upload-artifact@v7
         with:

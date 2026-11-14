@@ -162,8 +162,8 @@ cargo test                       # 校验提交的主题文件与 token 一致
 cd examples/demo
 nsh check                        # cargo check + 依据生成的类型检查 TS
 nsh test                         # 无头行为测试
-nsh test screenshots.test.tsx --target web   # 生成 docs/screenshots/*.png
 nsh run                          # 在本机运行演示应用
+cd ../.. && tools/shots.sh       # 用 Web 构建生成 docs/screenshots/*.png
 ```
 
 CI（`.github/workflows/ci.yml`）：fmt、clippy `-D warnings`、测试、主题漂移检查、

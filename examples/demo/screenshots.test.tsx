@@ -22,6 +22,8 @@ const PAGES = [
 
 const SCHEMES = ["light", "dark"] as const;
 
+const DIR = "../../docs/screenshots";
+
 async function shoot(page: string, scheme: "light" | "dark", contrast: string) {
   const app = await open("./App.tsx", {
     storage: { "cupertino.page": page, "cupertino.contrast": contrast },
@@ -30,9 +32,11 @@ async function shoot(page: string, scheme: "light" | "dark", contrast: string) {
     height: 844,
   });
   try {
-    await app.screenshot(`../../docs/screenshots/${page}-${scheme}${contrast === "high" ? "-contrast" : ""}.png`);
-  } catch {
-    // Headless draws nothing: the web run writes the files.
+    await app.screenshot(`${DIR}/${page}-${scheme}${contrast === "high" ? "-contrast" : ""}.png`);
+  } catch (error) {
+    // Headless draws nothing, so the run passes without writing; the web run
+    // writes, and `tools/check-screenshots.sh` fails when a file is missing.
+    console.warn(`no screenshot of ${page} (${scheme}):`, error);
   }
 }
 
