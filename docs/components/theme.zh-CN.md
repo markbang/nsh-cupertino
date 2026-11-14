@@ -22,11 +22,23 @@
 | 文字 | `label`、`secondary-label`、`tertiary-label`、`quaternary-label`、`placeholder-text` |
 | 分隔 | `separator`、`opaque-separator` |
 | 填充 | `fill`、`secondary-fill`、`tertiary-fill`、`quaternary-fill` |
+| 灰阶 | `system-gray`、`system-gray2` … `system-gray6` |
+| `cupertino_ui` 自有 | `section-header-footer`、`clear-button`、`text-field-disabled-background`、`activity-tick` |
 | 系统色 | `system-blue`、`system-green`、`system-red`、`system-orange`、`system-yellow`、`system-purple`、`system-pink`、`system-teal`、`system-indigo`、`system-gray`、`link` |
 | shadcn 别名 | `background`、`foreground`、`card`、`popover`、`primary`、`secondary`、`muted`、`accent`、`destructive`、`border`、`input`、`ring`、`selection` |
 
 TSX 里 token 就是类名：`bg-system-blue`、`text-secondary-label`、`border-separator`。
 Rust 里是函数：`tokens::system_blue()`、`tokens::secondary_label()`；两者都是响应式的。
+
+## 材质
+
+`tokens::materials` 保存浮动层的玻璃：`ultra-thin`、`thin`、`regular`、`thick` 与 `chrome`，
+每种是按外观的填充（高对比度下更不透明）加 20–30 pt 的模糊半径。TSX 里是类名
+（`bg-material-regular`、`backdrop-blur-xl`）；Rust 里是 `tokens::materials::fill` 与
+`tokens::materials::blur`，`NavigationBar` 与 `NavPage` 的 `material` 就是这么用的。
+
+玻璃只属于浮动层——栏、Sheet、浮在内容上的控件——永远不属于内容本身；见
+`docs/design-notes.md` 对 `materials.md` 与 `liquid-glass.md` 的引用。
 
 ## 高对比度怎么工作
 

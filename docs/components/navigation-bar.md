@@ -24,6 +24,7 @@ reaches your code.
 | `back` | `.back(..)` | `string` | none | The back button's label; without it there is no back button |
 | `trailing` | `.trailing(..)` | `string` | none | A tinted trailing action ("Done", "Edit") |
 | `background` | `.background(..)` | token name | `system-grouped-background` | The page's background |
+| `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | A material floats the bar over the content, which scrolls under its blur |
 | `children` | `.child(..)` | JSX | — | The page's content |
 
 Events: `onBack`, `onTrailing`.
@@ -31,6 +32,11 @@ Events: `onBack`, `onTrailing`.
 Notes
 
 - The bar is 44 pt tall, padded 16 pt at the sides; the large title adds 52 pt.
+  Both are minimums: large text grows them instead of clipping it.
+- The back button is a chevron at 20 pt with 6 pt before its label, and its
+  target is 50 pt wide, as `CupertinoNavigationBarBackButton` draws it.
+- With a `material`, the content scrolls under the bar: the compact title takes
+  over 44 pt earlier, and the page starts below the bar.
 - Pressing the title scrolls the page back to the top, as iOS does.
 - Safe area: the page pads its own top inset; the content ends above the home
   indicator.
@@ -47,6 +53,7 @@ title below it, a back button and a slot for trailing actions.
 | `back` | `.back(..)` | `string` | none | Back button label |
 | `trailing` | `.trailing(..)` | JSX | none | Anything at the trailing edge |
 | `collapsed` | `.collapsed(..)` | `number` 0–1 | `0` | Fades the compact title and the hairline in |
+| `material` | `.material(..)` | material name | `opaque` | A translucent bar over a blur, for content that scrolls under it |
 
 Events: `onBack`.
 

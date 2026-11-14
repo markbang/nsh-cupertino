@@ -1,6 +1,7 @@
 # 按钮
 
-iOS 的四种按钮外观，以及 iOS 的按压状态：整颗按钮在 150 ms 内淡到 40 %。
+iOS 的四种按钮外观，以及 iOS 的按压状态：整颗按钮在 120 ms 内淡到 40 %，再在 180 ms 内恢复
+（`CupertinoButton` 的 `kFadeOutDuration` 与 `kFadeInDuration`）。
 
 | | |
 | --- | --- |
@@ -27,16 +28,18 @@ iOS 的四种按钮外观，以及 iOS 的按压状态：整颗按钮在 150 ms 
 
 尺寸
 
-| 尺寸 | 文字 | 内边距 | 圆角 | 目标 |
-| --- | --- | --- | --- | --- |
-| large | 17 半粗 | 20 × 16 | 12 pt | 44 pt |
-| medium | 15 半粗 | 15 × 10 | 胶囊（40 pt） | 44 pt |
-| small | 15 半粗 | 12 × 6 | 胶囊（40 pt） | 44 pt |
+| 尺寸 | 高度 | 文字 | 内边距 | 圆角 | 目标 |
+| --- | --- | --- | --- | --- | --- |
+| large | 44 pt | 17 半粗 | 20 × 16 | 12 pt | 44 pt |
+| medium | 32 pt | 15 半粗 | 15 × 10 | 胶囊（40 pt） | 44 pt |
+| small | 28 pt | 15 半粗 | 12 × 6 | 胶囊（40 pt） | 44 pt |
 
 说明
 
-- 每档尺寸的按压目标都是 44 pt，符合 Human Interface Guidelines。
-- 禁用按钮不报告按压，读屏会读出"变灰"；外观保持形状，着色为 40 %。
+- 视觉高度与 `CupertinoButton` 一致；medium 与 small 只扩大命中区域到 44 pt，不放大外观，
+  符合 Human Interface Guidelines。
+- 禁用按钮不报告按压，读屏会读出"变灰"；文字使用 tertiary label 色，实心按钮的着色降到 40 %。
+- 图标按文字大小的 1.2 倍绘制，与 `CupertinoButton` 一致。
 
 ## 无障碍
 

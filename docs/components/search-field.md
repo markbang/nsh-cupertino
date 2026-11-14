@@ -1,7 +1,9 @@
 # Search field
 
-iOS's search field: 36 pt tall, 9 pt corners, a magnifier before the text, a
-clear button, and an optional Cancel beside it.
+iOS's search field: 36 pt tall, 9 pt corners, a magnifier and the placeholder in
+the secondary label color, a clear button, and an optional Cancel beside it.
+The insets (5.5 pt sides, 8 pt above and below) and the 20 pt icons are
+`CupertinoSearchTextField`'s.
 
 | | |
 | --- | --- |
@@ -20,8 +22,8 @@ Events: `onChange(text)`, `onSubmit(text)`, `onCancel`.
 
 Notes
 
-- The field is on `tertiaryFill` with the placeholder in `placeholderText`, as a
-  search bar has it; the role is search.
+- The field is on `tertiarySystemFill` with the placeholder in
+  `secondaryLabel`, as a search bar has it; the role is search.
 - Cancel reports `onCancel`; the app usually clears its query there.
 
 ## Accessibility

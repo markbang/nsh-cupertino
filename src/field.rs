@@ -33,6 +33,10 @@ pub struct TextFieldProps {
     pub return_key: Prop<Option<SharedString>>,
     /// Dimmed and not editable.
     pub disabled: Prop<Option<bool>>,
+    /// `"rounded"` (the default: `CupertinoTextField`'s white box, 5 pt
+    /// corners, a hairline border) or `"grouped"` (a form row's surface: the
+    /// grouped background, 10 pt corners, no border).
+    pub variant: Prop<Option<SharedString>>,
 }
 
 /// The events of a [`TextField`].
@@ -44,8 +48,10 @@ pub enum TextFieldEvent {
     Submit(String),
 }
 
-/// A rounded text field, as `Form` rows have them: a secondary grouped
-/// background, 10 pt corners, 44 pt tall at least, a caret and selection in
+/// A text field in one of two of iOS's looks: `CupertinoTextField`'s rounded
+/// box (white on light, black on dark, 5 pt corners, a 0.5 pt border at 20 %
+/// of the text color and 7 pt of padding), or a form row's grouped surface
+/// (10 pt corners, no border). 44 pt tall at least, a caret and selection in
 /// the tint color, and iOS's clear and reveal buttons.
 ///
 /// The value is the app's: the field reports every change and shows what it
@@ -60,6 +66,7 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
     let focus_ref = input_ref;
     let value_for_button = value;
     let secure = props.secure.get_untracked().unwrap_or(false);
+    let grouped = props.variant.get_untracked().as_deref() == Some("grouped");
     let clearable = props.clear.get_untracked().unwrap_or(true);
     let disabled = {
         let disabled = props.disabled;
@@ -71,7 +78,6 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
     let label = props.label;
     let leading = props.leading;
     let has_leading = props.leading.get_untracked().is_some();
-    let focused_for_ring = focused;
 
     view()
         .w_full()
@@ -79,23 +85,21 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
         .flex_row()
         .items_center()
         .gap(px(8.0))
-        .px(px(16.0))
-        .rounded(px(radius::ROW.0))
+        .px(px(if grouped { 16.0 } else { 7.0 }))
+        .rounded(px(if grouped { radius::ROW.0 } else { 5.0 }))
         .bg(move || {
             if disabled() {
-                tokens::tertiary_system_grouped_background()
-            } else {
+                tokens::text_field_disabled_background()
+            } else if grouped {
                 tokens::secondary_system_grouped_background()
+            } else {
+                tokens::system_background()
             }
         })
-        .focus_within(move |s| {
-            s.outline(px(2.0)).outline_color(move || {
-                if focused_for_ring.get() {
-                    tokens::system_blue()
-                } else {
-                    nsh_core::color::transparent_black()
-                }
-            })
+        .when(!grouped, |v| {
+            // `_kDefaultRoundedBorder`: 0.5 pt at 20 % of the text color.
+            v.border(px(0.5))
+                .border_color(move || tokens::label().opacity(0.2))
         })
         .when(has_leading, |v| {
             v.child(
@@ -232,28 +236,18 @@ pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl
     let focused_for_cancel = focused;
 
     let box_view = {
-        let focused_for_ring = focused;
         let focused_in = focused;
         let focused_out = focused;
         view()
             .flex_1()
             .flex_row()
             .items_center()
-            .gap(px(6.0))
+            .gap(px(5.5))
             .h(px(metrics::SEARCH_HEIGHT))
-            .px(px(8.0))
+            .px(px(5.5))
             .rounded(px(radius::SEARCH.0))
             .bg(tokens::tertiary_fill)
-            .focus_within(move |s| {
-                s.outline(px(2.0)).outline_color(move || {
-                    if focused_for_ring.get() {
-                        tokens::system_blue()
-                    } else {
-                        nsh_core::color::transparent_black()
-                    }
-                })
-            })
-            .child(icon_stroke("magnifyingglass", 16.0, 2.6).text_color(tokens::secondary_label))
+            .child(icon_stroke("magnifyingglass", 20.0, 2.2).text_color(tokens::secondary_label))
             .child(
                 input()
                     .element_ref(&focus_ref)
@@ -266,7 +260,7 @@ pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl
                             .unwrap_or_else(|| "Search".into())
                             .to_string(),
                     )
-                    .placeholder_color(tokens::placeholder_text)
+                    .placeholder_color(tokens::secondary_label)
                     .caret_color(tokens::system_blue)
                     .selection_color(move || tokens::system_blue().opacity(0.25))
                     .text_size(type_default::BODY.size)

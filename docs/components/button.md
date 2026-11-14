@@ -1,7 +1,8 @@
 # Button
 
 iOS's four button looks, with the pressed state iOS draws: the whole button fades
-to 40 % over 150 ms.
+to 40 % over 120 ms and back over 180 ms (`CupertinoButton`'s `kFadeOutDuration`
+and `kFadeInDuration`).
 
 | | |
 | --- | --- |
@@ -28,17 +29,19 @@ Looks
 
 Sizes
 
-| Size | Text | Padding | Corners | Target |
-| --- | --- | --- | --- | --- |
-| large | 17 semibold | 20 × 16 | 12 pt | 44 pt |
-| medium | 15 semibold | 15 × 10 | pill (40 pt) | 44 pt |
-| small | 15 semibold | 12 × 6 | pill (40 pt) | 44 pt |
+| Size | Height | Text | Padding | Corners | Target |
+| --- | --- | --- | --- | --- | --- |
+| large | 44 pt | 17 semibold | 20 × 16 | 12 pt | 44 pt |
+| medium | 32 pt | 15 semibold | 15 × 10 | pill (40 pt) | 44 pt |
+| small | 28 pt | 15 semibold | 12 × 6 | pill (40 pt) | 44 pt |
 
 Notes
 
-- The press target is 44 pt at every size, as the human interface guidelines ask.
-- A disabled button reports no presses and is announced as dimmed; it keeps its
-  shape at 40 % of the tint.
+- The visual height is `CupertinoButton`'s; a medium or small button grows its
+  hit area to 44 pt, not its look, as the guidelines ask.
+- A disabled button reports no presses and is announced as dimmed; its text
+  takes the tertiary label color and a filled one keeps its tint at 40 %.
+- An icon is drawn at 1.2 × the text size, as `CupertinoButton` sizes it.
 
 ## Accessibility
 

@@ -66,14 +66,25 @@ pub fn Switch(props: SwitchProps, cx: Scope<SwitchEvent>) -> impl IntoElement {
             s.size(px(metrics::SWITCH_THUMB))
                 .rounded_full()
                 .bg(white())
-                .shadow([BoxShadow {
-                    offset_x: px(0.0),
-                    offset_y: px(1.0),
-                    blur: px(2.0),
-                    spread: px(0.0),
-                    color: rgba(0x0000_0033).into(),
-                    inset: false,
-                }])
+                // `_kSwitchBoxShadows`: a soft one and a tight one.
+                .shadow([
+                    BoxShadow {
+                        offset_x: px(0.0),
+                        offset_y: px(3.0),
+                        blur: px(8.0),
+                        spread: px(0.0),
+                        color: rgba(0x2600_0000).into(),
+                        inset: false,
+                    },
+                    BoxShadow {
+                        offset_x: px(0.0),
+                        offset_y: px(3.0),
+                        blur: px(1.0),
+                        spread: px(0.0),
+                        color: rgba(0x0f00_0000).into(),
+                        inset: false,
+                    },
+                ])
                 .transition_transform()
                 .duration(motion::THUMB_MS)
                 .checked(move |s| {

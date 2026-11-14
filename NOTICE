@@ -1,0 +1,66 @@
+# NOTICE
+
+nsh-cupertino is MIT OR Apache-2.0 (see `LICENSE`, `LICENSE-MIT`,
+`LICENSE-APACHE`). It reimplements Apple's iOS look on Native Shell. The
+values it draws with were taken from the open-source projects below, each used
+as a reference for specific numbers or an approach; nothing was copied as code.
+
+## Flutter `cupertino_ui` — BSD-3-Clause
+
+- Repository: https://github.com/flutter/packages
+- Path: `packages/cupertino_ui` (version 1.1.6), `lib/src/*.dart`
+- License: BSD-3-Clause (Flutter Authors)
+- Used for: the port's specification, component by component.
+
+| What was taken | From |
+| --- | --- |
+| The 28 semantic color roles, each with light, dark, light and dark high-contrast values (`systemBackground`, `label`, `secondaryLabel`, `separator`, `opaqueSeparator`, the `systemFill` family, `systemBlue` … `systemIndigo`, `systemGrey` … `systemGrey6`, `link`) | `colors.dart` |
+| The type scale's sizes, line heights, weights and tracking; the 20 pt bold inset-grouped section header and its 13 pt header/footer color; the row subtitle at 12 pt; the row title at 17 pt | `text_theme.dart`, `list_section.dart`, `list_tile.dart` |
+| The navigation bar's 44 pt height, 16 pt side padding, 8 pt bottom padding, 52 pt large-title block, 50 pt back-button target, back button's 8/6 pt spacing, compact title at 17 pt semibold, large title at 34 pt bold | `nav_bar.dart` |
+| The inset-grouped list's 20 pt margins, 10 pt corner radius, top margins (16 pt header top, 6 pt below the header, 20 pt above the rows, 10 pt below the footer), 44/48 pt row heights, 20/14 pt row insets, 28 pt leading box and 16 pt gap, 0.33 pt hairline | `list_section.dart`, `list_tile.dart` |
+| The button's paddings (16×20, 10×15, 6×12), radii (12 pt large, 40 pt pill), minimum sizes (44/32/28 pt), 18 %/26 % tinted alpha, 40 % pressed opacity, 120 ms fade out and 180 ms fade in, icon at 1.2 × the text size, disabled foreground at the tertiary label | `button.dart`, `constants.dart` |
+| The switch's 51 × 31 pt track, 27 pt thumb, 20 pt travel, `systemGreen` on-color, `secondarySystemFill` off-color, 200 ms thumb, 50 % disabled opacity, and its two-layer thumb shadow (`0x26000000` at (0,3)/8, `0x0F000000` at (0,3)/1) | `switch.dart` |
+| The text field's rounded box: 5 pt radius, 20 % hairline border, 7 pt padding, white/black fill, 0.2 alpha clear button, disabled fill; the placeholder color | `text_field.dart` |
+| The search field's 36 pt height, 9 pt radius, `tertiarySystemFill` background, 5.5/8 pt insets, 20 pt secondary-label icon and placeholder | `search_field.dart`, `nav_bar.dart` |
+| The activity indicator: eight blades, the alpha table `[47, 47, 47, 47, 72, 97, 122, 147]`, blade geometry (1/10 of the diameter wide, 2/3 of the radius long, 1/20 corner), one-second turn in eight steps, `#3C3C44`/`#EBEBF5` tick color | `activity_indicator.dart` |
+| The page transition duration (500 ms) and the sheet's motion durations (300/500 ms) used for the motion tokens | `route.dart`, `sheet.dart` |
+
+## Lenso UI — MIT
+
+- Repository: https://github.com/LioRael/lenso-ui
+- Files read: `packages/tokens/themes/default/materials.css`,
+  `packages/tokens/src/tokens.stylex.const.ts`, `packages/glass/README.md`,
+  `DESIGN.md`
+- License: MIT
+- Used for: the structure of the material design tokens (`tokens::materials`:
+  a fill per appearance plus a blur radius, near-translucent fills for
+  `ultra-thin`/`thin`, an opaque-enough `thick` for text, a `chrome` bar, and
+  more opaque fills in increased contrast), the blur distances (20–30 pt), and
+  the rule that glass belongs to the floating layer only. No CSS was copied: the
+  values are nsh-cupertino's own tokens, generated from `src/tokens.rs`.
+
+## Framework7 — MIT
+
+- Repository: https://github.com/framework7io/framework7
+- Files read: `src/core/components/navbar/navbar-ios.less`,
+  `src/core/components/navbar/navbar-vars.less`, and its iOS component list
+  under `src/core/components/`
+- License: MIT
+- Used for: cross-checking the navigation bar's inner padding and large-title
+  padding (16 pt) and the trailing "16 pt between actions" gap, and for the gap
+  analysis of wave A against its iOS component inventory (tab bar, sheet,
+  swipe actions, pull to refresh and the other wave B components). No CSS was
+  copied.
+
+## Apple Human Interface Guidelines
+
+- https://developer.apple.com/design/human-interface-guidelines
+- Used as principles and acceptance criteria only (44 pt touch targets, 4.5:1
+  text contrast, the two-layer model and the material variants, reduce motion,
+  dynamic type). No text is reproduced in this repository.
+
+## Icons
+
+The 21 icons in `src/icon.rs` are this project's own SVG drawings of simple
+geometric shapes (chevrons, a magnifier, a checkmark and similar). They are not
+Apple's SF Symbols and contain none of Apple's artwork.

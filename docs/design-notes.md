@@ -89,6 +89,50 @@ Reduced motion: the spinner stops (a still frame), and the components' own
 transitions are short enough that iOS's own reduce-motion behavior (fewer, shorter
 animations) needs no separate code path.
 
+## The port: `cupertino_ui` first
+
+Wave A's component inventory, sizes and interaction details are a port of
+Flutter's official `cupertino_ui` 1.1.6 (`packages/cupertino_ui/lib/src/*.dart`),
+read component by component. `NOTICE` lists each file and what was taken from
+it; the short version:
+
+| Component | Source | What it fixed here |
+| --- | --- | --- |
+| Colors, type | `colors.dart`, `text_theme.dart` | 38 roles (including `systemGrey2`…`6`), the 12 pt row subtitle, `cupertino_ui`'s own `section-header-footer`, `clear-button`, disabled field fill and activity tick |
+| Lists | `list_section.dart`, `list_tile.dart` | 20 pt page margins (not 16), a 20 pt bold group header, the 13 pt footer color, 44/48 pt rows, 17/12 pt title and subtitle, `systemGrey4` press fill, `systemGrey2` chevron at the text size |
+| Navigation | `nav_bar.dart` | 8/6 pt back-button spacing, a 20 pt chevron, 50 pt target, the bar and large title as minimum heights |
+| Buttons | `button.dart`, `constants.dart` | 44/32/28 pt visual heights with a 44 pt target, 120/180 ms fades, the tertiary-label disabled foreground, icons at 1.2 × the text size |
+| Text fields | `text_field.dart`, `search_field.dart` | `CupertinoTextField`'s 5 pt box, 20 % border and 7 pt padding as the `rounded` variant; the search field's 5.5/8 pt insets, 20 pt icons and secondary-label placeholder |
+| Switch | `switch.dart` | The two-layer thumb shadow, `secondarySystemFill` off-track, 50 % disabled opacity |
+| Activity indicator | `activity_indicator.dart` | The alpha table, the blade geometry, one turn per second in eight steps, the tick color |
+
+### Where this port departs from `cupertino_ui`, and why
+
+- **The row separators.** `CupertinoListSection` starts an inset-grouped
+  separator at 14 pt + 42 pt with a leading icon, or 14 + 14 without. Against
+  the tile's own 20 pt leading inset that puts the line 8 pt past the text.
+  iOS aligns it with the text, and the HIG asks for alignment that shows the
+  hierarchy, so the separator starts at the text (20 pt, or 20 + 28 + 16 with an
+  icon).
+- **Section corners.** `cupertino_ui` asks for a superellipse and falls back to
+  `RoundedSuperellipseBorder`; NSH's `border-radius` is a circular corner on
+  every platform, so the 10 pt corner is circular here.
+- **The switch's drag.** `CupertinoSwitch` lets a finger drag the thumb and
+  stretches it by 7 %. `nsh/base`'s switch is a tap control; dragging is not in
+  this release.
+- **The search field's Cancel.** `CupertinoSearchTextField` has no Cancel;
+  `UISearchBar` shows one while editing, and this component follows the bar.
+
+## Materials, from Lenso UI
+
+`tokens::materials` takes Lenso UI's structure (`packages/tokens/themes/default/materials.css`):
+one translucent fill per appearance and a blur distance, thinning toward media
+and thickening toward text, with a `chrome` bar. The values are this project's
+own (20–30 pt of blur, fills from 70 % to 94 %), and the high-contrast set makes
+each fill more opaque. The rule that glass belongs only to the floating layer is
+Apple's (`materials.md`, `liquid-glass.md`); Lenso UI's `DESIGN.md` states it the
+same way. No CSS was copied.
+
 ## What is deliberately not copied
 
 - **SF Symbols.** They are Apple's font; the crate ships 21 SVG shapes instead and

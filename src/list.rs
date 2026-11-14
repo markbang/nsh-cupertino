@@ -17,8 +17,6 @@ pub struct ListProps {
     /// The background behind the sections (`system-grouped-background` unless
     /// set).
     pub background: Prop<Option<SharedString>>,
-    /// The 16 pt margin from the window's edges (on unless `false`).
-    pub inset: Prop<Option<bool>>,
     /// Scrolls itself (on unless `false`): `false` inside a [`crate::NavPage`],
     /// whose scroll already runs the page, so the sections come as they are.
     pub scroll: Prop<Option<bool>>,
@@ -31,17 +29,14 @@ pub struct ListProps {
 #[component]
 pub fn List(props: ListProps) -> impl IntoElement {
     let background = props.background;
-    let inset = props.inset.get_untracked().unwrap_or(true);
     let scrolls = props.scroll.get_untracked().unwrap_or(true);
     let sections = view()
         .w_full()
         .flex_col()
-        .when(inset, |v| v.px(px(metrics::SECTION_EDGE)))
-        .gap(px(metrics::SECTION_TOP))
         .role(AccessibilityRole::List)
         .child(props.children);
     if !scrolls {
-        return sections.pb(px(8.0)).into_element();
+        return sections.into_element();
     }
     scroll()
         .flex_1()
@@ -49,7 +44,6 @@ pub fn List(props: ListProps) -> impl IntoElement {
         .child(
             view()
                 .w_full()
-                .pt(px(metrics::SECTION_TOP))
                 .pb_safe_area_plus(px(24.0))
                 .bg(move || match background.get().as_deref() {
                     Some(name) => tokens::system(name),
@@ -63,9 +57,10 @@ pub fn List(props: ListProps) -> impl IntoElement {
 /// The props of [`Section`].
 #[derive(Debug, Clone, PartialEq, Props)]
 pub struct SectionProps {
-    /// A heading above the group, 13 pt, secondary label.
+    /// The group's heading: 20 pt bold, as `CupertinoListSection.insetGrouped`
+    /// draws it.
     pub header: Prop<Option<SharedString>>,
-    /// A note under the group, 13 pt, secondary label.
+    /// A note under the group, 13 pt in the header/footer color.
     pub footer: Prop<Option<SharedString>>,
     /// The rows.
     pub children: Prop<Children>,
@@ -82,24 +77,29 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
     let footer = props.footer;
     view()
         .flex_col()
-        .gap(px(8.0))
         .child(when(
             move || header.get().is_some(),
             move || {
-                view().px(px(metrics::ROW_EDGE - 4.0)).child(
-                    text(move || header.get().unwrap_or_default())
-                        .text_size(type_default::FOOTNOTE.size)
-                        .line_height(type_default::FOOTNOTE.line_height)
-                        .text_color(tokens::secondary_label)
-                        .role(AccessibilityRole::Header)
-                        .accessibility_level(2),
-                )
+                view()
+                    .pt(px(metrics::HEADER_TOP))
+                    .px(px(metrics::SECTION_EDGE))
+                    .pb(px(metrics::HEADER_BOTTOM))
+                    .child(
+                        text(move || header.get().unwrap_or_default())
+                            .text_size(px(metrics::SECTION_HEADER_SIZE))
+                            .line_height(px(metrics::SECTION_HEADER_SIZE * 1.2))
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(tokens::label)
+                            .role(AccessibilityRole::Header)
+                            .accessibility_level(2),
+                    )
             },
         ))
         .child(
             view()
                 .flex_col()
-                .w_full()
+                .mx(px(metrics::SECTION_EDGE))
+                .mt(px(metrics::SECTION_TOP))
                 .rounded(px(radius::ROW.0))
                 .overflow_hidden()
                 .bg(tokens::secondary_system_grouped_background)
@@ -109,12 +109,16 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
         .child(when(
             move || footer.get().is_some(),
             move || {
-                view().px(px(metrics::ROW_EDGE - 4.0)).child(
-                    text(move || footer.get().unwrap_or_default())
-                        .text_size(type_default::FOOTNOTE.size)
-                        .line_height(type_default::FOOTNOTE.line_height)
-                        .text_color(tokens::secondary_label),
-                )
+                view()
+                    .px(px(metrics::SECTION_EDGE))
+                    .pt(px(metrics::HEADER_BOTTOM))
+                    .pb(px(metrics::FOOTER_BOTTOM))
+                    .child(
+                        text(move || footer.get().unwrap_or_default())
+                            .text_size(type_default::FOOTNOTE.size)
+                            .line_height(type_default::FOOTNOTE.line_height)
+                            .text_color(tokens::section_header_footer),
+                    )
             },
         ))
 }
@@ -124,7 +128,7 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
 pub struct ListTileProps {
     /// The row's title, 17 pt.
     pub title: Prop<Option<SharedString>>,
-    /// A line under the title, 13 pt, secondary label.
+    /// A line under the title, 12 pt in the secondary label color.
     pub subtitle: Prop<Option<SharedString>>,
     /// An icon leading the title, by name ([`crate::icon::NAMES`]).
     pub leading: Prop<Option<SharedString>>,
@@ -143,6 +147,9 @@ pub struct ListTileProps {
     pub separator: Prop<Option<bool>>,
     /// Dimmed and not pressable.
     pub disabled: Prop<Option<bool>>,
+    /// A control at the trailing edge, after the accessory: a switch, a value.
+    /// iOS's settings rows are this shape (`<ListTile title="Wi-Fi"><Switch/></ListTile>`).
+    pub children: Prop<Children>,
 }
 
 /// The events of a [`ListTile`].
@@ -153,7 +160,8 @@ pub enum ListTileEvent {
 }
 
 /// A row: a title, an optional subtitle, an optional leading icon and an
-/// accessory, 44 pt tall at least, with the pressed highlight iOS uses.
+/// accessory, 44 pt tall at least (48 with a subtitle), with the pressed
+/// highlight iOS uses (`systemGrey4` while the finger is down).
 #[component]
 pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElement {
     let disabled = {
@@ -176,7 +184,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
     let checked = props.checked;
     let separator = props.separator;
     let leading_inset = if has_leading {
-        metrics::ROW_TRAILING + metrics::LEADING_SIZE + metrics::LEADING_GAP
+        metrics::ROW_EDGE + metrics::LEADING_SIZE + metrics::LEADING_GAP
     } else {
         metrics::ROW_EDGE
     };
@@ -188,7 +196,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
             button()
                 .w_full()
                 .flex_col()
-                .active(|s| s.bg(tokens::fill))
+                .active(|s| s.bg(tokens::system_gray4))
                 .on_press(move || {
                     if !disabled() {
                         cx.emit(ListTileEvent::Press);
@@ -224,7 +232,6 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                             metrics::ROW_EDGE
                         }))
                         .pr(px(metrics::ROW_TRAILING))
-                        .py(px(10.0))
                         .gap(px(metrics::LEADING_GAP))
                         .when(has_leading, |v| {
                             v.child(
@@ -245,7 +252,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                             view()
                                 .flex_1()
                                 .flex_col()
-                                .gap(px(2.0))
+                                .gap(px(metrics::TITLE_SUBTITLE_GAP))
                                 .child(
                                     text(move || title.get().unwrap_or_default())
                                         .text_size(type_default::BODY.size)
@@ -266,14 +273,16 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                     move || subtitle.get().is_some(),
                                     move || {
                                         text(move || subtitle.get().unwrap_or_default())
-                                            .text_size(type_default::FOOTNOTE.size)
-                                            .line_height(type_default::FOOTNOTE.line_height)
+                                            .text_size(type_default::SUBTITLE.size)
+                                            .line_height(type_default::SUBTITLE.line_height)
+                                            .letter_spacing(type_default::SUBTITLE.tracking)
                                             .text_color(tokens::secondary_label)
                                             .truncate()
                                     },
                                 )),
                         )
-                        .child(accessory_view(&accessory, &checked)),
+                        .child(accessory_view(&accessory, &checked))
+                        .child(props.children),
                 ),
         )
         .child(when(
@@ -303,6 +312,9 @@ fn accessory_view(
         ))
         .child(when(
             move || !matches!(chevron.get().as_deref(), Some("checkmark") | Some("none")),
-            move || icon_stroke("chevron.right", 13.0, 3.0).text_color(tokens::tertiary_label),
+            move || {
+                // `CupertinoListTileChevron`: the text size, systemGrey2.
+                icon_stroke("chevron.right", 17.0, 2.2).text_color(tokens::system_gray2)
+            },
         ))
 }
