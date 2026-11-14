@@ -8,7 +8,7 @@ boundary.
 ```sh
 nsh check                                  # cargo check + tsc against the generated types
 nsh test                                   # headless behavior tests (App.test.tsx)
-nsh test screenshots.test.tsx --target web # docs/screenshots, light and dark
+../../tools/shots.sh                       # docs/screenshots, light and dark (from the repository root)
 nsh run                                    # on this machine; --target ios, android, web, ...
 ```
 
