@@ -91,7 +91,7 @@ animations) needs no separate code path.
 
 ## What is deliberately not copied
 
-- **SF Symbols.** They are Apple's font; the crate ships 24 SVG shapes instead and
+- **SF Symbols.** They are Apple's font; the crate ships 21 SVG shapes instead and
   draws them in `currentColor`.
 - **UIKit's blur.** Navigation bars and sheets on iOS blur what is under them. NSH
   exposes `backdrop-filter` styles, but a blurred bar over a scrolling page costs a

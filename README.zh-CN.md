@@ -153,6 +153,8 @@ pub fn Settings() -> impl IntoElement {
   返回手势回退——这些来自 `nsh/base`，不在这里重写。
 - 文字跟随用户字号（`fontScale`）；`ActivityIndicator` 尊重"减少动态效果"，显示静止帧；
   组件的过渡都很短，无需单独分支。
+- Android 返回手势仍归平台：组件不注册返回处理，页面不会吞掉它。自己维护历史的应用只需在一处
+  接入（根视图的 `onBackPress`，或 `NavStack` 页面的 `on_dismiss`）。
 
 ## 开发
 

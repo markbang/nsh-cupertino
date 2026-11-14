@@ -35,7 +35,7 @@ All notable changes to `nsh-cupertino`. The format follows
   frame with reduced motion.
 - `ScrollView`: bouncing scroll with the platform's indicator and drag-to-dismiss
   keyboard.
-- 24 icons drawn as SVG in the text color, NSH's stand-in for SF Symbols.
+- 21 icons drawn as SVG in the text color, NSH's stand-in for SF Symbols.
 - Demo app (TSX + Rust) with one page per component, the appearance and contrast
   toggles, and storage-seeded deep links for screenshots.
 - Headless behavior tests and web screenshot tests for every demo page in light

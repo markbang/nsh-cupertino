@@ -166,6 +166,10 @@ leaves out, and sets the contrast variants of the ones it defines.
 - Text follows the user's text size (`fontScale`); `ActivityIndicator` honours
   reduced motion with a still frame, and the components' transitions are
   short enough not to need a separate path.
+- The Android back gesture stays the platform's: the components register no back
+  handler, so a page never swallows it. An app that keeps its own history wires
+  the gesture to it in one place (`onBackPress` on its root, or a `NavStack`
+  page's `on_dismiss`).
 
 ## Development
 

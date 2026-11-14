@@ -57,6 +57,13 @@ Events: `onBack`.
 - The title in `NavPage` is pressable (scroll to top) and carries the page's name
   as its label, so the heading is never only visual.
 
+## The back gesture
+
+`NavPage` draws a back button but registers no back handler: on Android the
+system gesture stays the platform's, and Escape on the desktops is the app's to
+handle. Wire both to your own history in one place — the app root's `onBackPress`
+(`nsh`), or a `NavStack` page's `on_dismiss` — and let `NavPage` only draw.
+
 ## Motion
 
 The compact title and hairline fade over the last 10 pt of the large title's

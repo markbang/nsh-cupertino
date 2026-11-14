@@ -79,7 +79,7 @@ iOS 用的是绝对行高（不是倍数），NSH 的 `lineHeight` 也是点数�
 
 ## 有意不复制的东西
 
-- **SF Symbols**：那是 Apple 的字体；这个 crate 自带 24 个 SVG 形状，用 `currentColor` 绘制。
+- **SF Symbols**：那是 Apple 的字体；这个 crate 自带 21 个 SVG 形状，用 `currentColor` 绘制。
 - **UIKit 的模糊**：iOS 上导航栏与 Sheet 会模糊下方内容。NSH 支持 `backdrop-filter`，但在滚动页面上
   做模糊导航栏在 Web 上意味着整屏重绘；除非有理由，栏保持不透明。
 - **侧滑返回**：iOS 上来自 `nsh/base` 的导航栈；Android 的返回手势交给平台（同样是 `nsh/base`），
