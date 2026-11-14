@@ -175,8 +175,8 @@ cargo test                       # the committed theme files match the tokens
 cd examples/demo
 nsh check                        # cargo check + tsc against the generated types
 nsh test                         # headless behavior tests
-nsh test screenshots.test.tsx --target web   # captures docs/screenshots/*.png
 nsh run                          # the demo on this machine
+cd ../.. && tools/shots.sh       # captures docs/screenshots/*.png from the web build
 ```
 
 CI (`.github/workflows/ci.yml`): fmt, clippy `-D warnings`, tests, the theme

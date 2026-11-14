@@ -1,0 +1,13 @@
+{
+  "name": "Cupertino",
+  "id": "dev.nsh.cupertino.demo",
+  "version": "0.1.0",
+  "build": 1,
+  "rust": ["../..", "."],
+  "theme": "../../theme/theme.json",
+  "tailwind": {
+    "radius": { "row": 10, "sheet": 14, "button": 12, "search": 9 },
+    "fontWeight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700 }
+  },
+  "appearance": "system"
+}
