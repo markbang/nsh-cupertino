@@ -1,0 +1,25 @@
+[package]
+name = "nsh-cupertino"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Cupertino (iOS) design system for Native Shell (NSH) apps: semantic tokens and native-feeling components"
+repository = "https://github.com/markbang/nsh-cupertino"
+readme = "README.md"
+keywords = ["nsh", "cupertino", "ios", "ui", "design-system"]
+categories = ["gui"]
+publish = false
+# The demo app and the supporting crates live under examples/; nothing there is a Cargo example target.
+autoexamples = false
+autobins = false
+autotests = false
+
+[workspace]
+exclude = ["examples/demo"]
+
+[dependencies]
+nsh-core = "0.5.0"
+nsh-base = "0.5.0"
+
+[lints.rust]
+unused_must_use = "warn"

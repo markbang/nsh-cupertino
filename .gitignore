@@ -1,0 +1,5 @@
+# nsh: generated types and packages; cargo's build directory
+.nsh/
+target/
+examples/demo/.nsh/
+examples/demo/target/

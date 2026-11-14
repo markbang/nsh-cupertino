@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NSH_VERSION: v0.5.0
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "4"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: fmt, clippy, tests, theme
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # QuickJS' bindings come from bindgen, which needs libclang.
+      - run: sudo apt-get update && sudo apt-get install -y clang libclang-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: check-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'Cargo.toml') }}
+          restore-keys: check-${{ runner.os }}-
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      # `theme/` is generated: a token changed without regenerating it fails here.
+      - run: cargo run --bin gen-theme -- --check
+
+  demo:
+    name: demo (check, headless tests)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: examples/demo
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y clang libclang-dev libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+        working-directory: .
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.nsh
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            examples/demo/target
+            target
+          key: demo-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('examples/demo/Cargo.lock') }}
+          restore-keys: demo-${{ runner.os }}-${{ env.NSH_VERSION }}-
+      - name: Install nsh
+        run: |
+          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
+          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
+        working-directory: .
+      - run: nsh check
+      - run: nsh test
+
+  web:
+    name: demo (web build, screenshots)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.nsh
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            examples/demo/target
+          key: web-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('examples/demo/Cargo.lock') }}
+          restore-keys: web-${{ runner.os }}-${{ env.NSH_VERSION }}-
+      - name: Install nsh
+        run: |
+          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
+          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.130
+      # The runner's image has Google Chrome, which `nsh test --target web` uses.
+      - name: Screenshots of every demo page
+        working-directory: examples/demo
+        run: nsh test screenshots.test.tsx --target web
+      - run: tools/check-screenshots.sh docs/screenshots
+      - uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: docs/screenshots
+          if-no-files-found: error
+      - name: Publish the screenshots to the screenshots branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          dir=$(mktemp -d)
+          git worktree add --detach "$dir" HEAD
+          cd "$dir"
+          git checkout --orphan screenshots-tmp
+          git rm -r --cached . >/dev/null
+          rm -rf docs/screenshots
+          mkdir -p main
+          cp "$GITHUB_WORKSPACE"/docs/screenshots/*.png main/
+          git add main
+          git -c user.name=github-actions -c user.email=github-actions@github.com commit -m "Screenshots of ${GITHUB_SHA::7}" >/dev/null
+          git push --force origin HEAD:refs/heads/screenshots
+      - name: Package the web app
+        working-directory: examples/demo
+        run: nsh package App.tsx --target web -o "$RUNNER_TEMP/web"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: ${{ runner.temp }}/web
+          if-no-files-found: error
