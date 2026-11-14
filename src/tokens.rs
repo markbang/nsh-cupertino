@@ -4,7 +4,7 @@
 //! Colors follow Apple's semantic roles, each with four appearances: light,
 //! dark, light high contrast and dark high contrast. The values are the ones
 //! the iOS system colors have (`UIColor.systemBackground` and friends, as
-//! `cupertino_ui/lib/src/colors.dart` carries them).
+//! `cupertino_ui/lib/src/colors.dart` carries them; see `NOTICE`).
 //!
 //! `theme/theme.json` is generated from this file (`cargo run --bin gen-theme`)
 //! and is what an app's `nsh.json` `"theme"` points at, so Rust, TSX classes
@@ -96,8 +96,18 @@ roles! {
     "system-pink" = 0xff2d_55ff, 0xff37_5fff, 0xd30f_45ff, 0xff64_82ff;
     "system-teal" = 0x5ac8_faff, 0x64d2_ffff, 0x0071_a4ff, 0x70d7_ffff;
     "system-indigo" = 0x5856_d6ff, 0x5e5c_e6ff, 0x3634_a3ff, 0x7d7a_ffff;
-    "system-gray" = 0x8e8e_93ff, 0x8e8e_93ff, 0x8e8e_93ff, 0x8e8e_93ff;
+    "system-gray" = 0x8e8e_93ff, 0x8e8e_93ff, 0x6c6c_70ff, 0xaeae_b2ff;
+    "system-gray2" = 0xaeae_b2ff, 0x6363_66ff, 0x8e8e_93ff, 0x7c7c_80ff;
+    "system-gray3" = 0xc7c7_ccff, 0x4848_4aff, 0xaeae_b2ff, 0x5454_56ff;
+    "system-gray4" = 0xd1d1_d6ff, 0x3a3a_3cff, 0xbcbc_c0ff, 0x4444_46ff;
+    "system-gray5" = 0xe5e5_eaff, 0x2c2c_2eff, 0xd8d8_dcff, 0x3636_38ff;
+    "system-gray6" = 0xf2f2_f7ff, 0x1c1c_1eff, 0xebeb_f0ff, 0x2424_26ff;
     "link" = 0x007a_ffff, 0x0984_ffff, 0x007a_ffff, 0x0984_ffff;
+    // Not UIKit roles: cupertino_ui's own values, inspected on iOS.
+    "section-header-footer" = 0x6c6c_6cff, 0x8e8e_92ff, 0x4a4a_4dff, 0xb0b0_b7ff;
+    "clear-button" = 0x0000_0033, 0xffff_ff33, 0x0000_0059, 0xffff_ff59;
+    "text-field-disabled-background" = 0xfafa_faff, 0x0505_05ff, 0xfafa_faff, 0x0505_05ff;
+    "activity-tick" = 0x3c3c_44ff, 0xebeb_f5ff, 0x0000_00ff, 0xffff_ffff;
 }
 
 /// Role names [`Role::name`] of the shadcn tokens `nsh/base` and NSH's classes
@@ -212,8 +222,26 @@ tokens! {
     system_indigo => "system-indigo";
     /// Gray.
     system_gray => "system-gray";
+    /// A lighter gray.
+    system_gray2 => "system-gray2";
+    /// A lighter gray still.
+    system_gray3 => "system-gray3";
+    /// The gray a pressed row fills with.
+    system_gray4 => "system-gray4";
+    /// A very light gray.
+    system_gray5 => "system-gray5";
+    /// The lightest gray, the grouped background in light.
+    system_gray6 => "system-gray6";
     /// A link.
     link => "link";
+    /// A grouped section's header and footer text.
+    section_header_footer => "section-header-footer";
+    /// A field's clear button, 20 % of the text color.
+    clear_button => "clear-button";
+    /// A disabled text field's background.
+    text_field_disabled_background => "text-field-disabled-background";
+    /// The activity indicator's blades.
+    activity_tick => "activity-tick";
 }
 
 /// White, for text on a system color (`button(for: .filled)` in both
@@ -308,6 +336,8 @@ pub mod type_default {
     pub const CAPTION1: TextStyle = super::style(12.0, 16.0, 400, 0.0);
     /// 11 / 13, regular.
     pub const CAPTION2: TextStyle = super::style(11.0, 13.0, 400, 0.07);
+    /// 12 / 16, regular: a list row's subtitle (`CupertinoListTile`, 12 pt).
+    pub const SUBTITLE: TextStyle = super::style(12.0, 16.0, 400, -0.08);
 }
 
 /// The type scale, as the app's theme sets it.
@@ -335,6 +365,8 @@ pub struct TypeScale {
     pub caption1: TextStyle,
     /// 11 / 13.
     pub caption2: TextStyle,
+    /// 12 / 16, a list row's subtitle.
+    pub subtitle: TextStyle,
 }
 
 impl TypeScale {
@@ -357,6 +389,7 @@ impl TypeScale {
             footnote: step("footnote", type_default::FOOTNOTE),
             caption1: step("caption1", type_default::CAPTION1),
             caption2: step("caption2", type_default::CAPTION2),
+            subtitle: step("subtitle", type_default::SUBTITLE),
         }
     }
 }
@@ -428,6 +461,12 @@ pub mod motion {
     pub const SHEET_MS: f32 = 500.0;
     /// 200 ms: a switch's thumb.
     pub const THUMB_MS: f32 = 200.0;
+    /// 120 ms: a button fading to its pressed opacity (`kFadeOutDuration`).
+    pub const PRESS_FADE_IN_MS: f32 = 120.0;
+    /// 180 ms: a button fading back (`kFadeInDuration`).
+    pub const PRESS_FADE_OUT_MS: f32 = 180.0;
+    /// 1000 ms: one turn of the activity indicator's eight blades.
+    pub const SPIN_MS: f32 = 1000.0;
 }
 
 /// The metrics iOS components are laid out with.
@@ -452,10 +491,18 @@ pub mod metrics {
     pub const LEADING_SIZE: f32 = 28.0;
     /// Between a leading icon and the title.
     pub const LEADING_GAP: f32 = 16.0;
-    /// A grouped section's margin from the screen's edge.
-    pub const SECTION_EDGE: f32 = 16.0;
-    /// Above a section's first group.
-    pub const SECTION_TOP: f32 = 22.0;
+    /// A grouped section's margin from the screen's edge (`_kDefaultInsetGroupedRowsMargin`).
+    pub const SECTION_EDGE: f32 = 20.0;
+    /// Above a section's group (`_kDefaultInsetGroupedRowsMargin`'s top).
+    pub const SECTION_TOP: f32 = 20.0;
+    /// Above a section's header (`_kInsetGroupedDefaultHeaderMargin`).
+    pub const HEADER_TOP: f32 = 16.0;
+    /// Between a section's header and its group.
+    pub const HEADER_BOTTOM: f32 = 6.0;
+    /// Below a section's footer.
+    pub const FOOTER_BOTTOM: f32 = 10.0;
+    /// Between a row's title and its subtitle (`_kNotchedTitleToSubtitle`).
+    pub const TITLE_SUBTITLE_GAP: f32 = 3.0;
     /// A switch's track.
     pub const SWITCH_WIDTH: f32 = 51.0;
     /// A switch's track height.
@@ -464,6 +511,116 @@ pub mod metrics {
     pub const SWITCH_THUMB: f32 = 27.0;
     /// A search field's height.
     pub const SEARCH_HEIGHT: f32 = 36.0;
-    /// A button's default minimum size.
+    /// A large button (`kCupertinoButtonMinSize`).
     pub const BUTTON_LARGE: f32 = 44.0;
+    /// A medium button.
+    pub const BUTTON_MEDIUM: f32 = 32.0;
+    /// A small button.
+    pub const BUTTON_SMALL: f32 = 28.0;
+    /// A section header's text size (`CupertinoListSection.insetGrouped`).
+    pub const SECTION_HEADER_SIZE: f32 = 20.0;
+}
+
+/// The materials of the functional layer: the fills and blur radii a bar or a
+/// sheet uses over content. Glass belongs to the floating layer only (HIG,
+/// `materials.md`, `liquid-glass.md`); content keeps a solid background.
+///
+/// The fills are translucent, over the blur: `regular` is what a bar uses over
+/// scrolling content, `thin` and `ultra_thin` let more through for media, and
+/// `thick` carries text. The numbers follow the layering idea and the blur
+/// distances of Lenso UI's material recipes (see `NOTICE`), rounded to the
+/// values iOS's own bars read as.
+pub mod materials {
+    use nsh_core::{Hsla, color::rgba};
+
+    /// One material: its fill in light and dark, and the blur radius.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub struct Material {
+        /// The token name (`regular`).
+        pub name: &'static str,
+        /// Light appearance.
+        pub light: u32,
+        /// Dark appearance.
+        pub dark: u32,
+        /// Light appearance, increased contrast (more opaque).
+        pub light_hc: u32,
+        /// Dark appearance, increased contrast.
+        pub dark_hc: u32,
+        /// The blur radius, in points.
+        pub blur: f32,
+    }
+
+    impl Material {
+        /// The fill for `dark` and `high_contrast`.
+        pub fn fill(self, dark: bool, high_contrast: bool) -> Hsla {
+            match (dark, high_contrast) {
+                (false, false) => rgba(self.light).into(),
+                (true, false) => rgba(self.dark).into(),
+                (false, true) => rgba(self.light_hc).into(),
+                (true, true) => rgba(self.dark_hc).into(),
+            }
+        }
+    }
+
+    /// Every material, thinnest first.
+    pub const ALL: &[Material] = &[
+        Material {
+            name: "ultra-thin",
+            light: 0xffff_ffb3,
+            dark: 0x0000_00b3,
+            light_hc: 0xffff_ffd9,
+            dark_hc: 0x0000_00d9,
+            blur: 20.0,
+        },
+        Material {
+            name: "thin",
+            light: 0xffff_ffcc,
+            dark: 0x0000_00cc,
+            light_hc: 0xffff_ffe6,
+            dark_hc: 0x0000_00e6,
+            blur: 25.0,
+        },
+        Material {
+            name: "regular",
+            light: 0xffff_ffd9,
+            dark: 0x1c1c_1ee6,
+            light_hc: 0xffff_fff0,
+            dark_hc: 0x1c1c_1ef7,
+            blur: 25.0,
+        },
+        Material {
+            name: "thick",
+            light: 0xffff_fff0,
+            dark: 0x1c1c_1ef7,
+            light_hc: 0xffff_fffa,
+            dark_hc: 0x1c1c_1efc,
+            blur: 30.0,
+        },
+        Material {
+            name: "chrome",
+            light: 0xffff_ffbf,
+            dark: 0x1c1c_1ee6,
+            light_hc: 0xffff_ffe0,
+            dark_hc: 0x1c1c_1ef2,
+            blur: 25.0,
+        },
+    ];
+
+    /// The material named `name`, `regular` when there is none.
+    pub fn get(name: &str) -> Material {
+        ALL.iter()
+            .find(|material| material.name == name)
+            .copied()
+            .unwrap_or(ALL[2])
+    }
+
+    /// The fill of the material `name` in the appearance shown.
+    pub fn fill(name: &str, dark: bool, high_contrast: bool) -> Hsla {
+        get(name).fill(dark, high_contrast)
+    }
+
+    /// The blur radius of the material `name`.
+    pub fn blur(name: &str) -> nsh_core::geometry::Points {
+        nsh_core::geometry::px(get(name).blur)
+    }
 }

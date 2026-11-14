@@ -1,6 +1,7 @@
 # 搜索框
 
-iOS 的搜索框：36 pt 高、9 pt 圆角，文本前有放大镜，有清除按钮，旁边可选"取消"。
+iOS 的搜索框：36 pt 高、9 pt 圆角，放大镜与 placeholder 使用 secondary label 色，有清除按钮，
+旁边可选"取消"。内边距（左右 5.5 pt、上下 8 pt）与 20 pt 图标来自 `CupertinoSearchTextField`。
 
 | | |
 | --- | --- |
@@ -19,7 +20,7 @@ iOS 的搜索框：36 pt 高、9 pt 圆角，文本前有放大镜，有清除�
 
 说明
 
-- 背景是 `tertiaryFill`，placeholder 用 `placeholderText`，与搜索栏一致；角色是 search。
+- 背景是 `tertiarySystemFill`，placeholder 用 `secondaryLabel`，与搜索栏一致；角色是 search。
 - "取消"通过 `onCancel` 报告；应用通常在这里清空查询。
 
 ## 无障碍

@@ -16,6 +16,7 @@ const PAGES = [
   "switches",
   "indicators",
   "scroll",
+  "materials",
   "colors",
   "type",
 ];

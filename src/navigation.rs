@@ -28,6 +28,10 @@ pub struct NavigationBarProps {
     /// its scroll position).
     #[prop(default)]
     pub collapsed: Prop<f32>,
+    /// `"opaque"` (the default) or a material (`"regular"`, `"thin"`,
+    /// `"ultra-thin"`, `"thick"`, `"chrome"`): a translucent bar that blurs what
+    /// scrolls under it, as the floating layer does.
+    pub material: Prop<Option<SharedString>>,
 }
 
 /// The events of a [`NavigationBar`].
@@ -46,6 +50,7 @@ pub enum NavigationBarEvent {
 pub fn NavigationBar(props: NavigationBarProps, cx: Scope<NavigationBarEvent>) -> impl IntoElement {
     let collapsed = props.collapsed;
     let large = props.large_title;
+    let material = props.material.get_untracked();
     let bar = bar(
         props.title,
         props.back,
@@ -53,11 +58,12 @@ pub fn NavigationBar(props: NavigationBarProps, cx: Scope<NavigationBarEvent>) -
         Fade::Reactive(Some(Rc::new(move || collapsed.get().clamp(0.0, 1.0)))),
         move || cx.emit(NavigationBarEvent::Back),
         None,
+        material.clone(),
     );
     bar.child(view().when(large.get_untracked().is_some(), |v| {
         v.px(px(metrics::NAV_EDGE))
             .pb(px(8.0))
-            .h(px(metrics::LARGE_TITLE_HEIGHT))
+            .min_h(px(metrics::LARGE_TITLE_HEIGHT))
             .justify_end()
             .child(large_title_text(&large))
     }))
@@ -80,6 +86,10 @@ pub struct NavPageProps {
     /// The background behind the content (`system-grouped-background` unless
     /// set).
     pub background: Prop<Option<SharedString>>,
+    /// `"opaque"` (the default) or a material (`"regular"`, `"thin"`,
+    /// `"ultra-thin"`, `"thick"`, `"chrome"`). A material makes the bar float
+    /// over the content, which scrolls under it and shows through the blur.
+    pub material: Prop<Option<SharedString>>,
 }
 
 /// The events of a [`NavPage`].
@@ -99,15 +109,58 @@ pub enum NavPageEvent {
 #[component]
 pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement {
     let offset = animated_value(0.0);
+    let floating_bar = props
+        .material
+        .get_untracked()
+        .as_deref()
+        .is_some_and(|name| name != "opaque");
     // The large title's block, and the last 10 pt of it over which the compact
-    // title and the hairline take over.
+    // title and the hairline take over. A floating bar sits over the content,
+    // so its title is under the bar 44 pt earlier.
     let over = metrics::LARGE_TITLE_HEIGHT;
-    let fade = offset.interpolate(&[over - 10.0, over], &[0.0, 1.0]);
+    let (start, end) = if floating_bar {
+        (metrics::NAV_HEIGHT, metrics::NAV_HEIGHT + 10.0)
+    } else {
+        (over - 10.0, over)
+    };
+    let fade = offset.interpolate(&[start, end], &[0.0, 1.0]);
     let background = props.background;
     let scroll_ref = element_ref();
     let to_top = scroll_ref;
     let trailing = props.trailing;
+    let floating = floating_bar;
     let large = props.large_title;
+    let bar_view = bar(
+        props.title,
+        props.back,
+        trailing_button(trailing, move || cx.emit(NavPageEvent::Trailing)),
+        Fade::Animated(fade),
+        move || cx.emit(NavPageEvent::Back),
+        Some(Rc::new(move || {
+            to_top.scroll_to(point(px(0.0), px(0.0)), true)
+        })),
+        props.material.get_untracked(),
+    );
+    let page = scroll()
+        .flex_1()
+        .bounces(true)
+        .scroll_value(&offset)
+        .element_ref(&scroll_ref)
+        .child(
+            view()
+                .w_full()
+                // A floating bar sits over the content: the page starts below it.
+                .when(floating, |v| v.pt(px(metrics::NAV_HEIGHT)))
+                .gap(px(metrics::SECTION_TOP))
+                .pb_safe_area_plus(px(24.0))
+                .child(view().when(large.get_untracked().is_some(), |v| {
+                    v.px(px(metrics::NAV_EDGE))
+                        .h(px(over))
+                        .justify_end()
+                        .child(large_title_text(&large))
+                }))
+                .child(props.children),
+        );
     view()
         .flex_1()
         .pt_safe_area()
@@ -115,36 +168,11 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
             Some(name) => tokens::system(name),
             None => tokens::system_grouped_background(),
         })
-        .child(bar(
-            props.title,
-            props.back,
-            trailing_button(trailing, move || cx.emit(NavPageEvent::Trailing)),
-            Fade::Animated(fade),
-            move || cx.emit(NavPageEvent::Back),
-            Some(Rc::new(move || {
-                to_top.scroll_to(point(px(0.0), px(0.0)), true)
-            })),
-        ))
-        .child(
-            scroll()
-                .flex_1()
-                .bounces(true)
-                .scroll_value(&offset)
-                .element_ref(&scroll_ref)
-                .child(
-                    view()
-                        .w_full()
-                        .gap(px(metrics::SECTION_TOP))
-                        .pb_safe_area_plus(px(24.0))
-                        .child(view().when(large.get_untracked().is_some(), |v| {
-                            v.px(px(metrics::NAV_EDGE))
-                                .h(px(over))
-                                .justify_end()
-                                .child(large_title_text(&large))
-                        }))
-                        .child(props.children),
-                ),
-        )
+        .when(!floating, |v| v.child(bar_view.clone()))
+        .child(page)
+        .when(floating, |v| {
+            v.child(view().absolute().left_0().right_0().top_0().child(bar_view))
+        })
 }
 
 /// How a bar's compact title and hairline come in.
@@ -171,15 +199,30 @@ fn bar(
     fade: Fade,
     on_back: impl Fn() + 'static,
     on_title: Option<Rc<dyn Fn()>>,
+    material: Option<SharedString>,
 ) -> View {
     let label = back.get_untracked();
+    // A material is a translucent fill over a blur: glass on the floating layer
+    // only (HIG, materials.md).
+    let glass = material
+        .as_deref()
+        .is_some_and(|name| name != "opaque")
+        .then(|| material.clone().unwrap_or_default());
     let mut node = view()
         .relative()
-        .h(px(metrics::NAV_HEIGHT))
+        .min_h(px(metrics::NAV_HEIGHT))
         .flex_row()
         .items_center()
         .gap(px(8.0))
-        .px(px(metrics::NAV_EDGE));
+        .px(px(metrics::NAV_EDGE))
+        .when_some(glass.clone(), |v, name| {
+            let name_for_bg = name.clone();
+            v.bg(move || {
+                let dark = nsh_core::element::dark();
+                tokens::materials::fill(&name_for_bg, dark, false)
+            })
+            .backdrop_blur(tokens::materials::blur(&name))
+        });
 
     if let Some(label) = label {
         let pressing_label = label.clone();
@@ -188,7 +231,7 @@ fn bar(
                 .min_h(px(44.0))
                 .flex_row()
                 .items_center()
-                .gap(px(4.0))
+                .gap(px(6.0))
                 .pr(px(6.0))
                 .ml(px(-8.0))
                 .pl(px(8.0))
@@ -199,7 +242,7 @@ fn bar(
                 .accessibility_label(pressing_label)
                 .role(AccessibilityRole::Button)
                 .on_press(on_back)
-                .child(icon_stroke("chevron.left", 18.0, 3.0).text_color(tokens::system_blue))
+                .child(icon_stroke("chevron.left", 20.0, 2.6).text_color(tokens::system_blue))
                 .child(
                     text(label)
                         .text_size(type_default::BODY.size)
@@ -291,6 +334,5 @@ fn large_title_text(title: &Prop<Option<SharedString>>) -> impl IntoElement {
         .text_color(tokens::label)
         .role(AccessibilityRole::Header)
         .accessibility_level(1)
-        .number_of_lines(1)
-        .truncate()
+        .number_of_lines(2)
 }

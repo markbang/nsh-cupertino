@@ -12,6 +12,11 @@ text and search fields, switches and the activity indicator.
   `text-secondary-label`) and `token()` read the same values.
 - **Light, dark and high contrast.** Every role carries Apple's four values;
   `<Theme>` swaps in the high-contrast set at run time.
+- **A port, not an impression.** Sizes, colors, motion and interaction details
+  come from Flutter's official `cupertino_ui` 1.1.6, component by component;
+  `NOTICE` lists what was taken from where.
+- **Materials for the floating layer.** `regular`, `thin`, `ultra-thin`, `thick`
+  and `chrome` glass fills with their blur, for bars that content scrolls under.
 - **Native behavior.** The components are built on `nsh/base`'s behavior (presses,
   focus, keyboard, roles) and draw only the look, so VoiceOver, TalkBack, Tab,
   Space/Return and the Android back gesture keep working.
@@ -140,7 +145,11 @@ and are attached to each release.
 - **Layout** — 4/8/12/16/20/24 spacing, 44 pt touch target, 10/14/12/9 pt radii,
   a 0.33 pt hairline, the navigation bar's 44 + 52 pt.
 - **Motion** — page push spring 0.86 damping / 300 stiffness, sheet 0.8 / 400,
-  pressed opacity 0.4, pressed scale 0.97, 150 / 200 / 300 / 500 ms durations.
+  pressed opacity 0.4, pressed scale 0.97, 120 / 180 / 200 / 300 / 500 ms
+  durations, and the spinner's one turn per second in eight steps.
+- **Materials** — `ultra-thin`, `thin`, `regular`, `thick` and `chrome`: a fill
+  per appearance (more opaque in high contrast) and a 20–30 pt blur, for the
+  floating layer only.
 
 `<Theme contrast="high">` clones the app's tokens, sets every role and alias to its
 increased-contrast value for the current appearance, and installs them with
@@ -190,3 +199,6 @@ screenshot job that publishes the captures to the `screenshots` branch.
 ## License
 
 MIT OR Apache-2.0, at your option (see `LICENSE-MIT`, `LICENSE-APACHE`).
+`NOTICE` records what was taken from Flutter's `cupertino_ui` (BSD-3-Clause),
+Lenso UI (MIT) and Framework7 (MIT), and what is Apple's guidance read as a
+principle.

@@ -4,7 +4,7 @@ use nsh_core::{AccessibilityRole, prelude::*};
 
 use crate::{
     icon::icon,
-    tokens::{self, motion, radius, type_default},
+    tokens::{self, metrics, motion, radius, type_default},
 };
 
 /// The props of [`Button`].
@@ -19,7 +19,8 @@ pub struct ButtonProps {
     /// `"large"` (44 pt, the default), `"medium"` (32 pt) or `"small"`
     /// (28 pt). The press target is 44 pt at every size.
     pub size: Prop<Option<SharedString>>,
-    /// An icon before the title, by name ([`crate::icon::NAMES`]).
+    /// An icon before the title, by name ([`crate::icon::NAMES`]), drawn at
+    /// 1.2 × the text size as `CupertinoButton` draws it.
     pub icon: Prop<Option<SharedString>>,
     /// Dimmed and not pressable.
     pub disabled: Prop<Option<bool>>,
@@ -35,10 +36,13 @@ pub enum ButtonEvent {
 }
 
 /// A button in one of iOS's four looks, with the pressed state as iOS draws
-/// it: the whole button fades to 40 %, over 150 ms.
+/// it: the whole button fades to 40 % over 120 ms (`kFadeOutDuration`), and
+/// back over 180 ms.
 ///
-/// Pressed and disabled are the app's to control (`disabled`); the press is
-/// reported once, and a disabled button reports nothing.
+/// The visual height is `CupertinoButton`'s (44, 32 or 28 pt); presses count
+/// over a 44 pt target at every size, as the guidelines ask. A disabled button
+/// keeps its shape and reports nothing, and its text takes the tertiary label
+/// color as `CupertinoButton` does.
 #[component]
 pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
     let variant = props
@@ -49,11 +53,20 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
     let destructive = variant == "destructive";
     let filled = variant == "filled";
     let tinted = variant == "tinted";
-    let (padding_x, padding_y, step, corner) = match size.as_str() {
-        "small" => (12.0, 6.0, type_default::SUBHEADLINE, 40.0),
-        "medium" => (15.0, 10.0, type_default::SUBHEADLINE, 40.0),
-        _ => (20.0, 16.0, type_default::HEADLINE, radius::BUTTON.0),
+    let (visual_height, padding_x, padding_y, step, corner) = match size.as_str() {
+        "small" => (28.0, 12.0, 6.0, type_default::SUBHEADLINE, 40.0),
+        "medium" => (32.0, 15.0, 10.0, type_default::SUBHEADLINE, 40.0),
+        _ => (
+            metrics::BUTTON_LARGE,
+            20.0,
+            16.0,
+            type_default::HEADLINE,
+            radius::BUTTON.0,
+        ),
     };
+    // The touch target stays 44 pt: a small button grows its hit area, not its
+    // look.
+    let slop = (44.0 - visual_height).max(0.0) / 2.0;
     let disabled = {
         let disabled = props.disabled;
         move || disabled.get().unwrap_or(false)
@@ -65,7 +78,8 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
     let title_label = props.title;
 
     nsh_base::button()
-        .min_h(px(44.0))
+        .min_h(px(visual_height))
+        .hit_slop(EdgeInsets::all(px(slop)))
         .flex_row()
         .items_center()
         .justify_center()
@@ -74,35 +88,37 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
         .py(px(padding_y))
         .rounded(px(corner))
         .bg(move || {
-            if disabled() {
-                if filled {
+            if filled {
+                if disabled() {
                     tokens::system_blue().opacity(0.4)
                 } else {
-                    nsh_core::color::transparent_black()
+                    tokens::system_blue()
                 }
-            } else if filled {
-                tokens::system_blue()
             } else if tinted {
-                tokens::system_blue().opacity(if nsh_core::element::dark() {
+                let alpha = if nsh_core::element::dark() {
                     0.26
                 } else {
                     0.18
-                })
+                };
+                if disabled() {
+                    tokens::system_blue().opacity(alpha * 0.5)
+                } else {
+                    tokens::system_blue().opacity(alpha)
+                }
             } else {
                 nsh_core::color::transparent_black()
             }
         })
         .active(|s| s.opacity(motion::PRESS_OPACITY))
         .transition_opacity()
-        .duration(motion::QUICK_MS)
+        .duration(motion::PRESS_FADE_IN_MS)
         .disabled(disabled())
         .role(AccessibilityRole::Button)
         .accessibility_label(move || {
             Some(
                 label
                     .get()
-                    .clone()
-                    .or_else(|| title_label.get().clone())
+                    .or_else(|| title_label.get())
                     .unwrap_or_default(),
             )
         })
@@ -113,8 +129,11 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
         })
         .when(has_icon, |v| {
             v.child(
-                icon(&icon_name.get_untracked().unwrap_or_default(), 20.0)
-                    .text_color(move || button_text(filled, destructive)),
+                icon(
+                    &icon_name.get_untracked().unwrap_or_default(),
+                    step.size.0 * 1.2,
+                )
+                .text_color(move || button_text(filled, destructive, disabled())),
             )
         })
         .child(when(
@@ -125,13 +144,17 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
                     .line_height(step.line_height)
                     .letter_spacing(step.tracking)
                     .font_weight(FontWeight(step.weight))
-                    .text_color(move || button_text(filled, destructive))
+                    .text_color(move || button_text(filled, destructive, disabled()))
             },
         ))
 }
 
-fn button_text(filled: bool, destructive: bool) -> Hsla {
-    if filled {
+fn button_text(filled: bool, destructive: bool, disabled: bool) -> Hsla {
+    if disabled {
+        // `CupertinoButton`'s disabled foreground: the tertiary label, whatever
+        // the variant.
+        tokens::tertiary_label()
+    } else if filled {
         tokens::on_tint()
     } else if destructive {
         tokens::system_red()

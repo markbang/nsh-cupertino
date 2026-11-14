@@ -20,13 +20,18 @@
 | `back` | `.back(..)` | `string` | 无 | 返回按钮的文案；不传就没有返回按钮 |
 | `trailing` | `.trailing(..)` | `string` | 无 | 右侧着色操作（"完成"、"编辑"） |
 | `background` | `.background(..)` | token 名 | `system-grouped-background` | 页面背景 |
+| `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | 材质让栏浮在内容之上，内容在其模糊下滚动 |
 | `children` | `.child(..)` | JSX | — | 页面内容 |
 
 事件：`onBack`、`onTrailing`。
 
 说明
 
-- 栏高 44 pt，左右内边距 16 pt；大标题额外占 52 pt。
+- 栏高 44 pt，左右内边距 16 pt；大标题额外占 52 pt。两者都是最小值：大字号会让它们变高，
+  而不是被裁切。
+- 返回按钮是 20 pt 的箭头，与文字之间 6 pt，命中宽度 50 pt，与 `CupertinoNavigationBarBackButton`
+  一致。
+- 设置 `material` 时内容从栏下滚过：紧凑标题提前 44 pt 接管，页面内容从栏下方开始。
 - 按下标题会把页面滚回顶部，与 iOS 一致。
 - 安全区：页面自己处理顶部 inset；内容结束在 home indicator 之上。
 
@@ -41,6 +46,7 @@
 | `back` | `.back(..)` | `string` | 无 | 返回按钮文案 |
 | `trailing` | `.trailing(..)` | JSX | 无 | 右侧任意内容 |
 | `collapsed` | `.collapsed(..)` | `number` 0–1 | `0` | 让紧凑标题与细线淡入 |
+| `material` | `.material(..)` | 材质名 | `opaque` | 半透明栏 + 模糊，用于内容在其下滚动 |
 
 事件：`onBack`。
 

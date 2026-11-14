@@ -9,6 +9,10 @@
 - **以 token 为唯一来源。** `src/tokens.rs` 生成 `theme/theme.json`，Rust 组件、TSX 类名
   （`bg-system-blue`、`text-secondary-label`）与 `token()` 读到的是同一组值。
 - **浅色、深色与高对比度。** 每个色角色都带 Apple 的四组取值，`<Theme>` 在运行时切换到高对比度。
+- **是移植，不是模仿。** 尺寸、颜色、动效与交互细节来自 Flutter 官方 `cupertino_ui` 1.1.6，
+  逐个组件对照；`NOTICE` 记录从哪里取用了什么。
+- **浮动层的材质。** `regular`、`thin`、`ultra-thin`、`thick`、`chrome` 五种玻璃填充与其模糊，
+  用于内容在其下滚动的栏。
 - **原生行为。** 组件建立在 `nsh/base` 的行为之上（按压、焦点、键盘、角色），自己只负责外观，
   所以 VoiceOver、TalkBack、Tab、空格/回车与 Android 返回手势都照常工作。
 - **每个页面都有截图。** 每次 PR 都会用 Web 构建给演示应用的每个页面拍浅色与深色截图。
@@ -174,3 +178,5 @@ CI（`.github/workflows/ci.yml`）：fmt、clippy `-D warnings`、测试、主�
 ## 许可
 
 MIT OR Apache-2.0，任选其一（见 `LICENSE-MIT`、`LICENSE-APACHE`）。
+`NOTICE` 记录了取自 Flutter `cupertino_ui`（BSD-3-Clause）、Lenso UI（MIT）与 Framework7
+（MIT）的内容，以及哪些只是把 Apple 的指南当作原则来读。

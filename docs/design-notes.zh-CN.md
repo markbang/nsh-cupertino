@@ -77,6 +77,42 @@ iOS 用的是绝对行高（不是倍数），NSH 的 `lineHeight` 也是点数�
 减少动态效果：加载指示器停止（静止帧），组件自己的过渡都很短，iOS 减少动态效果本身的行为
 （更少、更短的动画）不需要单独分支。
 
+## 移植：以 `cupertino_ui` 为准
+
+wave A 的组件清单、尺寸与交互细节是 Flutter 官方 `cupertino_ui` 1.1.6
+（`packages/cupertino_ui/lib/src/*.dart`）的移植，逐个组件对照阅读。`NOTICE` 列出每个文件与
+取用内容；简表：
+
+| 组件 | 来源 | 这里据此修正 |
+| --- | --- | --- |
+| 颜色、字号 | `colors.dart`、`text_theme.dart` | 38 个角色（含 `systemGrey2`…`6`）、12 pt 行副标题、`cupertino_ui` 自有的 `section-header-footer`、`clear-button`、禁用输入框填充与活动指示器色 |
+| 列表 | `list_section.dart`、`list_tile.dart` | 20 pt 页面边距（原为 16）、20 pt 粗体分组标题、13 pt 脚注色、44/48 pt 行、17/12 pt 标题与副标题、`systemGrey4` 按压填充、`systemGrey2` 且与文字同号的右箭头 |
+| 导航 | `nav_bar.dart` | 返回按钮 8/6 pt 间距、20 pt 箭头、50 pt 命中宽度、栏与大标题改用最小高度 |
+| 按钮 | `button.dart`、`constants.dart` | 44/32/28 pt 视觉高度 + 44 pt 目标、120/180 ms 淡入淡出、禁用文字用 tertiary label、图标为文字 1.2 倍 |
+| 输入框 | `text_field.dart`、`search_field.dart` | `CupertinoTextField` 的 5 pt 盒子、20 % 边框与 7 pt 内边距作为 `rounded` 变体；搜索框 5.5/8 pt 内边距、20 pt 图标与 secondary label placeholder |
+| 开关 | `switch.dart` | 双层滑块阴影、`secondarySystemFill` 关闭轨道、50 % 禁用透明度 |
+| 活动指示器 | `activity_indicator.dart` | 透明度表、叶片几何、每秒八步一圈、叶片颜色 |
+
+### 与 `cupertino_ui` 不同之处及原因
+
+- **行分隔线。** `CupertinoListSection` 的分隔线从 14 + 42 pt（有前置图标）或 14 + 14 pt 开始，
+  相对行自身的 20 pt 内缩，线会落在文字右侧 8 pt。iOS 是让线与文字对齐，HIG 也要求对齐体现层级，
+  所以这里从文字开始（20 pt，有图标时 20 + 28 + 16）。
+- **分组圆角。** `cupertino_ui` 使用超椭圆并在回退时用 `RoundedSuperellipseBorder`；NSH 的
+  `border-radius` 在所有平台上都是圆角，所以这里是 10 pt 圆角。
+- **开关拖动。** `CupertinoSwitch` 支持手指拖动滑块并拉伸 7 %；`nsh/base` 的开关是点按控件，
+  本版本不含拖动。
+- **搜索框的"取消"。** `CupertinoSearchTextField` 没有"取消"；`UISearchBar` 在编辑时显示，
+  这个组件跟随搜索栏。
+
+## 材质：来自 Lenso UI
+
+`tokens::materials` 采用 Lenso UI 的结构
+（`packages/tokens/themes/default/materials.css`）：每种外观一个半透明填充加一段模糊距离，
+朝媒体方向更薄、朝文字方向更厚，另有一个 `chrome` 栏。取值是本项目自己的（20–30 pt 模糊、
+70 %–94 % 填充），高对比度下每种填充更不透明。"玻璃只属于浮动层"这条规则来自 Apple
+（`materials.md`、`liquid-glass.md`），Lenso UI 的 `DESIGN.md` 也有同样表述。没有复制任何 CSS。
+
 ## 有意不复制的东西
 
 - **SF Symbols**：那是 Apple 的字体；这个 crate 自带 21 个 SVG 形状，用 `currentColor` 绘制。

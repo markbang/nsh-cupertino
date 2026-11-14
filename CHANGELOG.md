@@ -6,7 +6,34 @@ All notable changes to `nsh-cupertino`. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The components are now a port of Flutter's official `cupertino_ui` 1.1.6
+  (`NOTICE` lists every file and value): 20 pt list margins, a 20 pt bold group
+  header, a 12 pt row subtitle, `systemGrey4` press fill and a `systemGrey2`
+  chevron; the bar's and large title's heights are minimums so large text is not
+  clipped; buttons take `CupertinoButton`'s 44/32/28 pt heights with a 44 pt
+  target and its 120/180 ms fades; the text field gains `CupertinoTextField`'s
+  `rounded` box as its default variant (`grouped` keeps the form surface); the
+  search field takes its insets, 20 pt icons and secondary-label placeholder; the
+  switch takes the two-layer thumb shadow; the activity indicator takes the exact
+  blade geometry, alpha table and one-second, eight-step turn.
+- `ActivityIndicator`'s label is no longer "Loading": name the task, as the
+  guidelines ask.
+
 ### Added
+
+- `tokens::materials` (and `bg-material-*` classes): `ultra-thin`, `thin`,
+  `regular`, `thick` and `chrome` glass fills with 20–30 pt blur for the floating
+  layer, with more opaque high-contrast fills; `NavPage` and `NavigationBar` take
+  `material` and float the bar over the content.
+- `ListTile` takes a trailing control as children (`<ListTile title="Wi-Fi"><Switch/></ListTile>`),
+  the shape iOS's settings rows have.
+- `system-gray2` … `system-gray6`, `section-header-footer`, `clear-button`,
+  `text-field-disabled-background` and `activity-tick` tokens; a 12/16 subtitle
+  step in the type scale.
+- `NOTICE`: what was taken from `cupertino_ui` (BSD-3-Clause), Lenso UI (MIT) and
+  Framework7 (MIT), file by file.
 
 - Wave B, next: `ActionSheet`, `AlertDialog`, `ContextMenu`, `Sheet` with detents,
   `Picker`, `DatePicker`, `SegmentedControl`, `Slider`, `TabBar`, swipe actions

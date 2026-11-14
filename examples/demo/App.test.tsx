@@ -35,9 +35,9 @@ test("the clear button asks the app for no text", async () => {
 
 test("a switch reports the value it asks for", async () => {
   const app = await open("./App.tsx", { storage: { "cupertino.page": "switches" } });
-  expect(app.texts()).toContain("Off");
-  await app.press("role:switch[Bluetooth]");
-  expect(app.texts()).toContain("On");
+  expect(app.shows("text:Wi-Fi is on")).toBe(true);
+  await app.press("role:switch[Wi-Fi]");
+  expect(app.shows("text:Wi-Fi is off")).toBe(true);
 });
 
 test("the search field filters the rows the page owns", async () => {

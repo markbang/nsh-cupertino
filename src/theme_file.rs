@@ -6,7 +6,7 @@
 //! `cargo run --bin gen-theme` writes them, and a test checks the committed
 //! files.
 
-use crate::tokens::{ALIASES, ROLES, type_default};
+use crate::tokens::{ALIASES, ROLES, materials, type_default};
 
 /// `#rrggbbaa`, as a JSON string.
 fn hex(argb: u32) -> String {
@@ -100,14 +100,31 @@ pub fn theme_json() -> String {
         theme.push((name.to_owned(), format!("\"{value}\"")));
     }
 
+    for material in materials::ALL {
+        theme.push((
+            format!("material-{}-blur", material.name),
+            format!("\"{}px\"", material.blur),
+        ));
+    }
+
     let mut light: Vec<(String, String)> = ROLES
         .iter()
         .map(|role| (role.name.to_owned(), hex(role.light)))
         .collect();
+    light.extend(
+        materials::ALL
+            .iter()
+            .map(|material| (format!("material-{}", material.name), hex(material.light))),
+    );
     let mut dark: Vec<(String, String)> = ROLES
         .iter()
         .map(|role| (role.name.to_owned(), hex(role.dark)))
         .collect();
+    dark.extend(
+        materials::ALL
+            .iter()
+            .map(|material| (format!("material-{}", material.name), hex(material.dark))),
+    );
     for appearance in [&mut light, &mut dark] {
         for (alias, target) in ALIASES {
             appearance.push(((*alias).to_owned(), format!("\"var(--{target})\"")));

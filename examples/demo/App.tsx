@@ -35,11 +35,12 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
   { id: "navigation", title: "Navigation bar", blurb: "Large title, back, trailing action", icon: "arrow.up.right", tint: "system-blue" },
   { id: "lists", title: "Lists", blurb: "Sections, rows, accessories", icon: "list.bullet", tint: "system-orange" },
   { id: "buttons", title: "Buttons", blurb: "Filled, tinted, plain, destructive", icon: "sparkles", tint: "system-purple" },
-  { id: "textfields", title: "Text fields", blurb: "Rounded, clear, secure", icon: "square.grid.2x2", tint: "system-teal" },
+  { id: "textfields", title: "Text fields", blurb: "Cupertino box, clear, secure", icon: "square.grid.2x2", tint: "system-teal" },
   { id: "search", title: "Search field", blurb: "Magnifier, clear, cancel", icon: "magnifyingglass", tint: "system-indigo" },
   { id: "switches", title: "Switch", blurb: "51 × 31, green when on", icon: "slider.horizontal.3", tint: "system-green" },
   { id: "indicators", title: "Activity indicator", blurb: "Eight blades, turning natively", icon: "circle.lefthalf.filled", tint: "system-gray" },
   { id: "scroll", title: "Scroll view", blurb: "Bounce, indicators, horizontal", icon: "square.grid.2x2", tint: "system-pink" },
+  { id: "materials", title: "Materials", blurb: "Glass on the floating layer", icon: "moon", tint: "system-teal" },
   { id: "colors", title: "Color", blurb: "Semantic roles, light and dark", icon: "sun.max", tint: "system-yellow" },
   { id: "type", title: "Typography", blurb: "The eleven steps of the scale", icon: "info.circle", tint: "system-red" },
 ];
@@ -176,7 +177,7 @@ function ListsPage() {
   return (
     <Page id="lists">
       <List scroll={false}>
-        <Section header="Rows" footer="A row is 44 pt tall, 48 with a subtitle; the title is 17 pt, the subtitle 13 pt.">
+        <Section header="Rows" footer="A row is 44 pt tall, 48 with a subtitle; the title is 17 pt, the subtitle 12 pt, and the hairline starts where the text does.">
           <ListTile title="Plain row" accessory="chevron" separator />
           <ListTile title="Row with a subtitle" subtitle="Secondary label, 13 pt" accessory="chevron" separator />
           <ListTile title="Destructive" destructive accessory="none" separator />
@@ -188,7 +189,7 @@ function ListsPage() {
           <ListTile title="Notifications" leading="bell" leadingColor="system-red" accessory="chevron" separator />
           <ListTile title="Messages" leading="envelope" leadingColor="system-green" accessory="chevron" separator={false} />
         </Section>
-        <Section header="Selection" footer="A checkmark, and the row's state for screen readers.">
+        <Section header="Selection" footer="A checkmark on the chosen row, and its state for screen readers.">
           <Each of={["a", "b", "c"]} key={(id) => id}>
             {(id) => (
               <ListTile
@@ -246,29 +247,38 @@ function TextFieldsPage() {
   return (
     <Page id="textfields" trailing="Done" onTrailing={() => Keyboard.dismiss()}>
       <List scroll={false}>
-        <Section header="Grouped" footer="A secondary grouped background, 10 pt corners, 44 pt tall.">
+        <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 12 }}>
+          <Text class="text-label" style={{ fontSize: 20, fontWeight: 700 }}>
+            Rounded
+          </Text>
+          <TextField
+            value={empty()}
+            placeholder="With a leading icon"
+            label="With a leading icon"
+            leading="person"
+            onChange={(event: { value: string }) => empty.set(event.value)}
+          />
+          <TextField
+            value={password()}
+            placeholder="Password"
+            label="Password"
+            secure
+            onChange={(event: { value: string }) => password.set(event.value)}
+          />
+          <TextField value="Not editable" label="Disabled" placeholder="Disabled" disabled />
+          <Text class="text-secondary-label" style={{ fontSize: 13 }}>
+            CupertinoTextField: white on light, black on dark, 5 pt corners, a 20 % border, 7 pt of padding.
+          </Text>
+        </View>
+        <Section header="Grouped" footer="A form row's surface: the grouped background, 10 pt corners, no border.">
           <View style={{ padding: 16, gap: 12 }}>
             <TextField
               value={name()}
               placeholder="Name"
               label="Name"
+              variant="grouped"
               onChange={(event: { value: string }) => name.set(event.value)}
             />
-            <TextField
-              value={empty()}
-              placeholder="With a leading icon"
-              label="With a leading icon"
-              leading="person"
-              onChange={(event: { value: string }) => empty.set(event.value)}
-            />
-            <TextField
-              value={password()}
-              placeholder="Password"
-              label="Password"
-              secure
-              onChange={(event: { value: string }) => password.set(event.value)}
-            />
-            <TextField value="Not editable" label="Disabled" placeholder="Disabled" disabled />
           </View>
         </Section>
         <Section header="What is typed" footer="The value belongs to the app: the field reports it and shows yours.">
@@ -295,7 +305,7 @@ function SearchPage() {
           onCancel={() => query.set("")}
         />
       </View>
-      <List scroll={false} inset>
+      <List scroll={false}>
         <Section
           header="Results"
           footer={query() === "" ? "Type to filter: the field owns nothing, the page does." : `${fruits.filter((fruit) => fruit.toLowerCase().includes(query().toLowerCase())).length} of ${fruits.length}`}
@@ -321,23 +331,29 @@ function SwitchesPage() {
   return (
     <Page id="switches">
       <List scroll={false}>
-        <Section header="Settings" footer="A 51 × 31 pt track, a 27 pt thumb, 200 ms of travel.">
-          <ListTile title="Wi-Fi" subtitle={wifi() ? "On" : "Off"} accessory="none" separator />
-          <ListTile title="Bluetooth" subtitle={bluetooth() ? "On" : "Off"} accessory="none" separator />
-          <ListTile title="Disabled" subtitle="Off" accessory="none" disabled separator={false} />
-        </Section>
-        <Section header="The switches themselves">
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, gap: 12 }}>
-            <Text style={{ fontSize: 17 }}>Wi-Fi</Text>
+        <Section
+          header="Settings"
+          footer="A switch belongs in a list row, where the row's text says what it controls: a 51 × 31 pt track, a 27 pt thumb, 200 ms of travel."
+        >
+          <ListTile title="Wi-Fi" accessory="none" separator>
             <Switch checked={wifi()} label="Wi-Fi" onChange={(event: { value: boolean }) => wifi.set(event.value)} />
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, gap: 12 }}>
-            <Text style={{ fontSize: 17 }}>Bluetooth</Text>
+          </ListTile>
+          <ListTile title="Bluetooth" accessory="none" separator>
             <Switch checked={bluetooth()} label="Bluetooth" onChange={(event: { value: boolean }) => bluetooth.set(event.value)} />
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, gap: 12 }}>
-            <Text style={{ fontSize: 17 }}>Disabled</Text>
-            <Switch checked={false} disabled label="Disabled" />
+          </ListTile>
+          <ListTile title="AirDrop" subtitle="Contacts Only" accessory="none" separator={false}>
+            <Switch checked={false} disabled label="AirDrop" />
+          </ListTile>
+        </Section>
+        <Section header="Elsewhere" footer="Outside a list, iOS uses a button that behaves like a toggle rather than a switch.">
+          <ListTile title="Keep loading" subtitle={wifi() ? "On" : "Off"} accessory="none">
+            <Switch checked={wifi()} label="Keep loading" onChange={(event: { value: boolean }) => wifi.set(event.value)} />
+          </ListTile>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14 }}>
+            <ActivityIndicator size={20} label="Checking for mail" />
+            <Text class="text-secondary-label" style={{ fontSize: 13 }}>
+              {`Wi-Fi is ${wifi() ? "on" : "off"}`}
+            </Text>
           </View>
         </Section>
       </List>
@@ -350,22 +366,22 @@ function IndicatorsPage() {
   return (
     <Page id="indicators">
       <List scroll={false}>
-        <Section header="Sizes" footer="Drawn natively: eight blades fading in turn, one turn per 800 ms.">
+        <Section header="Sizes" footer="Drawn natively: eight blades at fixed opacities, the set turning 45° eight times a second, one turn per second.">
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-around", padding: 24 }}>
-            <ActivityIndicator size={16} />
-            <ActivityIndicator size={20} />
-            <ActivityIndicator size={28} />
-            <ActivityIndicator size={40} color="system-blue" />
+            <ActivityIndicator size={16} label="Checking mail" />
+            <ActivityIndicator size={20} label="Checking mail" />
+            <ActivityIndicator size={28} label="Checking mail" />
+            <ActivityIndicator size={40} color="system-blue" label="Checking mail" />
           </View>
         </Section>
-        <Section header="Animating" footer="Reduced motion shows a still frame.">
+        <Section header="Animating" footer="Reduce Motion shows a still frame instead of turning.">
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 16 }}>
-            <ActivityIndicator size={20} animating={running()} />
+            <ActivityIndicator size={20} animating={running()} label="Fetching mail" />
             <Text style={{ fontSize: 17, flex: 1 }}>{running() ? "Loading mail…" : "Paused"}</Text>
             <Switch checked={running()} label="Keep loading" onChange={(event: { value: boolean }) => running.set(event.value)} />
           </View>
         </Section>
-        <Section footer="Inside a row, the indicator is tertiary label: the quiet color.">
+        <Section footer="Inside a row the indicator stays quiet: the activity tick color, its blades at 18–58 % opacity.">
           <ListTile title="Checking for mail" subtitle="Activity indicator at 20 pt" accessory="none" separator={false} />
         </Section>
       </List>
@@ -409,6 +425,62 @@ function ScrollPage() {
         </Section>
       </List>
     </Page>
+  );
+}
+
+const MATERIALS = [
+  { name: "ultra-thin", title: "Ultra thin", blurb: "Media behind it" },
+  { name: "thin", title: "Thin", blurb: "More of the content shows" },
+  { name: "regular", title: "Regular", blurb: "Bars over scrolling content" },
+  { name: "thick", title: "Thick", blurb: "Text-heavy surfaces" },
+  { name: "chrome", title: "Chrome", blurb: "The browser-like bar" },
+];
+
+function MaterialsPage() {
+  return (
+    <NavPage
+      title="Materials"
+      largeTitle="Materials"
+      back={history().length > 0 ? "Cupertino" : undefined}
+      onBack={back}
+      material="regular"
+    >
+      <List scroll={false}>
+        <Section header="Materials over content" footer="Each card is a translucent fill from tokens::materials over a 20–30 pt backdrop blur; the high-contrast set makes the fill more opaque.">
+          <View
+            style={{
+              height: 420,
+              paddingHorizontal: 16,
+              paddingVertical: 16,
+              gap: 10,
+              backgroundColor: "#2563eb",
+              backgroundImage: "linear-gradient(150deg, #2563eb 0%, #7c3aed 45%, #db2777 75%, #f59e0b 100%)",
+            }}
+          >
+            <Each of={MATERIALS} key={(material) => material.name}>
+              {(material) => (
+                <View
+                  class={`bg-material-${material().name} backdrop-blur-xl`}
+                  style={{ flex: 1, borderRadius: 12, justifyContent: "center", paddingHorizontal: 14 }}
+                >
+                  <Text class="text-label" style={{ fontSize: 17, fontWeight: 600 }}>
+                    {material().title}
+                  </Text>
+                  <Text class="text-secondary-label" style={{ fontSize: 12 }}>
+                    {`bg-material-${material().name} · backdrop-blur-xl`}
+                  </Text>
+                </View>
+              )}
+            </Each>
+          </View>
+        </Section>
+        <Section header="Notes" footer="A material is one fill in light, dark and their high-contrast variants, plus a blur radius.">
+          <ListTile title="regular" subtitle="Bars over scrolling content · 25 pt" accessory="none" separator />
+          <ListTile title="thin" subtitle="More of the content shows · 25 pt" accessory="none" separator />
+          <ListTile title="ultra-thin" subtitle="For media behind the glass · 20 pt" accessory="none" separator={false} />
+        </Section>
+      </List>
+    </NavPage>
   );
 }
 
@@ -535,6 +607,7 @@ function CurrentPage() {
   if (id === "switches") return <SwitchesPage />;
   if (id === "indicators") return <IndicatorsPage />;
   if (id === "scroll") return <ScrollPage />;
+  if (id === "materials") return <MaterialsPage />;
   if (id === "colors") return <ColorsPage />;
   return <TypePage />;
 }

@@ -3,7 +3,7 @@
 # two increased-contrast ones. Run from the repository root.
 set -euo pipefail
 dir="${1:-docs/screenshots}"
-pages=(gallery navigation lists buttons textfields search switches indicators scroll colors type)
+pages=(gallery navigation lists buttons textfields search switches indicators scroll materials colors type)
 missing=0
 for page in "${pages[@]}"; do
   for scheme in light dark; do

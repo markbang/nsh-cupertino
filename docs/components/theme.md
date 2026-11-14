@@ -23,12 +23,27 @@ high-contrast values when the app asks for them. `tokens` is the data behind it.
 | Labels | `label`, `secondary-label`, `tertiary-label`, `quaternary-label`, `placeholder-text` |
 | Separators | `separator`, `opaque-separator` |
 | Fills | `fill`, `secondary-fill`, `tertiary-fill`, `quaternary-fill` |
+| Greys | `system-gray`, `system-gray2` … `system-gray6` |
+| `cupertino_ui`'s own | `section-header-footer`, `clear-button`, `text-field-disabled-background`, `activity-tick` |
 | System colors | `system-blue`, `system-green`, `system-red`, `system-orange`, `system-yellow`, `system-purple`, `system-pink`, `system-teal`, `system-indigo`, `system-gray`, `link` |
 | shadcn aliases | `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `selection` |
 
 In TSX, the token is a class: `bg-system-blue`, `text-secondary-label`,
 `border-separator`. In Rust, a function: `tokens::system_blue()`,
 `tokens::secondary_label()`; both are reactive.
+
+## Materials
+
+`tokens::materials` holds the functional layer's glass: `ultra-thin`, `thin`,
+`regular`, `thick` and `chrome`, each a fill per appearance (and a more opaque
+high-contrast fill) plus a blur radius of 20–30 pt. TSX names them as classes
+(`bg-material-regular`, `backdrop-blur-xl`); Rust as `tokens::materials::fill`
+and `tokens::materials::blur`, which `NavigationBar` and `NavPage` apply for
+their `material`.
+
+Glass belongs to the floating layer — bars, sheets, controls over content —
+never to content itself, and the ring around it stays quiet: see the
+`materials.md` and `liquid-glass.md` notes in `docs/design-notes.md`.
 
 ## How contrast works
 
