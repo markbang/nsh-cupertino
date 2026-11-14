@@ -1,0 +1,48 @@
+# 按钮
+
+iOS 的四种按钮外观，以及 iOS 的按压状态：整颗按钮在 150 ms 内淡到 40 %。
+
+| | |
+| --- | --- |
+| 浅色 | ![按钮，浅色](https://raw.githubusercontent.com/markbang/nsh-cupertino/screenshots/main/buttons-light.png) |
+| 深色 | ![按钮，深色](https://raw.githubusercontent.com/markbang/nsh-cupertino/screenshots/main/buttons-dark.png) |
+
+| TSX | Rust | 类型 | 默认值 | |
+| --- | --- | --- | --- | --- |
+| `title` | `.title(..)` | `string` | 无 | 文案；纯图标按钮可不传 |
+| `variant` | `.variant(..)` | `"filled"` \| `"tinted"` \| `"plain"` \| `"destructive"` | `filled` | 外观 |
+| `size` | `.size(..)` | `"large"` \| `"medium"` \| `"small"` | `large` | 内边距与字号 |
+| `icon` | `.icon(..)` | 图标名 | 无 | 标题前的图标 |
+| `disabled` | `.disabled(..)` | `boolean` | `false` | 变灰，不报告按压 |
+| `label` | `.label(..)` | `string` | 无 | 读屏名称，用于纯图标按钮 |
+
+事件：`onPress`。
+
+外观
+
+- **filled**：`systemBlue` 背景、白色文字、12 pt 圆角、44 pt 高。
+- **tinted**：浅色下 18 %、深色下 26 % 的着色，蓝色文字。
+- **plain**：只有蓝色文字。
+- **destructive**：红色文字（iOS 的危险操作样式），形状同 plain。
+
+尺寸
+
+| 尺寸 | 文字 | 内边距 | 圆角 | 目标 |
+| --- | --- | --- | --- | --- |
+| large | 17 半粗 | 20 × 16 | 12 pt | 44 pt |
+| medium | 15 半粗 | 15 × 10 | 胶囊（40 pt） | 44 pt |
+| small | 15 半粗 | 12 × 6 | 胶囊（40 pt） | 44 pt |
+
+说明
+
+- 每档尺寸的按压目标都是 44 pt，符合 Human Interface Guidelines。
+- 禁用按钮不报告按压，读屏会读出"变灰"；外观保持形状，着色为 40 %。
+
+## 无障碍
+
+- 角色为按钮，名称为 `label`，否则为标题。
+- 键盘焦点显示焦点环（`focus-visible`）；空格与回车可以按下。
+
+## 动效
+
+`active:` 在 150 ms 内淡到 40 % 再回来；不缩放，与 iOS 一致。
