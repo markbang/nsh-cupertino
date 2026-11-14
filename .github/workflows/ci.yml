@@ -49,10 +49,13 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       # `theme/` is generated: a token changed without regenerating it fails here.
-      - run: cargo run --bin gen-theme -- --check
+      - if: hashFiles('src/bin/gen_theme.rs') != ''
+        run: cargo run --bin gen-theme -- --check
 
   demo:
     name: demo (check, headless tests)
+    # The scaffold commit has no demo yet: the workflow stays valid there.
+    if: hashFiles('examples/demo/nsh.json') != ''
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -83,6 +86,7 @@ jobs:
 
   web:
     name: demo (web build, screenshots)
+    if: hashFiles('examples/demo/nsh.json') != ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
