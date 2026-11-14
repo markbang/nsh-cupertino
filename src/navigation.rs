@@ -199,10 +199,7 @@ fn bar(
                 .accessibility_label(pressing_label)
                 .role(AccessibilityRole::Button)
                 .on_press(on_back)
-                .child(
-                    icon_stroke("chevron.left", 18.0, 3.0)
-                        .text_color(tokens::system_blue),
-                )
+                .child(icon_stroke("chevron.left", 18.0, 3.0).text_color(tokens::system_blue))
                 .child(
                     text(label)
                         .text_size(type_default::BODY.size)

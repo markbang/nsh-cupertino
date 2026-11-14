@@ -43,18 +43,21 @@ pub fn List(props: ListProps) -> impl IntoElement {
     if !scrolls {
         return sections.pb(px(8.0)).into_element();
     }
-    scroll().flex_1().bounces(true).child(
-        view()
-            .w_full()
-            .pt(px(metrics::SECTION_TOP))
-            .pb_safe_area_plus(px(24.0))
-            .bg(move || match background.get().as_deref() {
-                Some(name) => tokens::system(name),
-                None => tokens::system_grouped_background(),
-            })
-            .child(sections),
-    )
-    .into_element()
+    scroll()
+        .flex_1()
+        .bounces(true)
+        .child(
+            view()
+                .w_full()
+                .pt(px(metrics::SECTION_TOP))
+                .pb_safe_area_plus(px(24.0))
+                .bg(move || match background.get().as_deref() {
+                    Some(name) => tokens::system(name),
+                    None => tokens::system_grouped_background(),
+                })
+                .child(sections),
+        )
+        .into_element()
 }
 
 /// The props of [`Section`].
@@ -299,9 +302,7 @@ fn accessory_view(
             move || icon_stroke("checkmark", 18.0, 3.0).text_color(tokens::system_blue),
         ))
         .child(when(
-            move || {
-                !matches!(chevron.get().as_deref(), Some("checkmark") | Some("none"))
-            },
+            move || !matches!(chevron.get().as_deref(), Some("checkmark") | Some("none")),
             move || icon_stroke("chevron.right", 13.0, 3.0).text_color(tokens::tertiary_label),
         ))
 }

@@ -27,7 +27,11 @@ fn every_role_has_its_own_dark_and_increased_contrast_values() {
     for role in nsh_cupertino::tokens::ROLES {
         // A gray that is the same in both appearances, as Apple's systemGray.
         if role.name != "system-gray" {
-            assert_ne!(role.light, role.dark, "{}: one value for both appearances", role.name);
+            assert_ne!(
+                role.light, role.dark,
+                "{}: one value for both appearances",
+                role.name
+            );
         }
         if role.dark_hc != role.dark || role.light_hc != role.light {
             adjusted += 1;
@@ -43,7 +47,16 @@ fn every_role_has_its_own_dark_and_increased_contrast_values() {
 fn the_type_scale_is_eleven_steps_with_room_for_a_second_line() {
     use nsh_cupertino::tokens::type_default::*;
     let steps = [
-        LARGE_TITLE, TITLE1, TITLE2, TITLE3, HEADLINE, BODY, CALLOUT, SUBHEADLINE, FOOTNOTE, CAPTION1,
+        LARGE_TITLE,
+        TITLE1,
+        TITLE2,
+        TITLE3,
+        HEADLINE,
+        BODY,
+        CALLOUT,
+        SUBHEADLINE,
+        FOOTNOTE,
+        CAPTION1,
         CAPTION2,
     ];
     assert_eq!(steps.len(), 11);

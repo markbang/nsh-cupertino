@@ -133,12 +133,8 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
                     Some("send") => ReturnKeyType::Send,
                     _ => ReturnKeyType::Default,
                 })
-                .on_focus({
-                    move || focused.set(true)
-                })
-                .on_blur({
-                    move || focused.set(false)
-                })
+                .on_focus({ move || focused.set(true) })
+                .on_blur({ move || focused.set(false) })
                 .on_change(move |text: &str| cx.emit(TextFieldEvent::Change(text.to_owned())))
                 .on_submit(move |text: &str| cx.emit(TextFieldEvent::Submit(text.to_owned())))
                 .when_some(label.get_untracked(), |v, label| v.optional_label(label)),
@@ -150,19 +146,11 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
                 .gap(px(8.0))
                 .child(when(
                     move || secure && revealed.get(),
-                    move || {
-                        icon_button("eye.slash", "Hide text", {
-                            move || revealed.set(false)
-                        })
-                    },
+                    move || icon_button("eye.slash", "Hide text", { move || revealed.set(false) }),
                 ))
                 .child(when(
                     move || secure && !revealed.get(),
-                    move || {
-                        icon_button("eye", "Show text", {
-                            move || revealed.set(true)
-                        })
-                    },
+                    move || icon_button("eye", "Show text", { move || revealed.set(true) }),
                 ))
                 .child(when(
                     move || {
@@ -265,10 +253,7 @@ pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl
                     }
                 })
             })
-            .child(
-                icon_stroke("magnifyingglass", 16.0, 2.6)
-                    .text_color(tokens::secondary_label),
-            )
+            .child(icon_stroke("magnifyingglass", 16.0, 2.6).text_color(tokens::secondary_label))
             .child(
                 input()
                     .element_ref(&focus_ref)

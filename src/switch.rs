@@ -84,4 +84,5 @@ pub fn Switch(props: SwitchProps, cx: Scope<SwitchEvent>) -> impl IntoElement {
             if !blocked.get_untracked().unwrap_or(false) {
                 cx.emit(SwitchEvent::Change(*checked));
             }
-        })}
+        })
+}
