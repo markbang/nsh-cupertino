@@ -1,0 +1,29 @@
+{
+  "tailwind": {
+    "radius": {
+      "row": 10,
+      "sheet": 14,
+      "button": 12,
+      "search": 9
+    },
+    "fontSize": {
+      "largeTitle": [34, 1.206],
+      "title1": [28, 1.214],
+      "title2": [22, 1.273],
+      "title3": [20, 1.250],
+      "headline": [17, 1.294],
+      "body": [17, 1.294],
+      "callout": [16, 1.312],
+      "subheadline": [15, 1.333],
+      "footnote": [13, 1.385],
+      "caption1": [12, 1.333],
+      "caption2": [11, 1.182]
+    },
+    "fontWeight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    }
+  }
+}
