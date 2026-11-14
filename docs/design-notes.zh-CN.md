@@ -113,6 +113,14 @@ wave A 的组件清单、尺寸与交互细节是 Flutter 官方 `cupertino_ui` 
 70 %–94 % 填充），高对比度下每种填充更不透明。"玻璃只属于浮动层"这条规则来自 Apple
 （`materials.md`、`liquid-glass.md`），Lenso UI 的 `DESIGN.md` 也有同样表述。没有复制任何 CSS。
 
+## 对比度：三个低于 WCAG AA 的角色
+
+浅色外观使用 Apple 自己的取值，其中三个在白色背景上的正文对比度低于 4.5:1：`system-blue`
+4.02:1、`secondary-label` 3.44:1、`system-red` 3.55:1。深色外观是 5.8–6.4:1，高对比度取值达到
+7.6 / 4.25 / 5.4:1。这个决定连同测量方法与应用可以做的覆盖，记录在
+[issue #3](https://github.com/markbang/nsh-cupertino/issues/3)：以 4.5:1 为门槛的应用应把用户的
+"提高对比度"设置传给 `<Theme contrast="high">`，或在自己的主题里覆盖这三个角色。
+
 ## 有意不复制的东西
 
 - **SF Symbols**：那是 Apple 的字体；这个 crate 自带 21 个 SVG 形状，用 `currentColor` 绘制。

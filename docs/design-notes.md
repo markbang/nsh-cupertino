@@ -133,6 +133,16 @@ each fill more opaque. The rule that glass belongs only to the floating layer is
 Apple's (`materials.md`, `liquid-glass.md`); Lenso UI's `DESIGN.md` states it the
 same way. No CSS was copied.
 
+## Contrast: the three roles below WCAG AA
+
+The light appearance ships Apple's own values, and three of them are under 4.5:1
+for regular text on white: `system-blue` 4.02:1, `secondary-label` 3.44:1,
+`system-red` 3.55:1. The dark appearance is 5.8–6.4:1, and the increased-contrast
+set reaches 7.6 / 4.25 / 5.4:1. This is recorded, with the measurements and the
+override an app can make, in [issue #3](https://github.com/markbang/nsh-cupertino/issues/3):
+an app that gates contrast at 4.5:1 passes the user's Increase Contrast setting to
+`<Theme contrast="high">`, or overrides those three roles in its own theme.
+
 ## What is deliberately not copied
 
 - **SF Symbols.** They are Apple's font; the crate ships 21 SVG shapes instead and
