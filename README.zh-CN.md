@@ -2,6 +2,9 @@
 
 [English](README.md)
 
+**[文档站点：markbang.github.io/nsh-cupertino](https://markbang.github.io/nsh-cupertino/)**——
+每个组件都有可交互演示、绘制它的 TSX 与属性表。
+
 面向 [Native Shell](https://nsh.dev) 应用的 Cupertino（iOS）设计系统：把 Apple 的语义色、
 字号表与度量做成 token，并提供 iOS 设置页、详情页常用的组件——导航栏、分组内嵌列表、按钮、
 输入框与搜索框、开关、活动指示器。
@@ -173,6 +176,30 @@ pub fn Settings() -> impl IntoElement {
 - Android 返回手势仍归平台：组件不注册返回处理，页面不会吞掉它。自己维护历史的应用只需在一处
   接入（根视图的 `onBackPress`，或 `NavStack` 页面的 `on_dismiss`）。
 
+## 文档站点
+
+<https://markbang.github.io/nsh-cupertino/> 是这个库给自己写的文档：`site/` 本身就是一个
+Native Shell 应用，每个页面都用它所记录的组件绘制，所以页面展示的就是运行中的组件库。
+
+- 首页网格列出全部 24 个组件；每个组件都有可点击、拖动、滑动的演示，绘制它的 TSX（带复制按钮），
+  以及由 `tools/site-api.mjs` 从 `docs/components/*.md` 生成的属性表——文档是来源，站点不会与之偏离。
+- 顶栏是全局设置：浅色 / 深色 / 跟随系统、高对比度、文字大小、手机边框以及英文 / 中文。
+- 每个页面都是 hash 路由（`#/sheet`），可以把它单独分享，浏览器的前进与后退也能在页面间切换。
+- 它是 GitHub Pages 上的静态站点，由 `.github/workflows/pages.yml` 从 `main` 部署。
+
+测量方法：打包后的站点（GitHub Pages 以相同的 gzip 字节发送）在无头 Chrome 155 中经 DevTools
+协议测量，每次加载前禁用并清空缓存、只开一个标签页，视口 1440 × 900 与 390 × 844，取五次冷加载的
+中位数。`node tools/site-check.mjs --url <站点地址>` 可复现同样的测量并打印这些数字。
+
+| 首页，冷缓存 | |
+| --- | --- |
+| 首次绘制 | 24 ms |
+| 首次内容绘制 | 0.81 s |
+| 首次加载传输 | 2.59 MB / 18 个请求 |
+
+首次加载主要是 Web 运行时：`nsh.<digest>.wasm` 未压缩 6.6 MB，gzip 后 2.43 MB，首页约 0.8 秒绘出。
+其余页面是同一个运行时内的路由，不再额外下载。
+
 ## 开发
 
 ```sh
@@ -183,10 +210,18 @@ nsh check                        # cargo check + 依据生成的类型检查 TS
 nsh test                         # 无头行为测试
 nsh run                          # 在本机运行演示应用
 cd ../.. && tools/shots.sh       # 用 Web 构建生成 docs/screenshots/*.png
+
+cd site                          # 文档站点
+nsh run --target web             # 在 http://127.0.0.1:4173/nsh-cupertino/ 上运行
+nsh test                         # 站点自身的行为：路由、控件、演示
+node ../tools/site-api.mjs       # 从 docs/components/ 重新生成 site/src/api.ts
+cd .. && node tools/site-check.mjs --url http://127.0.0.1:4173/nsh-cupertino/
 ```
 
 CI（`.github/workflows/ci.yml`）：fmt、clippy `-D warnings`、测试、主题漂移检查、
-演示应用的 `nsh check` 与 `nsh test`、Web 打包，以及把截图发布到 `screenshots` 分支的截图任务。
+演示应用的 `nsh check` 与 `nsh test`、Web 打包、把截图发布到 `screenshots` 分支的截图任务，
+以及站点自身的检查、测试、Web 打包与无头运行。`pages.yml` 在每次推送到 `main`
+和每个 tag 上把站点部署到 GitHub Pages。
 
 ## 许可
 
