@@ -118,6 +118,8 @@ pub fn Theme(props: ThemeProps) -> impl IntoElement {
     // The platform's own faces, inherited by every text inside: the app's too.
     view()
         .flex_1()
-        .when_some(tokens::font_family(), |view, family| view.font_family(family))
+        .when_some(tokens::font_family(), |view, family| {
+            view.font_family(family)
+        })
         .child(props.children)
 }

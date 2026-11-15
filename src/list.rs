@@ -275,7 +275,9 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                         text(move || subtitle.get().unwrap_or_default())
                                             .text_size(type_default::SUBTITLE.size)
                                             .line_height(type_default::SUBTITLE.line_height)
-                                            .letter_spacing(tokens::tracking(type_default::SUBTITLE))
+                                            .letter_spacing(tokens::tracking(
+                                                type_default::SUBTITLE,
+                                            ))
                                             .text_color(tokens::secondary_label)
                                             .truncate()
                                     },

@@ -386,9 +386,9 @@ pub fn font_family() -> Option<&'static str> {
         nsh_core::platform::Os::Android => {
             Some("Roboto, 'Noto Sans CJK SC', 'Noto Sans SC', 'Noto Sans', sans-serif")
         }
-        nsh_core::platform::Os::Windows => {
-            Some("'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif")
-        }
+        nsh_core::platform::Os::Windows => Some(
+            "'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif",
+        ),
         nsh_core::platform::Os::Linux => {
             Some("Inter, Cantarell, 'DejaVu Sans', 'Noto Sans CJK SC', 'Noto Sans', sans-serif")
         }
