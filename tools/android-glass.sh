@@ -40,6 +40,14 @@ if [ "$(adb shell id -u | tr -d '\r')" != "0" ]; then
   exit 1
 fi
 
+# A software GPU on a runner is slow: the launcher's own storm can raise an ANR
+# dialog ("Pixel Launcher isn't responding") over the app. Never show one, and
+# let the system settle before driving anything.
+adb shell settings put global hide_error_dialogs 1
+adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+adb shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+sleep 5
+
 step "installing $(basename "$APK")"
 adb install -r -g "$APK" >/dev/null
 
@@ -59,11 +67,24 @@ seed() {
   adb shell "restorecon -R /data/data/$PKG/files" >/dev/null 2>&1 || true
 }
 
+# The app in front, whatever the system put there first.
 launch() {
-  adb shell am force-stop "$PKG"
-  adb logcat -c
-  adb shell am start -W -n "$PKG/com.longbridge.nsh.AppActivity" >/dev/null
-  sleep 2
+  local attempt
+  for attempt in 1 2 3; do
+    adb shell am force-stop "$PKG"
+    adb logcat -c
+    adb shell am start -W -n "$PKG/com.longbridge.nsh.AppActivity" >/dev/null
+    sleep 2
+    if adb shell dumpsys window 2>/dev/null | grep -q "mCurrentFocus.*$PKG"; then
+      return 0
+    fi
+    step "the app is not in front; dismissing what is"
+    adb shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+    sleep 1
+  done
+  echo "the app never came to the front:" >&2
+  adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus|mFocusedApp" >&2
+  exit 1
 }
 
 # A page that did not mount says what is on screen instead: a seeded page the

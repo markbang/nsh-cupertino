@@ -90,6 +90,10 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          # SwiftShader renders in software: more cores keep the system's own
+          # processes from starving while the GPU work runs.
+          cores: 4
+          ram-size: 4096M
           disable-animations: false
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -no-audio
