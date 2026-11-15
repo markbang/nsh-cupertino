@@ -279,7 +279,8 @@ fn sheet_panel(
             .flex_col()
             .overflow_hidden()
             .rounded_t(radius::SHEET)
-            .bg(tokens::secondary_system_background)
+            .bg(move || tokens::materials::fill("thick", nsh_core::element::dark(), false))
+            .backdrop_blur(tokens::materials::blur("thick"))
             .shadow([BoxShadow {
                 offset_y: px(-2.0),
                 blur: px(24.0),

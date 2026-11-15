@@ -188,8 +188,12 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
             s.p(px(6.0))
                 .min_w(px(250.0))
                 .rounded(px(radius::SHEET.0))
-                .bg(tokens::secondary_system_background().opacity(0.97))
-                .backdrop_blur(px(24.0))
+                .bg(tokens::materials::fill(
+                    "thick",
+                    nsh_core::element::dark(),
+                    false,
+                ))
+                .backdrop_blur(tokens::materials::blur("thick"))
                 .shadow([nsh_core::BoxShadow {
                     offset_y: px(10.0),
                     blur: px(40.0),
@@ -218,7 +222,11 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
                 slot.flex_none()
                     .rounded(px(16.0))
                     .overflow_hidden()
-                    .bg(tokens::secondary_system_background)
+                    .bg(tokens::materials::fill(
+                        "thick",
+                        nsh_core::element::dark(),
+                        false,
+                    ))
                     .shadow([nsh_core::BoxShadow {
                         offset_y: px(18.0),
                         blur: px(48.0),
@@ -229,6 +237,7 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
             overlay()
                 .absolute()
                 .inset_0()
+                .z_index(1000)
                 .focusable(false)
                 .pointer_events(PointerEvents::None)
                 .child(

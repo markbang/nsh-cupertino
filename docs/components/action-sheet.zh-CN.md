@@ -25,7 +25,8 @@
 说明
 
 - 每行至少 57 pt，标题 20 pt；破坏性操作为红色，无障碍名称会带上 "destructive"。
-- 组是半透明表面加背景模糊；没有背景模糊的平台（Linux）依靠色调仍可读。
+- 组使用 `regular` 材质（`tokens::materials`）：填充叠加 25 pt 模糊；没有模糊的平台（Linux）只靠填充仍可读。
+- 次要文字沿用 Apple 的对比度（[issue #3](https://github.com/markbang/nsh-cupertino/issues/3)），材质不会改变它。
 - 点击遮罩、Escape、返回和取消按钮都会上报 `onCancel`。
 
 ## 无障碍

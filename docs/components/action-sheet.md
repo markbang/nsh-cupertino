@@ -27,8 +27,10 @@ Notes
 
 - Rows are at least 57 pt, 20 pt titles; a destructive action is red and its
   name says "destructive" to screen readers.
-- The groups are translucent surfaces with a backdrop blur; without one (Linux)
-  the tint alone keeps them readable.
+- The groups are the `regular` material (`tokens::materials`): its fill over a
+  25 pt blur; without a blur (Linux) the fill alone keeps them readable.
+- Secondary label text keeps Apple's contrast ([issue #3](https://github.com/markbang/nsh-cupertino/issues/3)); the material does not
+  change it.
 - A press on the backdrop, Escape, back and the cancel button report `onCancel`.
 
 ## Accessibility

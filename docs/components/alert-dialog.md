@@ -27,6 +27,8 @@ Events: `onOpenChange(open)`, `onAction(id, text)`, `onCancel()`.
 
 Notes
 
+- The card is the `thick` material: its fill over a 30 pt blur. Secondary text
+  keeps Apple's contrast ([issue #3](https://github.com/markbang/nsh-cupertino/issues/3)).
 - The text-entry variant is the standard iOS alert with one field; the field's
   text travels with the action, so the app needs no draft of its own.
 - Hairlines between buttons are one device pixel (`separator_thickness`).
