@@ -289,7 +289,8 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
             move || separator.get().unwrap_or(true),
             move || {
                 view()
-                    .h(tokens::hairline())
+                    .test_id("separator")
+                    .h(tokens::separator_thickness)
                     .ml(px(leading_inset))
                     .bg(tokens::separator)
             },

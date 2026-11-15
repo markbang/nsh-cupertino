@@ -1,3 +1,5 @@
+[简体中文](search-field.zh-CN.md)
+
 # Search field
 
 iOS's search field: 36 pt tall, 9 pt corners, a magnifier and the placeholder in

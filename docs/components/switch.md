@@ -1,3 +1,5 @@
+[简体中文](switch.zh-CN.md)
+
 # Switch
 
 iOS's on / off switch: a 51 × 31 pt pill, `systemGreen` when on, `secondaryFill`

@@ -1,3 +1,5 @@
+[简体中文](button.zh-CN.md)
+
 # Button
 
 iOS's four button looks, with the pressed state iOS draws: the whole button fades

@@ -24,6 +24,14 @@ as a reference for specific numbers or an approach; nothing was copied as code.
 | The search field's 36 pt height, 9 pt radius, `tertiarySystemFill` background, 5.5/8 pt insets, 20 pt secondary-label icon and placeholder | `search_field.dart`, `nav_bar.dart` |
 | The activity indicator: eight blades, the alpha table `[47, 47, 47, 47, 72, 97, 122, 147]`, blade geometry (1/10 of the diameter wide, 2/3 of the radius long, 1/20 corner), one-second turn in eight steps, `#3C3C44`/`#EBEBF5` tick color | `activity_indicator.dart` |
 | The page transition duration (500 ms) and the sheet's motion durations (300/500 ms) used for the motion tokens | `route.dart`, `sheet.dart` |
+| The action sheet's 8 pt edges, 8 pt cancel padding, 16 × 13.5 pt content padding, 57.17 pt minimum row and 10 pt corner groups | `dialog.dart` |
+| The alert's 270 pt width, 20 pt padding, 45 pt minimum button and its 13 pt message | `dialog.dart` |
+| The segmented control's 28 pt minimum height, 16 pt horizontal padding and 165 ms fade | `segmented_control.dart` |
+| The picker's 32 pt row, 216 pt wheel, 1.07 diameter ratio, 1.45 squeeze and 0.447 over/under-centre opacity | `picker.dart` |
+| The slider's 14 pt thumb radius, 7 pt press extension, 8 pt track padding and 176 pt default width | `slider.dart`, `thumb_painter.dart` |
+| The tab bar's 50 pt height (49 pt plus the hairline), inactive gray and top border | `bottom_tab_bar.dart` |
+| The refresh trigger's 100 pt pull and 60 pt indicator extent | `refresh.dart` |
+| The sheet's 0.0835 scale under a stacked sheet and 0.08 top gap | `sheet.dart` |
 
 ## Lenso UI — MIT
 

@@ -1,6 +1,6 @@
 [package]
 name = "nsh-cupertino"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Cupertino (iOS) design system for Native Shell (NSH) apps: semantic tokens and native-feeling components"
@@ -20,14 +20,25 @@ exclude = ["examples/demo"]
 [dependencies]
 nsh-core = "0.5.0"
 nsh-base = "0.5.0"
+# Calendar arithmetic and the month and weekday names of a date picker.
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
 [[bin]]
 name = "gen-theme"
 path = "src/bin/gen_theme.rs"
 
 [[test]]
+name = "separators"
+path = "tests/separators.rs"
+
+[[test]]
 name = "theme_files"
 path = "tests/theme_files.rs"
+
+# The separator test opens a page headlessly and reads its layout.
+[dev-dependencies]
+nsh-engine = "0.5.0"
+nsh-testing = { version = "0.5.0", default-features = false }
 
 [lints.rust]
 unused_must_use = "warn"

@@ -1,3 +1,5 @@
+[English](list.md)
+
 # 列表：`List`、`Section`、`ListTile`
 
 iOS 的分组内嵌列表：行在一整块 10 pt 圆角表面上，页面边距 20 pt，细线从文字开始的位置起，
@@ -50,6 +52,16 @@ iOS 的分组内嵌列表：行在一整块 10 pt 圆角表面上，页面边距
 | `children` | `.child(..)` | JSX | 无 | 行尾的控件：`<ListTile title="Wi-Fi"><Switch/></ListTile>` |
 
 事件：`onPress`。
+
+## 分隔线
+
+分组中除最后一行外，每一行都画一条细分隔线，与行的种类无关：普通行、带副标题、破坏性、禁用、带前置图标、带箭头、勾选选中都一样。线从文字开始处起（有前置图标时在图标之后，否则从行自身的内缩开始），厚度是一台**设备像素**：
+
+```text
+thickness = round(max(configured * pixelRatio, 1)) / pixelRatio
+```
+
+配置值为 0.33 pt 时，@3x 为 0.33 pt，@2x 为 0.5 pt，1x 为 1 pt。没有下限时，1x 屏幕会把线四舍五入掉，这正是网页上部分行没有分隔线的原因。只在分组最后一行传 `separator={false}`；空分组不画线。
 
 说明
 

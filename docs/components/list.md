@@ -1,3 +1,5 @@
+[简体中文](list.zh-CN.md)
+
 # Lists: `List`, `Section`, `ListTile`
 
 iOS's inset grouped lists: rows on one 10 pt surface with 20 pt page margins,
@@ -54,6 +56,22 @@ icon), title at 17 pt, subtitle at 12 pt.
 | `children` | `.child(..)` | JSX | none | A control at the trailing edge: `<ListTile title="Wi-Fi"><Switch/></ListTile>` |
 
 Events: `onPress`.
+
+## Separators
+
+Every row but the last of its group draws a hairline, whatever the row is: a
+plain row, a subtitle, a destructive or disabled row, a leading icon, a chevron,
+a checkmark selection. The line starts where the text starts (after a leading
+icon, at the row's own inset otherwise) and is one **device pixel**:
+
+```text
+thickness = round(max(configured * pixelRatio, 1)) / pixelRatio
+```
+
+With the configured 0.33 pt that is 0.33 pt at @3x, 0.5 pt at @2x and 1 pt at
+1x. Without the floor a 1x display rounds the line away, which is what left rows
+without a separator on the web. Set `separator={false}` only on the last row of a
+group; an empty group draws none.
 
 Notes
 

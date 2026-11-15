@@ -7,12 +7,15 @@ boundary.
 
 ```sh
 nsh check                                  # cargo check + tsc against the generated types
-nsh test                                   # headless behavior tests (App.test.tsx)
+nsh test                                   # headless behavior tests (App.test.tsx, waveb.test.tsx)
 ../../tools/shots.sh                       # docs/screenshots, light and dark (from the repository root)
 nsh run                                    # on this machine; --target ios, android, web, ...
 ```
 
 Deep links: seed the app's storage with `cupertino.page` (`gallery`,
 `navigation`, `lists`, `buttons`, `textfields`, `search`, `switches`,
-`indicators`, `scroll`, `colors`, `type`), `cupertino.contrast` (`normal`,
-`high`) and `cupertino.appearance` (`light`, `dark`, `system`).
+`indicators`, `scroll`, `materials`, `colors`, `type`, `sheet`, `actionsheet`,
+`alert`, `contextmenu`, `picker`, `datepicker`, `segmented`, `slider`, `tabbar`,
+`swipe`, `refresh`, `bar-materials`), `cupertino.overlay` (`sheet`,
+`actionsheet`, `alert`) to open an overlay on landing, `cupertino.contrast`
+(`normal`, `high`) and `cupertino.appearance` (`light`, `dark`, `system`).

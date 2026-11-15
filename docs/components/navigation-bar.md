@@ -1,3 +1,5 @@
+[简体中文](navigation-bar.zh-CN.md)
+
 # Navigation bar
 
 A page's bar, and the whole page with it: a back button, a title that is compact
@@ -25,9 +27,10 @@ reaches your code.
 | `trailing` | `.trailing(..)` | `string` | none | A tinted trailing action ("Done", "Edit") |
 | `background` | `.background(..)` | token name | `system-grouped-background` | The page's background |
 | `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | A material floats the bar over the content, which scrolls under its blur |
+| `refreshing` | `.refreshing(..)` | `boolean` | `false` | A pull to refresh runs: the indicator stays below the bar |
 | `children` | `.child(..)` | JSX | — | The page's content |
 
-Events: `onBack`, `onTrailing`.
+Events: `onBack`, `onTrailing`, `onRefresh`.
 
 Notes
 
@@ -35,6 +38,10 @@ Notes
   Both are minimums: large text grows them instead of clipping it.
 - The back button is a chevron at 20 pt with 6 pt before its label, and its
   target is 50 pt wide, as `CupertinoNavigationBarBackButton` draws it.
+- Pulling past the top asks for a refresh (`onRefresh`); `refreshing` pins the
+  activity indicator below the bar.
+- The hairline is one device pixel at every scale, the same rule as
+  [the lists](list.md#separators).
 - With a `material`, the content scrolls under the bar: the compact title takes
   over 44 pt earlier, and the page starts below the bar.
 - Pressing the title scrolls the page back to the top, as iOS does.

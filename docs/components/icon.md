@@ -1,3 +1,5 @@
+[简体中文](icon.zh-CN.md)
+
 # Icons
 
 NSH has no SF Symbols; this crate draws the handful of shapes the components need

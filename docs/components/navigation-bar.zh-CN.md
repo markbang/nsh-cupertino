@@ -1,3 +1,5 @@
+[English](navigation-bar.md)
+
 # 导航栏
 
 页面的栏，以及整页本身：返回按钮、可大可小的标题、右侧操作，以及内容滚动到栏下方时出现的细线。
@@ -21,9 +23,10 @@
 | `trailing` | `.trailing(..)` | `string` | 无 | 右侧着色操作（"完成"、"编辑"） |
 | `background` | `.background(..)` | token 名 | `system-grouped-background` | 页面背景 |
 | `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | 材质让栏浮在内容之上，内容在其模糊下滚动 |
+| `refreshing` | `.refreshing(..)` | `boolean` | `false` | 下拉刷新进行中，指示器停在栏下 |
 | `children` | `.child(..)` | JSX | — | 页面内容 |
 
-事件：`onBack`、`onTrailing`。
+事件：`onBack`、`onTrailing`、`onRefresh`。
 
 说明
 
@@ -31,6 +34,8 @@
   而不是被裁切。
 - 返回按钮是 20 pt 的箭头，与文字之间 6 pt，命中宽度 50 pt，与 `CupertinoNavigationBarBackButton`
   一致。
+- 从顶部下拉会请求刷新（`onRefresh`），`refreshing` 把活动指示器固定在栏下。
+- 分隔线在任何倍率下都是一台设备像素，规则同 [列表](list.zh-CN.md#分隔线)。
 - 设置 `material` 时内容从栏下滚过：紧凑标题提前 44 pt 接管，页面内容从栏下方开始。
 - 按下标题会把页面滚回顶部，与 iOS 一致。
 - 安全区：页面自己处理顶部 inset；内容结束在 home indicator 之上。
