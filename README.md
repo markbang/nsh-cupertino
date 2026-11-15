@@ -225,7 +225,7 @@ the numbers.
 | --- | --- |
 | First paint | 24 ms |
 | First contentful paint | 0.81 s |
-| First-load transfer | 2.59 MB in 18 requests |
+| First-load transfer | 2.60 MB in 20 requests |
 
 The first load is the web runtime: `nsh.<digest>.wasm` is 6.6 MB uncompressed,
 2.43 MB of it gzipped, and the home screen is drawn about 0.8 s in. The other
