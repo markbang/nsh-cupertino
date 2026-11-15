@@ -62,7 +62,7 @@ Apple iOS 26 的材质：一件覆在身后内容之上的玻璃。表面通过 
 
 | | |
 | --- | --- |
-| iOS、macOS、Windows、Linux、Android | wgpu（Metal、Vulkan、Direct3D 12、OpenGL）：shader 绘制材质，平台在它之上绘制内容。 |
+| iOS、macOS、Windows、Linux、Android | wgpu（Metal、Vulkan、Direct3D 12、OpenGL）：shader 绘制材质，平台在它之上绘制内容。Android 由 CI 验证：API 34 模拟器用 SwiftShader 拍摄这些页面并测量透镜效果（[`android-glass-*.png`](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)）。 |
 | Web | 通过 NSH 运行时的 WebGL 2。在 NSH 修复两个阶段的 uniform block 绑定之前，材质需要 `tools/patch-runtime.mjs` 的修复（见 `docs/design-notes.md`）；没有它，Web 上的 shader 什么都画不出来。 |
 | 无 GPU（没有 WebGL 2 的浏览器、未启用 shader 编译器的构建、终端） | 退化为材质自身的填充与背景模糊（`tokens::materials`），与 shader 之前导航栏所用的完全一致：`tokens::glass` 与 `tokens::materials` 在观感上对齐，其他都不变。 |
 | 降低动态效果 | 按压保留数值、去掉弹簧；sheet 的入场仍按原有动画。 |

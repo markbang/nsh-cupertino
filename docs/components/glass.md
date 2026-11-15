@@ -81,7 +81,7 @@ material's own legibility rules assume it.
 
 | | |
 | --- | --- |
-| iOS, macOS, Windows, Linux, Android | wgpu (Metal, Vulkan, Direct3D 12, OpenGL): the shader draws the material, the platform draws the content over it. |
+| iOS, macOS, Windows, Linux, Android | wgpu (Metal, Vulkan, Direct3D 12, OpenGL): the shader draws the material, the platform draws the content over it. Android is verified by CI: an API 34 emulator with SwiftShader captures the pages and measures the lens ([`android-glass-*.png`](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)). |
 | Web | WebGL 2, through NSH's runtime. The material needs **the WebGL 2 uniform-block fix in `tools/patch-runtime.mjs`** until NSH binds both stages' blocks (see `docs/design-notes.md`); without it a web shader draws nothing. |
 | No GPU (a browser without WebGL 2, a build without the shader compiler, a terminal) | The material's own fill and backdrop blur (`tokens::materials`), as the bars drew it before the shader: `tokens::glass` and `tokens::materials` agree on the look, and nothing else changes. |
 | Reduce Motion | The press keeps its values and drops the springs; the entrance of a sheet still animates as it did. |
