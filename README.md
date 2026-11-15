@@ -2,6 +2,9 @@
 
 [简体中文](README.zh-CN.md)
 
+**[Documentation site: markbang.github.io/nsh-cupertino](https://markbang.github.io/nsh-cupertino/)** —
+every component with a live demo, the TSX that draws it and the props it takes.
+
 A Cupertino (iOS) design system for [Native Shell](https://nsh.dev) apps: Apple's
 semantic colors, type scale and metrics as tokens, and the components iOS draws
 settings and detail screens with — navigation bars, inset grouped lists, buttons,
@@ -195,6 +198,39 @@ leaves out, and sets the contrast variants of the ones it defines.
   the gesture to it in one place (`onBackPress` on its root, or a `NavStack`
   page's `on_dismiss`).
 
+## The site
+
+<https://markbang.github.io/nsh-cupertino/> is this crate documenting itself:
+`site/` is a Native Shell app that draws every screen with the components it
+documents, so what the page shows is the library running.
+
+- The home grid lists all 24 components; each has a page with a demo you can
+  press, drag and swipe, the TSX that draws it (with a copy button), and the
+  prop table generated from `docs/components/*.md` by `tools/site-api.mjs` — the
+docs are the source, so the site cannot drift from them.
+- The bar carries the global controls: light / dark / system, high contrast, the
+  text size, a phone frame, and English / 中文.
+- Every page is a hash route (`#/sheet`), so a link to one can be shared, and
+  the browser's back and forward move between pages.
+- It is a static site under GitHub Pages, deployed from `main` by
+  `.github/workflows/pages.yml`.
+
+Measured on the packaged site (GitHub Pages serves the same bytes gzipped) in
+headless Chrome 155 through the DevTools protocol: cache disabled and cleared
+before each load, no other tab open, at 1440 × 900 and 390 × 844, median of five
+cold loads. `node tools/site-check.mjs --url <the site>` repeats this and prints
+the numbers.
+
+| Home, cold cache | |
+| --- | --- |
+| First paint | 24 ms |
+| First contentful paint | 0.81 s |
+| First-load transfer | 2.60 MB in 20 requests |
+
+The first load is the web runtime: `nsh.<digest>.wasm` is 6.6 MB uncompressed,
+2.43 MB of it gzipped, and the home screen is drawn about 0.8 s in. The other
+pages are routes inside the same runtime and cost nothing extra.
+
 ## Development
 
 ```sh
@@ -205,11 +241,19 @@ nsh check                        # cargo check + tsc against the generated types
 nsh test                         # headless behavior tests
 nsh run                          # the demo on this machine
 cd ../.. && tools/shots.sh       # captures docs/screenshots/*.png from the web build
+
+cd site                          # the documentation site
+nsh run --target web             # it on http://127.0.0.1:4173/nsh-cupertino/
+nsh test                         # its behavior: routes, controls, demos
+node ../tools/site-api.mjs       # regenerate site/src/api.ts from docs/components/
+cd .. && node tools/site-check.mjs --url http://127.0.0.1:4173/nsh-cupertino/
 ```
 
 CI (`.github/workflows/ci.yml`): fmt, clippy `-D warnings`, tests, the theme
-drift check, `nsh check` + `nsh test` of the demo, the web package, and a
-screenshot job that publishes the captures to the `screenshots` branch.
+drift check, `nsh check` + `nsh test` of the demo, the web package, a screenshot
+job that publishes the captures to the `screenshots` branch, and the site's own
+check, tests, web build and headless run. `pages.yml` deploys the site to GitHub
+Pages on every push to `main` and on every tag.
 
 ## License
 

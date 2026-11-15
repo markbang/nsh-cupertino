@@ -1,0 +1,21 @@
+{
+  "name": "Cupertino",
+  "id": "dev.nsh.cupertino.site",
+  "version": "0.2.2",
+  "build": 1,
+  "rust": [".."],
+  "theme": "../theme/theme.json",
+  "icon": "icon.png",
+  "appearance": "system",
+  "capabilities": {
+    "clipboard": true,
+    "statusBar": true,
+    "openUrl": { "schemes": ["https"] },
+    "host": ["site.*"]
+  },
+  "web": {
+    "base": "/nsh-cupertino/",
+    "history": true,
+    "host": "./host.js"
+  }
+}

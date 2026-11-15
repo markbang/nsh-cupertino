@@ -165,3 +165,82 @@ jobs:
           name: web
           path: ${{ runner.temp }}/web
           if-no-files-found: error
+
+  site:
+    name: site (check, tests, web build, headless checks)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-dev
+        working-directory: .
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.nsh
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            site/target
+          key: site-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('site/nsh.json', 'Cargo.toml') }}
+          restore-keys: site-${{ runner.os }}-${{ env.NSH_VERSION }}-
+      - name: Install nsh
+        run: |
+          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
+          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
+        working-directory: .
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.130
+      # The site shows the crate's version and the docs' own prop tables: both
+      # are generated, and a stale commit fails here.
+      - run: node ../tools/site-version.mjs --check
+      - run: node ../tools/site-api.mjs --check
+      - run: nsh check
+      - run: nsh test
+      - name: Package the site for the web
+        run: nsh package App.tsx --target web -o "$RUNNER_TEMP/out"
+      # `nsh package` writes `<out>/<Name>/`; the site is served from a directory
+      # named after its base path, so a URL under it resolves as GitHub Pages
+      # resolves it.
+      - name: Serve it under its base path
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/pages"
+          shopt -s nullglob
+          entries=("$RUNNER_TEMP"/out/*)
+          if [ ${#entries[@]} -ne 1 ] || [ ! -d "${entries[0]}" ]; then
+            echo "expected one directory in $RUNNER_TEMP/out, got: ${entries[*]}" >&2
+            exit 1
+          fi
+          mv "${entries[0]}" "$RUNNER_TEMP/pages/nsh-cupertino"
+          cd "$RUNNER_TEMP/pages"
+          python3 -m http.server 4173 --bind 127.0.0.1 &
+          for i in $(seq 1 50); do
+            curl -fsS -o /dev/null http://127.0.0.1:4173/nsh-cupertino/ && break
+            sleep 0.2
+          done
+      # The runner's image has Google Chrome; `site-check` drives it over CDP:
+      # both viewports, every deep link, the demos, the controls, the paint and
+      # transfer numbers of a cold first load.
+      - name: Check the published site in headless Chrome
+        working-directory: .
+        run: |
+          node tools/site-check.mjs \
+            --url http://127.0.0.1:4173/nsh-cupertino/ \
+            --out "$RUNNER_TEMP/screens" \
+            --chrome "$(command -v google-chrome || command -v google-chrome-stable)" \
+            > "$RUNNER_TEMP/site-check.json"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: site
+          path: |
+            ${{ runner.temp }}/screens
+            ${{ runner.temp }}/site-check.json
+          if-no-files-found: warn
