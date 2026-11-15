@@ -86,6 +86,13 @@ roles! {
     "secondary-fill" = 0x7878_8028, 0x7878_8051, 0x7878_803d, 0x7878_8066;
     "tertiary-fill" = 0x7676_801e, 0x7676_803d, 0x7676_8033, 0x7676_8051;
     "quaternary-fill" = 0x7474_8014, 0x7676_802d, 0x7474_8028, 0x7676_8042;
+    // Liquid Glass fills: the tint a glass surface mixes over its blurred
+    // backdrop. Thinner than `materials`, because the lens carries part of the
+    // separation; the increased-contrast values are near opaque, as the HIG
+    // asks of glass it cannot guarantee contrast over.
+    "glass-regular" = 0xffff_ff6b, 0x1c1c_1ea6, 0xffff_ffe6, 0x1c1c_1ef2;
+    "glass-clear" = 0xffff_ff24, 0x0000_0059, 0xffff_ffc4, 0x0000_00cc;
+    "glass-thick" = 0xffff_ffb0, 0x1c1c_1ec4, 0xffff_fffa, 0x1c1c_1efa;
     // System colors.
     "system-blue" = 0x007a_ffff, 0x0a84_ffff, 0x0040_ddff, 0x409c_ffff;
     "system-green" = 0x34c7_59ff, 0x30d1_58ff, 0x248a_3dff, 0x30db_5bff;
@@ -643,4 +650,78 @@ pub mod materials {
     pub fn blur(name: &str) -> nsh_core::geometry::Points {
         nsh_core::geometry::px(get(name).blur)
     }
+}
+
+/// The numbers of the Liquid Glass material: the height field of the lens, the
+/// specular rim, the press and the merge.
+///
+/// The behaviour follows Apple's *Liquid Glass* (WWDC25 "Meet Liquid Glass",
+/// HIG *Materials* and *Liquid Glass*): a rim that refracts what lies outside
+/// the shape, a specular highlight that follows the light, an adaptive tint,
+/// and clear/regular variants. The numbers are this crate's, tuned against
+/// screenshots; `NOTICE` lists the implementations they were checked against.
+pub mod glass {
+    /// The width of the lensed rim, in points: inside it the height field
+    /// rises from the edge to the flat middle.
+    pub const BEVEL: f32 = 18.0;
+    /// How far a ray shifts at the very rim, in points.
+    pub const THICKNESS: f32 = 7.0;
+    /// The magnification of the picture under the sheet (2 %).
+    pub const LENS: f32 = 0.02;
+    /// The blur radius of the material, in points.
+    pub const BLUR: f32 = 20.0;
+    /// The strength of the specular rim.
+    pub const SPECULAR: f32 = 0.5;
+    /// The width of the specular rim, as the exponent of the bevel's falloff
+    /// (higher: a tighter rim).
+    pub const BLOOM: f32 = 2.4;
+    /// The strength of the hairline at the very edge.
+    pub const EDGE: f32 = 0.5;
+    /// The inner shadow opposite the light.
+    pub const INNER: f32 = 0.4;
+    /// The chromatic separation of the rim, in points (one pixel at @3x).
+    pub const CHROMA: f32 = 0.33;
+    /// The direction the light comes from, in degrees (the upper left).
+    pub const LIGHT: f32 = 225.0;
+    /// The alpha of a `tinted` glass fill.
+    pub const TINTED_ALPHA: f32 = 0.16;
+
+    /// The token names of the fills: `glass-regular`, `glass-clear`,
+    /// `glass-thick`.
+    pub const REGULAR: &str = "glass-regular";
+    /// See [`REGULAR`].
+    pub const CLEAR: &str = "glass-clear";
+    /// See [`REGULAR`].
+    pub const THICK: &str = "glass-thick";
+
+    /// What a press drives its animated value to.
+    pub const PRESS_HELD: f32 = 1.0;
+    /// How much harder the lens works while held.
+    pub const PRESS_LENS: f32 = 2.4;
+    /// The specular rim's exponent while held (a wider bloom).
+    pub const PRESS_BLOOM: f32 = 0.8;
+    /// The extra brightness of the rim while held.
+    pub const PRESS_LIFT: f32 = 0.22;
+    /// The squash of the surface while held.
+    pub const PRESS_SCALE: f32 = 0.965;
+    /// The spring a press runs on (`~250 ms` to rest).
+    pub const PRESS_DAMPING: f32 = 0.72;
+    /// See [`PRESS_DAMPING`].
+    pub const PRESS_STIFFNESS: f32 = 420.0;
+    /// The spring a release runs on.
+    pub const RELEASE_DAMPING: f32 = 0.86;
+    /// See [`RELEASE_DAMPING`].
+    pub const RELEASE_STIFFNESS: f32 = 300.0;
+    /// The spring a [`crate::GlassGroup`] merges on.
+    pub const MERGE_DAMPING: f32 = 0.78;
+    /// See [`MERGE_DAMPING`].
+    pub const MERGE_STIFFNESS: f32 = 340.0;
+}
+
+/// The fill of the glass material `name` in the appearance and contrast
+/// shown: a token, so [`crate::Theme`]'s `contrast="high"` swaps in the
+/// near-opaque values.
+pub fn glass_fill(name: &str) -> Hsla {
+    let role = role(name).unwrap_or(&ROLES[0]);
+    color(name, role.adaptive())
 }

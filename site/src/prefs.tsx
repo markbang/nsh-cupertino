@@ -13,6 +13,8 @@ const loaded = signal(false);
 
 export const appearance = signal<Appearance>("auto");
 export const contrast = signal<Contrast>("normal");
+/** The site's own switch: the glass demos draw the material or the fallback. */
+export const liquidGlass = signal(true);
 export const typeScale = signal(1);
 export const frame = signal(false);
 export const frameTouched = signal(false);
@@ -20,6 +22,7 @@ export const frameTouched = signal(false);
 interface Stored {
   appearance?: Appearance;
   contrast?: Contrast;
+  liquidGlass?: boolean;
   typeScale?: number;
   frame?: boolean;
   frameTouched?: boolean;
@@ -33,6 +36,7 @@ void Storage.getItem(KEY)
         const prefs = JSON.parse(raw) as Stored;
         if (prefs.appearance) appearance.set(prefs.appearance);
         if (prefs.contrast) contrast.set(prefs.contrast);
+        if (typeof prefs.liquidGlass === "boolean") liquidGlass.set(prefs.liquidGlass);
         if (typeof prefs.typeScale === "number") typeScale.set(prefs.typeScale);
         if (typeof prefs.frame === "boolean") frame.set(prefs.frame);
         if (typeof prefs.frameTouched === "boolean") frameTouched.set(prefs.frameTouched);
@@ -48,6 +52,7 @@ void Storage.getItem(KEY)
 export function resetPreferences() {
   appearance.set("auto");
   contrast.set("normal");
+  liquidGlass.set(true);
   typeScale.set(1);
   frameTouched.set(false);
   frame.set(defaultFrame());
@@ -76,6 +81,7 @@ effect(() => {
   const prefs: Stored = {
     appearance: appearance(),
     contrast: contrast(),
+    liquidGlass: liquidGlass(),
     typeScale: typeScale(),
     frame: frame(),
     frameTouched: frameTouched(),

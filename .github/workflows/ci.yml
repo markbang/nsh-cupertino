@@ -132,6 +132,9 @@ jobs:
       # The runner's image has Google Chrome, which `nsh test --target web` uses.
       # `docs/screenshots/` is not in the repository: the script makes it, the
       # test writes into it.
+      # `tools/shots.sh` also packages the demo for `tools/glass-shots.mjs`, which
+      # patches the runtime (the shader's uniform blocks, see docs/design-notes.md)
+      # and drives Chrome over CDP, then runs the material's pixel checks.
       - name: Screenshots of every demo page
         run: tools/shots.sh
       - run: tools/check-screenshots.sh docs/screenshots

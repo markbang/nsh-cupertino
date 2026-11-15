@@ -206,6 +206,9 @@ pub struct SearchFieldProps {
     /// A "Cancel" button after the field, which reports `Cancel` while the
     /// field is focused.
     pub cancel: Prop<Option<bool>>,
+    /// Draw the field as glass, for a search bar over content that scrolls
+    /// under it (the floating layer; the field keeps its 9 pt corners).
+    pub glass: Prop<Option<bool>>,
     /// A row of scopes under the field (segmented control is wave B).
     pub children: Prop<Children>,
 }
@@ -222,7 +225,8 @@ pub enum SearchFieldEvent {
 }
 
 /// iOS's search field: 36 pt tall, 9 pt corners, a magnifier before the text
-/// and a clear button, on the `fill` color as a search bar has it.
+/// and a clear button, on the `fill` color as a search bar has it — or, with
+/// `glass`, on Liquid Glass for a bar that floats over the page.
 #[component]
 pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl IntoElement {
     let focused = signal(false);
@@ -234,19 +238,18 @@ pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl
     let label = props.label;
     let cancel = props.cancel.get_untracked().unwrap_or(false);
     let focused_for_cancel = focused;
+    let glass = props.glass.get_untracked().unwrap_or(false);
 
     let box_view = {
         let focused_in = focused;
         let focused_out = focused;
-        view()
+        let field = view()
             .flex_1()
             .flex_row()
             .items_center()
             .gap(px(5.5))
             .h(px(metrics::SEARCH_HEIGHT))
             .px(px(5.5))
-            .rounded(px(radius::SEARCH.0))
-            .bg(tokens::tertiary_fill)
             .child(icon_stroke("magnifyingglass", 20.0, 2.2).text_color(tokens::secondary_label))
             .child(
                 input()
@@ -285,7 +288,25 @@ pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl
                         }
                     })
                 },
-            ))
+            ));
+        if glass {
+            view()
+                .flex_1()
+                .relative()
+                .rounded(px(radius::SEARCH.0))
+                .child(crate::glass::layer(
+                    crate::glass::GlassSpec::rounded(radius::SEARCH.0)
+                        .variant(crate::glass::GlassVariant::Regular),
+                    None,
+                ))
+                .child(field)
+        } else {
+            view()
+                .flex_1()
+                .rounded(px(radius::SEARCH.0))
+                .bg(tokens::tertiary_fill)
+                .child(field)
+        }
     };
 
     view()

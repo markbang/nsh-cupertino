@@ -236,27 +236,19 @@ fn bar(
     material: Option<SharedString>,
 ) -> View {
     let label = back.get_untracked();
-    // A material is a translucent fill over a blur: glass on the floating layer
-    // only (HIG, materials.md).
+    // A material is Liquid Glass: the bar is part of the floating layer and the
+    // page scrolls under it (HIG, materials.md, liquid-glass.md). Without a
+    // GPU the material's fill and blur draw instead, as they did before.
     let glass = material
         .as_deref()
-        .is_some_and(|name| name != "opaque")
-        .then(|| material.clone().unwrap_or_default());
+        .filter(|name| *name != "opaque")
+        .map(|name| crate::glass::material_spec(name, [0.0; 4]));
     let mut node = view()
-        .relative()
         .min_h(px(metrics::NAV_HEIGHT))
         .flex_row()
         .items_center()
         .gap(px(8.0))
-        .px(px(metrics::NAV_EDGE))
-        .when_some(glass.clone(), |v, name| {
-            let name_for_bg = name.clone();
-            v.bg(move || {
-                let dark = nsh_core::element::dark();
-                tokens::materials::fill(&name_for_bg, dark, false)
-            })
-            .backdrop_blur(tokens::materials::blur(&name))
-        });
+        .px(px(metrics::NAV_EDGE));
 
     if let Some(label) = label {
         let pressing_label = label.clone();
@@ -307,14 +299,19 @@ fn bar(
         None => center.into_element(),
     });
 
-    node.child(
+    node = node.child(
         view()
             .flex_row()
             .items_center()
             .gap(px(16.0))
             .child(trailing),
-    )
-    .child(apply(
+    );
+    let mut bar = view().relative();
+    match glass {
+        Some(spec) => bar = bar.child(crate::glass::layer(spec, None)),
+        None => bar = bar.bg(tokens::system_background),
+    }
+    bar.child(node).child(apply(
         fade,
         view()
             .absolute()

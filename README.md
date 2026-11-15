@@ -18,6 +18,11 @@ text and search fields, switches and the activity indicator.
 - **A port, not an impression.** Sizes, colors, motion and interaction details
   come from Flutter's official `cupertino_ui` 1.1.6, component by component;
   `NOTICE` lists what was taken from where.
+- **Liquid Glass on the floating layer.** `Glass`, `GlassButton` and
+  `GlassGroup` draw Apple's iOS 26 material with a shader — the backdrop is
+  refracted through the rim, blurred, tinted and given a specular rim — on bars,
+  sheets, alerts and floating controls, with the material's fill and blur where
+  there is no GPU ([`docs/components/glass.md`](docs/components/glass.md)).
 - **Materials for the floating layer.** `regular`, `thin`, `ultra-thin`, `thick`
   and `chrome` glass fills with their blur, for bars that content scrolls under.
 - **Native behavior.** The components are built on `nsh/base`'s behavior (presses,
@@ -29,10 +34,11 @@ text and search fields, switches and the activity indicator.
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **wave B** (0.2.0) — the tokens, the components settings screens need,
-and the overlays and controls of the rest of iOS: sheets with detents, action
-sheets, alerts, context menus, pickers, a date picker, the segmented control,
-the slider, the tab bar, swipe actions, pull to refresh and the bar materials.
+Status: **0.3.0** — the tokens, the components settings screens need, the
+overlays and controls of the rest of iOS, and real Liquid Glass: `Glass`,
+`GlassButton` and `GlassGroup` draw Apple's iOS 26 material with a shader on
+every bar, sheet, alert and floating control, falling back to the material's
+fill and blur where there is no GPU.
 
 ## Install
 
@@ -143,6 +149,7 @@ pub fn Settings() -> impl IntoElement {
 | [`SwipeRow`](docs/components/swipe-actions.md) | Leading and trailing actions behind a row |
 | [`RefreshView`](docs/components/refresh.md) | A scroll view whose pull drops an activity indicator |
 | [`Theme`](docs/components/theme.md) | Installs the tokens; switches to the high-contrast values |
+| [`Glass`](docs/components/glass.md), `GlassButton`, `GlassGroup` | Liquid Glass: the shader material of the floating layer, its variants, its grouping and its fallback |
 | `Icon` | [`icon`](docs/components/icon.md) / `iconStroke`, NSH's stand-in for SF Symbols |
 
 Screenshots of every demo page, light and dark, live on the `screenshots` branch
@@ -204,12 +211,12 @@ leaves out, and sets the contrast variants of the ones it defines.
 `site/` is a Native Shell app that draws every screen with the components it
 documents, so what the page shows is the library running.
 
-- The home grid lists all 24 components; each has a page with a demo you can
+- The home grid lists all 25 components; each has a page with a demo you can
   press, drag and swipe, the TSX that draws it (with a copy button), and the
   prop table generated from `docs/components/*.md` by `tools/site-api.mjs` — the
 docs are the source, so the site cannot drift from them.
-- The bar carries the global controls: light / dark / system, high contrast, the
-  text size, a phone frame, and English / 中文.
+- The bar carries the global controls: light / dark / system, Liquid Glass on or
+  off, high contrast, the text size, a phone frame, and English / 中文.
 - Every page is a hash route (`#/sheet`), so a link to one can be shared, and
   the browser's back and forward move between pages.
 - It is a static site under GitHub Pages, deployed from `main` by

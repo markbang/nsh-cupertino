@@ -226,8 +226,10 @@ fn alert_panel(
         .flex_col()
         .rounded(px(14.0))
         .overflow_hidden()
-        .bg(move || tokens::materials::fill("thick", nsh_core::element::dark(), false))
-        .backdrop_blur(tokens::materials::blur("thick"))
+        .child(crate::glass::layer(
+            crate::glass::material_spec("thick", [14.0; 4]),
+            None,
+        ))
         .shadow([nsh_core::BoxShadow {
             offset_y: px(8.0),
             blur: px(32.0),

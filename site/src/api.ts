@@ -287,6 +287,155 @@ export const API: Record<string, ApiGroup[]> = {
       ]
     }
   ],
+  "glass": [
+    {
+      "title": "Glass",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`shape`",
+          "rust": "`.shape(..)`",
+          "type": "`\"rounded\" | \"capsule\" | \"circle\"`",
+          "default": "`\"rounded\"`",
+          "note": "Its silhouette"
+        },
+        {
+          "tsx": "`radius`",
+          "rust": "`.radius(..)`",
+          "type": "`number`",
+          "default": "`0`",
+          "note": "Corners of `\"rounded\"`, in points"
+        },
+        {
+          "tsx": "`variant`",
+          "rust": "`.variant(..)`",
+          "type": "`\"regular\" | \"clear\" | \"thick\" | \"interactive\" | \"tinted\"`",
+          "default": "`\"regular\"`",
+          "note": "Its look"
+        },
+        {
+          "tsx": "`tint`",
+          "rust": "`.tint(..)`",
+          "type": "`string`",
+          "default": "`system-blue`",
+          "note": "The token `\"tinted\"` uses"
+        },
+        {
+          "tsx": "`light`",
+          "rust": "`.light(..)`",
+          "type": "`number`",
+          "default": "`225`",
+          "note": "Where the light comes from, degrees"
+        },
+        {
+          "tsx": "`quality`",
+          "rust": "`.quality(..)`",
+          "type": "`\"high\" | \"balanced\" | \"low\"`",
+          "default": "`\"balanced\"`",
+          "note": "Blur samples: 17, 9 or 1"
+        },
+        {
+          "tsx": "`interactive`",
+          "rust": "`.interactive(..)`",
+          "type": "`boolean`",
+          "default": "`false`",
+          "note": "It answers presses"
+        },
+        {
+          "tsx": "`children`",
+          "rust": "",
+          "type": "content",
+          "default": "",
+          "note": "What draws over it"
+        }
+      ]
+    },
+    {
+      "title": "GlassButton",
+      "kind": "props",
+      "events": "onPress().",
+      "rows": [
+        {
+          "tsx": "`title`",
+          "rust": "`.title(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "Its text"
+        },
+        {
+          "tsx": "`icon`",
+          "rust": "`.icon(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "An icon before it"
+        },
+        {
+          "tsx": "`label`",
+          "rust": "`.label(..)`",
+          "type": "`string`",
+          "default": "the title",
+          "note": "Its name for screen readers"
+        },
+        {
+          "tsx": "`disabled`",
+          "rust": "`.disabled(..)`",
+          "type": "`boolean`",
+          "default": "`false`",
+          "note": "Dimmed, not pressable"
+        }
+      ]
+    },
+    {
+      "title": "GlassGroup",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`shapes`",
+          "rust": "`.shapes(..)`",
+          "type": "`GlassRect[]`",
+          "default": "`[]`",
+          "note": "One or two shapes"
+        },
+        {
+          "tsx": "`mergedShapes`",
+          "rust": "`.merged_shapes(..)`",
+          "type": "`GlassRect[]`",
+          "default": "`shapes`",
+          "note": "Where they spring to"
+        },
+        {
+          "tsx": "`merged`",
+          "rust": "`.merged(..)`",
+          "type": "`boolean`",
+          "default": "`false`",
+          "note": "Fuse them"
+        },
+        {
+          "tsx": "`spacing`",
+          "rust": "`.spacing(..)`",
+          "type": "`number`",
+          "default": "`0`",
+          "note": "How far apart they still fuse"
+        },
+        {
+          "tsx": "`variant`",
+          "rust": "`.variant(..)`",
+          "type": "`string`",
+          "default": "`\"regular\"`",
+          "note": "Its look"
+        },
+        {
+          "tsx": "`children`",
+          "rust": "",
+          "type": "content",
+          "default": "",
+          "note": "What draws over it"
+        }
+      ]
+    }
+  ],
   "icon": [
     {
       "title": "Props",

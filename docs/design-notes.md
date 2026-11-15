@@ -133,6 +133,54 @@ each fill more opaque. The rule that glass belongs only to the floating layer is
 Apple's (`materials.md`, `liquid-glass.md`); Lenso UI's `DESIGN.md` states it the
 same way. No CSS was copied.
 
+## Liquid Glass: what is refraction and what is an approximation
+
+`src/glass.rs` draws the material of the floating layer as a WGSL shader. Apple
+publishes no implementation, so the behaviour comes from its own description and
+the numbers are this crate's:
+
+- [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/)
+  (WWDC25): light bends and concentrates at the rim rather than scattering as a
+  blur does; the specular highlight moves with the light; the material adapts to
+  what is behind it; `regular`, `clear` and tinted variants; interactive
+  variants; and shapes that morph inside a `GlassEffectContainer`.
+- HIG [Materials](https://developer.apple.com/design/human-interface-guidelines/materials)
+  and [Liquid Glass](https://developer.apple.com/design/human-interface-guidelines/liquid-glass):
+  glass belongs to the floating layer, never to content; keep text off glass that
+  cannot hold its contrast; increased contrast makes the material nearly opaque.
+- [conorluddy/LiquidGlassReference](https://github.com/conorluddy/LiquidGlassReference),
+  a written specification of the same feature set (lensing against blur,
+  specular response, variants, containers).
+
+What the shader does, and how close each part is:
+
+| Part | What this crate does | Fidelity |
+| --- | --- | --- |
+| Lensing | The surface's SDF gives a height field (a bevel of `BEVEL` points at the rim, flat inside); its gradient displaces the backdrop sample, strongest at the rim, and magnifies the whole picture by 2 % | **Refraction** of a sampled picture: the displacement is real, the height profile is a chosen curve, not Apple's optic |
+| Blur | 9 to 17 backdrop taps on a golden spiral, rotated per pixel; `quality` drops them | A blur of the sampled picture, coarser than a separable Gaussian |
+| Specular rim | `facing = dot(normal, light)` on the bevel, a hairline at the very edge, and an inner shadow on the unlit side | Directional and continuous around the silhouette; the *shape* of Apple's highlight is its own |
+| Adaptive tint | The tint's alpha rises where the blurred backdrop's luminance would fight the label (up to 96 %) | Approximates "adapts to the background"; Apple's own rule is unpublished |
+| Chromatic separation | Red and blue sampled half a pixel apart along the normal, only in the rim band | ≤ 1 px, as Apple's edge shows |
+| Dynamic light | `light` (degrees) and an app-driven `tilt` angle | NSH reports no device motion, so the tilt is not automatic |
+| `GlassEffectContainer` | `GlassGroup`: one shader over two rects, fused with a smooth minimum (`spacing`) and sprung between two layouts | One sampling region and a fused silhouette, as Apple asks; no morphing of a shape's content |
+| Interactive | A press springs the lens, the specular bloom and a 3,5 % squash on the UI thread | Values and timing (~250 ms) are this crate's; Reduce Motion keeps the values and drops the springs |
+
+The approaches were checked against the open-source implementations that solved
+the same problems; `NOTICE` lists each, its licence and what was taken from it.
+No code was copied: the WGSL, the SDFs and the numbers are written here.
+
+### The web runtime binds one uniform block per program
+
+A shader compiled for the web gets *two* uniform blocks per struct, one per
+stage — naga names them `Nsh_block_0Vertex` and `Nsh_block_0Fragment` — while
+`nsh`'s web runtime binds only the names the fragment stage's reflection gives
+it. The vertex stage's block stays unbound, WebGL rejects the draw with
+`GL_INVALID_OPERATION` and the view shows nothing. `tools/patch-runtime.mjs`
+binds every block whose name starts with the one asked for, and
+`tools/glass-shots.mjs` applies it to the build it screenshots. The fix belongs
+in `nsh` (`crates/nsh-platform-web/web/nsh.js`, `shaderProgram`); until it
+lands, a web build needs the patch to draw any shader at all.
+
 ## Contrast: the three roles below WCAG AA
 
 The light appearance ships Apple's own values, and three of them are under 4.5:1

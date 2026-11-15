@@ -30,6 +30,7 @@ const PAGES = [
   "swipe",
   "refresh",
   "materials",
+  "glass",
   "bar-materials",
 ];
 
@@ -64,6 +65,9 @@ for (const page of PAGES) {
 for (const scheme of SCHEMES) {
   test(`gallery, ${scheme}, increased contrast`, async () => {
     await shoot("gallery", scheme, "high");
+  });
+  test(`glass, ${scheme}, increased contrast`, async () => {
+    await shoot("glass", scheme, "high");
   });
 }
 

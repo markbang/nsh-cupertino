@@ -319,8 +319,10 @@ fn sheet_panel(
             .flex_col()
             .overflow_hidden()
             .rounded_t(radius::SHEET)
-            .bg(move || tokens::materials::fill("thick", nsh_core::element::dark(), false))
-            .backdrop_blur(tokens::materials::blur("thick"))
+            .child(crate::glass::layer(
+                crate::glass::material_spec("thick", [radius::SHEET.0, radius::SHEET.0, 0.0, 0.0]),
+                None,
+            ))
             .shadow([BoxShadow {
                 offset_y: px(-2.0),
                 blur: px(24.0),

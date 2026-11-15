@@ -73,3 +73,29 @@ as a reference for specific numbers or an approach; nothing was copied as code.
 The 21 icons in `src/icon.rs` are this project's own SVG drawings of simple
 geometric shapes (chevrons, a magnifier, a checkmark and similar). They are not
 Apple's SF Symbols and contain none of Apple's artwork.
+
+## Liquid Glass — the material of the floating layer
+
+`src/glass.rs` draws Apple's Liquid Glass with a WGSL shader. Apple publishes no
+implementation; the behaviour comes from its own description, and the shading,
+the SDFs and the numbers are this crate's own. These were read for the approach
+(no code was copied, and none of the projects' source is vendored):
+
+| Project | Licence | Read for |
+| --- | --- | --- |
+| [shuding/liquid-glass](https://github.com/shuding/liquid-glass) | MIT | The height field of a rounded rect turned into a surface normal, and the backdrop displaced by it — the approach this crate's lens follows, in a shader rather than an SVG filter |
+| [rdev/liquid-glass-react](https://github.com/rdev/liquid-glass-react) | MIT | A refraction pass over a captured backdrop, with a specular edge on top |
+| [archisvaze/liquid-glass](https://github.com/archisvaze/liquid-glass) | MIT | The split between the WebGL pass and a plain CSS blur where there is no GPU — this crate's fallback rule |
+| [iyinchao/liquid-glass-studio](https://github.com/iyinchao/liquid-glass-studio) | MIT | Chromatic separation along the rim, and its order of magnitude (a pixel) |
+| [samasante/liquid-glass](https://github.com/samasante/liquid-glass) | MIT | Sampling a live DOM backdrop, and where that costs redraws |
+| [DnV1eX/LiquidGlassKit](https://github.com/DnV1eX/LiquidGlassKit) | no licence file | The feature list a backport must keep: refraction, chromatic dispersion, Fresnel-style edge light, a glare that follows the surface's normals |
+| [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Apache-2.0 | Backdrop sampling in a Compose renderer, and the variant split (regular/clear) of the same material |
+| [sdegenaar/liquid_glass_widgets](https://github.com/sdegenaar/liquid_glass_widgets) | MIT | Merging neighbouring shapes into one material (`GlassGroup`'s smooth union) |
+| [whynotmake-it/flutter_liquid_glass](https://github.com/whynotmake-it/flutter_liquid_glass) | Apache-2.0 | Shape and container APIs for a glass widget set |
+| [conorluddy/LiquidGlassReference](https://github.com/conorluddy/LiquidGlassReference) | none | The written specification of the feature set: lensing against blur, specular response, variants, containers |
+
+Apple's own sources, used as the specification and as acceptance criteria:
+[Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/),
+HIG [Materials](https://developer.apple.com/design/human-interface-guidelines/materials)
+and [Liquid Glass](https://developer.apple.com/design/human-interface-guidelines/liquid-glass).
+No text is reproduced in this repository.
