@@ -16,6 +16,7 @@
 | `detent` | `.detent(..)` | `"medium" \| "large"` | 无 | 受控档位 |
 | `defaultDetent` | `.default_detent(..)` | `"medium" \| "large"` | `"large"` | 初始档位 |
 | `title` | `.title(..)` | `string` | 无 | 标题栏 17 pt 半粗 |
+| `leading` | `.leading(..)` | `string` | 无 | 左侧操作（"取消"），使用 tint 色 |
 | `trailing` | `.trailing(..)` | `string` | 无 | 右侧操作（"完成"），使用 tint 色 |
 | `children` | `.child(..)` | JSX | — | 面板内容，可滚动 |
 

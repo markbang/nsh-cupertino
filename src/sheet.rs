@@ -29,6 +29,8 @@ pub struct SheetProps {
     pub default_detent: Prop<Option<SharedString>>,
     /// A title in the sheet's header, on the grabber's line.
     pub title: Prop<Option<SharedString>>,
+    /// A leading action in the header ("Cancel"), reported by `onLeading`.
+    pub leading: Prop<Option<SharedString>>,
     /// A trailing action in the header ("Done"), reported by `onTrailing`.
     pub trailing: Prop<Option<SharedString>>,
     /// What the sheet shows; it scrolls.
@@ -47,6 +49,8 @@ pub enum SheetEvent {
     /// The user closed it (the backdrop, Escape, back, or a drag past the
     /// medium detent).
     Cancel,
+    /// The header's leading action was pressed.
+    Leading,
     /// The header's trailing action was pressed.
     Trailing,
 }
@@ -135,6 +139,7 @@ pub fn Sheet(props: SheetProps, cx: Scope<SheetEvent>) -> impl IntoElement {
             drag,
             request_close.clone(),
             props.title,
+            props.leading,
             props.trailing,
             props.children,
         )
@@ -150,6 +155,7 @@ fn sheet_panel(
     drag: AnimatedValue,
     request_close: Rc<dyn Fn()>,
     title: Prop<Option<SharedString>>,
+    leading: Prop<Option<SharedString>>,
     trailing: Prop<Option<SharedString>>,
     children: Prop<Children>,
 ) -> impl IntoElement {
@@ -207,6 +213,7 @@ fn sheet_panel(
     });
     let drag_end = on_drag_end.clone();
     let trailing_close = request_close.clone();
+    let leading_close = request_close.clone();
 
     let header = view()
         .flex_col()
@@ -229,6 +236,34 @@ fn sheet_panel(
                 .pb(px(8.0))
                 .flex_row()
                 .items_center()
+                .child(when(
+                    move || leading.get().is_some(),
+                    move || {
+                        let label = leading.get_untracked().unwrap_or_default();
+                        button()
+                            .min_h(px(44.0))
+                            .px(px(4.0))
+                            .mr(px(12.0))
+                            .rounded(px(8.0))
+                            .accessibility_label(label.clone())
+                            .role(AccessibilityRole::Button)
+                            .active(|s| s.opacity(motion::PRESS_OPACITY))
+                            .on_press({
+                                let close = leading_close.clone();
+                                move || {
+                                    close();
+                                    cx.emit(SheetEvent::OpenChange(false));
+                                    cx.emit(SheetEvent::Leading);
+                                }
+                            })
+                            .child(
+                                text(label)
+                                    .text_size(type_default::BODY.size)
+                                    .text_color(tokens::system_blue),
+                            )
+                            .into_element()
+                    },
+                ))
                 .child(
                     text(move || title.get().unwrap_or_default())
                         .flex_1()
