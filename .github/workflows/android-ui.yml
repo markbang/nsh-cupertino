@@ -124,6 +124,7 @@ jobs:
             ${{ runner.temp }}/logcat.txt
           if-no-files-found: warn
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: android-apk
           path: |

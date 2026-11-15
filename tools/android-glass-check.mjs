@@ -87,25 +87,33 @@ function difference(a, b) {
   return sum / count;
 }
 
-/**
- * Where a row of the calibration page turns from the blue band to the light
- * page, in pixels: half-way between the row's darkest and lightest points, so
- * the material's tint and blur move the value without moving the edge.
- */
-function edge(image, y) {
-  let least = 1;
+/** The page's hard blue edge, in pixels: 70 pt, which gives the device's scale. */
+function blueEdge(none) {
+  const y = none.height >> 1;
   let most = 0;
-  for (let x = 0; x < image.width; x++) {
-    const value = image.luminance(x, y);
-    least = Math.min(least, value);
-    most = Math.max(most, value);
+  let at = null;
+  for (let x = 1; x < none.width; x++) {
+    const change = Math.abs(none.luminance(x, y) - none.luminance(x - 1, y));
+    if (change > most) {
+      most = change;
+      at = x;
+    }
   }
-  if (most - least < 0.1) return null;
-  const level = (least + most) / 2;
-  for (let x = 1; x < image.width; x++) {
-    if (image.luminance(x - 1, y) < level && image.luminance(x, y) >= level) return x;
+  return most > 0.2 ? at : null;
+}
+
+/**
+ * How far the blue field reaches along a row, in pixels: the last x whose pixel
+ * is clearly blue. On the calibration page the field ends at 70 pt; a material
+ * that magnifies the backdrop (the lens) carries it further inside the capsule.
+ */
+function blueReach(image, y, until) {
+  let last = -1;
+  for (let x = 0; x < until; x++) {
+    const [r, , b] = image.pixel(x, y);
+    if (b - r > 60) last = x;
   }
-  return null;
+  return last;
 }
 
 /** The rows where two frames differ, and the biggest change in them: the capsule. */
@@ -132,6 +140,9 @@ for (const scheme of SCHEMES) {
     const shades = colours(image);
     if (brightness <= 0.02) fail(`${name}.png is black (mean luminance ${brightness.toFixed(3)})`);
     else if (shades <= 3) fail(`${name}.png is one colour (${shades} shades): nothing drew`);
+    // A page of the demo holds text, rows and a picture: a window that never
+    // drew (a stuck splash, a white dialog) is a handful of shades.
+    else if (shades < 100) fail(`${name}.png holds ${shades} shades: a window drew nothing, not the page`);
     else report(`${name}.png: ${image.width}×${image.height}, mean ${brightness.toFixed(2)}, ${shades} shades`);
   }
 }
@@ -179,28 +190,30 @@ for (const scheme of SCHEMES) {
     }
     if (mean(image) <= 0.02) fail(`calibration-${mode}-${scheme}.png is black`);
   }
+  const none = shots.none;
   const material = shots.material;
   const shader = shots.shader;
-  if (!material || !shader) continue;
-  const drawn = changedRows(shots.none ?? material, shader);
-  if (drawn.rows.length < 8) {
-    fail(`calibration-shader-${scheme}.png draws nothing over calibration-none-${scheme}.png: the shader produced no surface`);
+  if (!none || !material || !shader) continue;
+  const page = blueEdge(none);
+  if (page === null) {
+    fail(`calibration-none-${scheme}.png has no blue edge to calibrate on`);
     continue;
   }
-  const y = drawn.rows[drawn.rows.length >> 1];
-  const before = edge(material, y);
-  const after = edge(shader, y);
-  if (before === null || after === null) {
-    fail(`calibration: no edge to measure on row ${y} (material ${before}, shader ${after})`);
-    continue;
-  }
-  const moved = Math.abs(after - before);
+  // `GlassCalibrationPage`: the capsule runs from 60 pt to 240 pt, and its
+  // vertical middle is 152 pt below the top.
+  const scale = page / 70;
+  const y = Math.round(152 * scale);
+  const until = Math.round(240 * scale);
+  const field = blueReach(material, y, until);
+  const lens = blueReach(shader, y, until);
   const apart = changedRows(material, shader).most;
-  report(`calibration ${scheme}: the surface covers ${drawn.rows.length} rows, the shader differs from the material by ${apart.toFixed(2)}, the edge at row ${y} moves ${moved} px (${before} → ${after})`);
+  report(
+    `calibration ${scheme}: the blue field ends at ${page} px on the page, reaches ${field} px through the fill and ${lens} px through the shader at row ${y} (${scale.toFixed(2)} px a point)`,
+  );
   if (apart < 0.02) {
     fail(`calibration-shader-${scheme}.png is calibration-material-${scheme}.png: the GPU shader drew nothing of its own`);
-  } else if (moved < 2) {
-    fail(`calibration-shader-${scheme}.png draws without the lens: the edge under the rim stays at ${before} px (a flat fill, not refraction)`);
+  } else if (lens - Math.max(field, page) < 40) {
+    fail(`calibration-shader-${scheme}.png draws without the lens: the blue field reaches ${lens} px, as far as the fill (${field} px), not past the page's edge (${page} px)`);
   }
 }
 

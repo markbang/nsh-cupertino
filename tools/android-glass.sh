@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # The Liquid Glass pages, captured on an Android emulator from the packaged
 # demo — the evidence that the material draws on Android, where nobody had run
-# it (`docs/releases/v0.3.1.md`). Light and dark, the rows under the bar
-# mid-scroll, the capsule variants, the glass sheet, and the calibration page
-# `tools/android-glass-check.mjs` measures for refraction.
+# it (`docs/releases/v0.3.1.md`). Light and dark, the page scrolled so its
+# striped band is under the bar, the capsule variants, the glass sheet, and the
+# calibration page `tools/android-glass-check.mjs` measures for the lens.
 #
 #   tools/android-glass.sh <apk or directory of APKs> [out dir]
 #
@@ -15,6 +15,8 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 APK=${1:?usage: tools/android-glass.sh <apk or directory of APKs> [out dir]}
 OUT=${2:-$here/docs/screenshots}
+LOGCAT=${LOGCAT:-$here/android-glass.logcat.txt}
+: > "$LOGCAT"
 if [ -d "$APK" ]; then
   APK=$(find "$APK" -maxdepth 2 -name '*.apk' | head -1)
   [ -n "$APK" ] || { echo "no APK in $1" >&2; exit 1; }
@@ -104,18 +106,8 @@ shot() {
   step "capture android-glass-$1.png"
   adb exec-out screencap -p > "$OUT/android-glass-$1.png"
   [ -s "$OUT/android-glass-$1.png" ] || { echo "screencap wrote nothing" >&2; exit 1; }
-}
-
-# A flick, with the frame taken while the list still moves: the rows are
-# part-way under the bar, which is where the lens and the blur follow content
-# rather than the page's background.
-mid_scroll() {
-  adb shell input swipe 540 1800 540 900 250 >/dev/null 2>&1 &
-  local finger=$!
-  sleep 0.55
-  shot "scrolled-$1"
-  wait "$finger"
-  sleep 1
+  # What the app logged since it started: a crash, or the shader's warning.
+  adb logcat -d -s nsh:V AndroidRuntime:E >> "$LOGCAT" 2>/dev/null || true
 }
 
 # A finger that drags the page by `$1` pixels and lifts, then the settle.
@@ -135,14 +127,26 @@ capture() {
   launch
   wait_for "Under the bar"
   shot "$scheme"
-  mid_scroll "$scheme"
+  scroll_by 360
+  shot "scrolled-$scheme"
   launch
   wait_for "Under the bar"
-  scroll_by 520
+  scroll_by 900
   shot "capsules-$scheme"
+
+  # The glass sheet, two ways: seeded open at launch (the seed a screenshot
+  # test uses), then opened by a finger on its button.
   seed "cupertino.page=glass" "cupertino.overlay=glass"
   launch
-  sleep 1
+  sleep 3
+  adb shell dumpsys window 2>/dev/null | grep -E "Window #|mCurrentFocus" >> "$LOGCAT" || true
+  shot "sheet-seeded-$scheme"
+  seed "cupertino.page=glass"
+  launch
+  scroll_by 520
+  adb shell input tap 540 2330
+  sleep 2
+  adb shell dumpsys window 2>/dev/null | grep -E "Window #|mCurrentFocus" >> "$LOGCAT" || true
   shot "sheet-$scheme"
 
   local mode
@@ -165,7 +169,6 @@ adb shell cmd uimode night no >/dev/null
 # What the GPU is, and whether the shader opened a device: the run's answer to
 # "did it draw, or fall back?" (the material's fill is the fallback).
 step "the shader's log"
-adb logcat -d -s nsh:V > "${LOGCAT:-/tmp/logcat.txt}" 2>/dev/null || true
-grep -i "shader" "${LOGCAT:-/tmp/logcat.txt}" | tail -20 || echo "(no shader lines)"
+grep -i "shader\|GPU\|adapter" "$LOGCAT" | tail -20 || echo "(no shader lines)"
 
 step "done: $(ls "$OUT"/android-glass-*.png | wc -l) captures in $OUT"
