@@ -4,3 +4,6 @@ target/
 examples/demo/.nsh/
 examples/demo/target/
 docs/screenshots/
+
+# Python bytecode from the Android driver helper.
+__pycache__/
