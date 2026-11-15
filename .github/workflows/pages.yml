@@ -1,0 +1,94 @@
+name: Pages
+
+# The documentation site: https://markbang.github.io/nsh-cupertino/, built for
+# the web from `site/` and deployed as a static site. `site/nsh.json` sets
+# `"base": "/nsh-cupertino/"`, the path GitHub Pages serves a project site from.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and a run that is already deploying finishes.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  NSH_VERSION: v0.5.0
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "4"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: build the site
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # QuickJS' bindings come from bindgen, which needs libclang; the wasm
+      # target links with clang and llvm-ar.
+      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.nsh
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            site/.nsh/rust/target
+          key: pages-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('site/nsh.json', 'Cargo.toml') }}
+          restore-keys: pages-${{ runner.os }}-${{ env.NSH_VERSION }}-
+      - name: Install nsh
+        run: |
+          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
+          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.130
+      # The site shows the crate's version and the docs' own prop tables: both
+      # are generated, and a stale commit fails here.
+      - run: node tools/site-version.mjs --check
+      - run: node tools/site-api.mjs --check
+      - name: Package the site for the web
+        run: nsh package site/App.tsx --target web -o "$RUNNER_TEMP/out"
+      # `nsh package` writes `<out>/<Name>/`; the artifact is served at the
+      # site's root, so the directory's own name must not reach the URL.
+      - name: Move the site to the artifact root
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/site"
+          shopt -s dotglob nullglob
+          entries=("$RUNNER_TEMP/out"/*)
+          if [ ${#entries[@]} -ne 1 ] || [ ! -d "${entries[0]}" ]; then
+            echo "expected one directory in $RUNNER_TEMP/out, got: ${entries[*]}" >&2
+            exit 1
+          fi
+          mv "${entries[0]}"/* "$RUNNER_TEMP/site/"
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    name: deploy to Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
