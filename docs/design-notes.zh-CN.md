@@ -113,6 +113,45 @@ wave A 的组件清单、尺寸与交互细节是 Flutter 官方 `cupertino_ui` 
 70 %–94 % 填充），高对比度下每种填充更不透明。"玻璃只属于浮动层"这条规则来自 Apple
 （`materials.md`、`liquid-glass.md`），Lenso UI 的 `DESIGN.md` 也有同样表述。没有复制任何 CSS。
 
+## 液态玻璃：哪些是真折射，哪些是近似
+
+`src/glass.rs` 用一段 WGSL shader 绘制浮动层材质。Apple 没有公开实现，因此行为来自它自己的描述，
+数值是本项目自己的：
+
+- [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/)（WWDC25）：
+  光在边缘被弯折、聚集，而不是像模糊那样散射；高光随光照移动；材质会适应背后内容；
+  `regular`、`clear` 与着色变体；交互变体；以及在 `GlassEffectContainer` 内形变的形状。
+- HIG [Materials](https://developer.apple.com/design/human-interface-guidelines/materials)
+  与 [Liquid Glass](https://developer.apple.com/design/human-interface-guidelines/liquid-glass)：
+  玻璃只属于浮动层，绝不用于内容；不要把文字放在无法保证对比度的玻璃上；增强对比度时材质接近不透明。
+- [conorluddy/LiquidGlassReference](https://github.com/conorluddy/LiquidGlassReference)：
+  同一组特性的书面规格（折射对比模糊、高光响应、变体、容器）。
+
+shader 做了什么，以及每一部分有多接近：
+
+| 部分 | 本项目做法 | 保真度 |
+| --- | --- | --- |
+| 折射 | 表面的 SDF 给出高度场（边缘 `BEVEL` 点的斜面，内部平整），其梯度位移背景采样，边缘最强；整幅画面再放大 2 % | 对被采样的画面是**真实折射**；高度曲线是选定的，不是 Apple 的光学 |
+| 模糊 | 9 到 17 次背景采样，黄金螺旋分布、逐像素旋转；`quality` 可减少 | 采样画面的模糊，比可分离高斯粗糙 |
+| 高光边缘 | 斜面上 `facing = dot(normal, light)`，边缘一条细亮线，背光侧内阴影 | 沿轮廓连续且有方向；Apple 高光的形状是它自己的 |
+| 自适应着色 | 当模糊背景的亮度会与文字冲突时，着色 alpha 升到最多 96 % | 近似"随背景适应"；Apple 的规则未公开 |
+| 色散 | 沿法线相距半像素采样红、蓝，仅限边缘带 | ≤ 1 px，与 Apple 的边缘一致 |
+| 动态光照 | `light`（角度）与由应用驱动的 `tilt` 角 | NSH 不提供设备姿态，倾斜不会自动发生 |
+| `GlassEffectContainer` | `GlassGroup`：一个 shader 覆盖两个矩形，用平滑最小值（`spacing`）融合，并在两套布局之间弹动 | 共享采样区域与融合轮廓，符合 Apple 要求；不迁移形状内容 |
+| 交互 | 按压在 UI 线程弹动镜头、高光扩散与 3.5 % 压缩 | 数值与时长（约 250 ms）是本项目的；降低动态效果保留数值、去掉弹簧 |
+
+这些做法对照了解决同一问题的开源实现；`NOTICE` 逐条列出许可证与取用内容。没有复制代码：
+WGSL、SDF 与数值都在本仓库里写就。
+
+### Web 运行时只绑定每个程序的一个 uniform block
+
+为 Web 编译的 shader 里，每个 struct 会按阶段各生成一个 uniform block——naga 把它们命名为
+`Nsh_block_0Vertex` 与 `Nsh_block_0Fragment`——而 `nsh` 的 Web 运行时只绑定 fragment 阶段反射给出的名字。
+vertex 阶段的 block 一直未绑定，WebGL 以 `GL_INVALID_OPERATION` 拒绝绘制，视图什么都不显示。
+`tools/patch-runtime.mjs` 会把所有名字以所请求名字开头的 block 一并绑定，`tools/glass-shots.mjs`
+在截图前对构建应用它。正确的修复属于 `nsh`（`crates/nsh-platform-web/web/nsh.js` 的 `shaderProgram`）；
+在它落地之前，Web 构建需要这个补丁才能绘制任何 shader。
+
 ## 对比度：三个低于 WCAG AA 的角色
 
 浅色外观使用 Apple 自己的取值，其中三个在白色背景上的正文对比度低于 4.5:1：`system-blue`

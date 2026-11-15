@@ -5,7 +5,7 @@ import { Button as Press, Popover } from "nsh/base";
 import { Button, ScrollView, SegmentedControl, Slider, Switch } from "cupertino";
 import { CATALOG, entryOf, nameOf, type Entry } from "./catalog";
 import { language, strings, t, tr } from "./i18n";
-import { appearance, contrast, frame, resetPreferences, typeScale, wide } from "./prefs";
+import { appearance, contrast, frame, liquidGlass, resetPreferences, typeScale, wide } from "./prefs";
 import { hairline, label, muted, page, surface, tint } from "./ui";
 
 export const version = () => appInfo().version ?? "0.2.2";
@@ -93,6 +93,13 @@ export function SettingsPanel(props: { showFrame: boolean }) {
           onChange={(event: { value: string }) => appearance.set(event.value as "light" | "dark" | "auto")}
         />
         </View>
+      </SettingRow>
+      <SettingRow title={t("liquidGlass")} hint={t("liquidGlassHint")}>
+        <Switch
+          checked={liquidGlass()}
+          label={t("liquidGlass")}
+          onChange={(event: { value: boolean }) => liquidGlass.set(event.value)}
+        />
       </SettingRow>
       <SettingRow title={t("contrast")}>
         <Switch

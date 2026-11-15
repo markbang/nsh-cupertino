@@ -3,6 +3,7 @@
 import { type JSX, Text, token, View, type ViewStyle } from "nsh";
 import { language, tr } from "./i18n";
 import { basics } from "./pages-basics";
+import { glassPages } from "./pages-glass";
 import { overlays } from "./pages-overlays";
 import { faint, hairline, label, muted, surface } from "./ui";
 
@@ -34,6 +35,13 @@ const META: Record<string, { name: [string, string]; blurb: [string, string]; ic
     blurb: ["Title, large title, back and trailing actions", "标题、大标题、返回与尾部操作"],
     icon: "chevron.left",
     tint: "system-blue",
+  },
+  glass: {
+    name: ["Liquid Glass", "液态玻璃"],
+    blurb: ["Apple's iOS 26 material: lens, specular rim, adaptive tint", "Apple iOS 26 材质：镜头、高光环、自适应着色"],
+    icon: "sparkles",
+    tint: "system-indigo",
+    doc: "glass",
   },
   "nav-page": {
     name: ["Nav page", "导航页"],
@@ -167,7 +175,7 @@ const META: Record<string, { name: [string, string]; blurb: [string, string]; ic
   },
 };
 
-const PAGES = [...basics, ...overlays];
+const PAGES = [...basics, ...glassPages, ...overlays];
 
 export const CATALOG: Entry[] = PAGES.map(({ id, Page }) => {
   const meta = META[id];
@@ -544,6 +552,19 @@ export function Thumb(props: { id: string }) {
                 {(n) => <View style={{ ...mini(), height: 12 }} />}
               </Each>
             </View>
+          </View>
+        </ThumbShell>
+      );
+    case "glass":
+      return (
+        <ThumbShell>
+          <View style={{ paddingHorizontal: 12, gap: 8 }}>
+            <View style={{ flexDirection: "row", height: 44, gap: 4 }}>
+              <Each of={["#1d4ed8", "#f5f5f7", "#0f766e", "#f5f5f7", "#b91c1c"]} key={(color) => color}>
+                {(color) => <View style={{ flex: 1, backgroundColor: color() }} />}
+              </Each>
+            </View>
+            <View style={{ height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.9)", marginTop: -28 }} />
           </View>
         </ThumbShell>
       );

@@ -53,6 +53,11 @@ export const strings = {
   dark: ["Dark", "深色"],
   auto: ["Auto", "自动"],
   contrast: ["High contrast", "高对比度"],
+  liquidGlass: ["Liquid Glass", "液态玻璃"],
+  liquidGlassHint: [
+    "Off: the material without a GPU, the fill and blur the bars had before.",
+    "关闭：无 GPU 时的材质，即栏此前的填充与模糊。",
+  ],
   typeSize: ["Text size", "字号"],
   frame: ["Phone frame", "手机外框"],
   language: ["Language", "语言"],

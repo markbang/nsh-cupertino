@@ -14,6 +14,9 @@
 - **浅色、深色与高对比度。** 每个色角色都带 Apple 的四组取值，`<Theme>` 在运行时切换到高对比度。
 - **是移植，不是模仿。** 尺寸、颜色、动效与交互细节来自 Flutter 官方 `cupertino_ui` 1.1.6，
   逐个组件对照；`NOTICE` 记录从哪里取用了什么。
+- **浮动层的液态玻璃。** `Glass`、`GlassButton` 与 `GlassGroup` 用 shader 绘制 Apple
+  iOS 26 材质——背景经边缘折射、模糊、着色，并带有高光环——用于栏、sheet、弹窗与浮动控件；
+  没有 GPU 时退回材质自身的填充与模糊（[`docs/components/glass.zh-CN.md`](docs/components/glass.zh-CN.md)）。
 - **浮动层的材质。** `regular`、`thin`、`ultra-thin`、`thick`、`chrome` 五种玻璃填充与其模糊，
   用于内容在其下滚动的栏。
 - **原生行为。** 组件建立在 `nsh/base` 的行为之上（按压、焦点、键盘、角色），自己只负责外观，
@@ -21,7 +24,7 @@
 - **每个页面都有截图。** 每次 PR 都会用 Web 构建给演示应用的每个页面拍浅色与深色截图，浮层在两种外观下打开；另有像素测试检查列表分隔线。
 - **一台设备像素。** 所有细分隔线在任何显示倍率下都不低于一台设备像素。
 
-状态：**wave B**（0.2.0）——包含 token、设置类页面所需的组件，以及 iOS 其余浮层与控件：
+状态：**0.3.0**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及真正的液态玻璃：
 带档位的 Sheet、操作表、警告框、上下文菜单、滚轮、日期选择、分段控件、滑块、标签栏、
 滑动操作、下拉刷新与栏的材质。
 
@@ -135,6 +138,7 @@ pub fn Settings() -> impl IntoElement {
 | [`RefreshView`](docs/components/refresh.zh-CN.md) | 下拉落出活动指示器的滚动视图 |
 | [`Theme`](docs/components/theme.zh-CN.md) | 安装 token，并切换到高对比度取值 |
 | `Icon` | [`icon`](docs/components/icon.zh-CN.md) / `iconStroke`，NSH 里替代 SF Symbols |
+| [`Glass`](docs/components/glass.zh-CN.md)、`GlassButton`、`GlassGroup` | 液态玻璃：浮动层的 shader 材质、变体、组合与回退 |
 
 演示应用每个页面的截图（浅色与深色）在 `screenshots` 分支上，并附在每个 release 里。
 
@@ -181,7 +185,7 @@ pub fn Settings() -> impl IntoElement {
 <https://markbang.github.io/nsh-cupertino/> 是这个库给自己写的文档：`site/` 本身就是一个
 Native Shell 应用，每个页面都用它所记录的组件绘制，所以页面展示的就是运行中的组件库。
 
-- 首页网格列出全部 24 个组件；每个组件都有可点击、拖动、滑动的演示，绘制它的 TSX（带复制按钮），
+- 首页网格列出全部 25 个组件；每个组件都有可点击、拖动、滑动的演示，绘制它的 TSX（带复制按钮），
   以及由 `tools/site-api.mjs` 从 `docs/components/*.md` 生成的属性表——文档是来源，站点不会与之偏离。
 - 顶栏是全局设置：浅色 / 深色 / 跟随系统、高对比度、文字大小、手机边框以及英文 / 中文。
 - 每个页面都是 hash 路由（`#/sheet`），可以把它单独分享，浏览器的前进与后退也能在页面间切换。
