@@ -134,20 +134,21 @@ capture() {
   scroll_by 900
   shot "capsules-$scheme"
 
-  # The glass sheet, two ways: seeded open at launch (the seed a screenshot
-  # test uses), then opened by a finger on its button.
+  # The glass sheet, seeded open at launch — the seed a screenshot test uses.
+  # Its window takes seconds to draw on a software GPU: the dialog is white
+  # until the surface does.
   seed "cupertino.page=glass" "cupertino.overlay=glass"
   launch
   sleep 3
-  adb shell dumpsys window 2>/dev/null | grep -E "Window #|mCurrentFocus" >> "$LOGCAT" || true
-  shot "sheet-seeded-$scheme"
-  seed "cupertino.page=glass"
-  launch
-  scroll_by 520
-  adb shell input tap 540 2330
-  sleep 2
-  adb shell dumpsys window 2>/dev/null | grep -E "Window #|mCurrentFocus" >> "$LOGCAT" || true
   shot "sheet-$scheme"
+
+  # What the sheet's window does to the page behind it, on the demo's own sheet
+  # page (a medium detent): `android-sheet-page-*.png` is a diagnosis, not a
+  # still of the material, so it stays out of the published set.
+  seed "cupertino.page=sheet" "cupertino.overlay=sheet"
+  launch
+  sleep 3
+  adb exec-out screencap -p > "$OUT/android-sheet-page-$scheme.png"
 
   local mode
   for mode in none material shader; do
