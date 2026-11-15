@@ -18,10 +18,12 @@ them; a drag past medium closes it.
 | `detent` | `.detent(..)` | `"medium" \| "large"` | none | Controlled detent |
 | `defaultDetent` | `.default_detent(..)` | `"medium" \| "large"` | `"large"` | Detent at first |
 | `title` | `.title(..)` | `string` | none | 17 pt semibold in the header |
+| `leading` | `.leading(..)` | `string` | none | "Cancel", in the tint |
 | `trailing` | `.trailing(..)` | `string` | none | "Done", in the tint |
-| `children` | `.child(..)` | JSX | — | The content, which scrolls |
+| `scroll` | `.scroll(..)` | `boolean` | `true` | `false` for content that scrolls itself (a page, a stack) |
+| `children` | `.child(..)` | JSX | — | The content |
 
-Events: `onOpenChange(open)`, `onDetentChange(detent)`, `onCancel()`,
+Events: `onOpenChange(open)`, `onDetentChange(detent)`, `onCancel()`, `onLeading()`,
 `onTrailing()`.
 
 Notes
@@ -32,7 +34,8 @@ Notes
   release velocity and the springs between detents run on the UI thread.
 - The backdrop dims only at large (0.32) and hardly at medium (0.03), as iOS.
 - Escape, the Android back button, a press on the backdrop and a drag past
-  medium close it; `Done` reports the trailing action and asks to close.
+  medium close it; `Done` reports the trailing action and asks to close, and
+  `Cancel` reports the leading one the same way.
 - Give the app's `detent` and follow `onDetentChange` when the app owns it; a
   drag that changes detents also reports it.
 

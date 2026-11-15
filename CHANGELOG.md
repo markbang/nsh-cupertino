@@ -4,7 +4,26 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-11-15
+
+### Added
+
+- `Icon`, the component: an icon on its own, with a size, a token tint and an
+  optional accessible name, for the parts a row or a bar draws.
+- 28 shapes a mail client needs: `tray`, `paperplane`, `archivebox`, `trash`,
+  `flag` / `flag.fill`, `paperclip`, `folder`, `square.and.pencil`, `pencil`,
+  `clock`, `calendar`, `arrow.clockwise`, `arrowshape.turn.up.left` /
+  `arrowshape.turn.up.right`, `link`, `key`, `line.3.horizontal.decrease`,
+  `cloud`, `exclamationmark.triangle`, `checkmark.circle`, `doc`, `photo`,
+  `envelope.open`, `person.crop.circle`, `ellipsis`, `plus`, `xmark`.
+- `Sheet` takes a `leading` action ("Cancel") beside its `trailing` one, and
+  reports it as `onLeading`, as iOS's compose sheets have; `scroll={false}`
+  leaves the scrolling to content that has its own (a page, a navigation stack).
+
 ## [0.2.1] - 2026-11-15
+
+### Added
+
 
 ### Changed
 
