@@ -4,7 +4,7 @@
 # Run from the repository root.
 set -euo pipefail
 dir="${1:-docs/screenshots}"
-pages=(gallery navigation lists buttons textfields search switches indicators scroll materials colors type sheet actionsheet alert contextmenu picker datepicker segmented slider tabbar swipe refresh bar-materials)
+pages=(gallery navigation lists buttons textfields search switches indicators scroll materials glass colors type sheet actionsheet alert contextmenu picker datepicker segmented slider tabbar swipe refresh bar-materials)
 missing=0
 for page in "${pages[@]}"; do
   for scheme in light dark; do
