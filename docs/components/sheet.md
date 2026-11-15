@@ -20,7 +20,8 @@ them; a drag past medium closes it.
 | `title` | `.title(..)` | `string` | none | 17 pt semibold in the header |
 | `leading` | `.leading(..)` | `string` | none | "Cancel", in the tint |
 | `trailing` | `.trailing(..)` | `string` | none | "Done", in the tint |
-| `children` | `.child(..)` | JSX | — | The content, which scrolls |
+| `scroll` | `.scroll(..)` | `boolean` | `true` | `false` for content that scrolls itself (a page, a stack) |
+| `children` | `.child(..)` | JSX | — | The content |
 
 Events: `onOpenChange(open)`, `onDetentChange(detent)`, `onCancel()`, `onLeading()`,
 `onTrailing()`.

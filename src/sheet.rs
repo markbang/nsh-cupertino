@@ -33,7 +33,10 @@ pub struct SheetProps {
     pub leading: Prop<Option<SharedString>>,
     /// A trailing action in the header ("Done"), reported by `onTrailing`.
     pub trailing: Prop<Option<SharedString>>,
-    /// What the sheet shows; it scrolls.
+    /// Scrolls its content (on unless `false`): `false` for content that
+    /// scrolls itself, a page of lists or a navigation stack.
+    pub scroll: Prop<Option<bool>>,
+    /// What the sheet shows.
     pub children: Prop<Children>,
 }
 
@@ -141,6 +144,7 @@ pub fn Sheet(props: SheetProps, cx: Scope<SheetEvent>) -> impl IntoElement {
             props.title,
             props.leading,
             props.trailing,
+            props.scroll.get_untracked().unwrap_or(true),
             props.children,
         )
     })
@@ -157,6 +161,7 @@ fn sheet_panel(
     title: Prop<Option<SharedString>>,
     leading: Prop<Option<SharedString>>,
     trailing: Prop<Option<SharedString>>,
+    scrolls: bool,
     children: Prop<Children>,
 ) -> impl IntoElement {
     let enter = presence
@@ -326,11 +331,19 @@ fn sheet_panel(
             .on_press(|| {})
             .role(AccessibilityRole::Dialog)
             .child(header)
-            .child(
+            .child(if scrolls {
                 scroll()
                     .flex_1()
                     .bounces(true)
-                    .child(view().w_full().pb_safe_area_plus(px(24.0)).child(children)),
-            ),
+                    .child(view().w_full().pb_safe_area_plus(px(24.0)).child(children))
+                    .into_element()
+            } else {
+                view()
+                    .flex_1()
+                    .w_full()
+                    .pb_safe_area_plus(px(0.0))
+                    .child(children)
+                    .into_element()
+            }),
     )
 }

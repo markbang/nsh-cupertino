@@ -9,7 +9,8 @@ All notable changes to `nsh-cupertino`. The format follows
 ### Added
 
 - `Sheet` takes a `leading` action ("Cancel") beside its `trailing` one, and
-  reports it as `onLeading`, as iOS's compose sheets have.
+  reports it as `onLeading`, as iOS's compose sheets have; `scroll={false}`
+  leaves the scrolling to content that has its own (a page, a navigation stack).
 - `Icon`, the component: an icon on its own, with a size, a token tint and an
   optional accessible name, for the parts a row or a bar draws.
 - 28 shapes a mail client needs: `tray`, `paperplane`, `archivebox`, `trash`,
