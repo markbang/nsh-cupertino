@@ -4,10 +4,13 @@
 use std::rc::Rc;
 
 use nsh_base::button;
-use nsh_core::{AccessibilityRole, element::Children, geometry::point, prelude::*};
+use nsh_core::{
+    AccessibilityRole, Haptic, HapticImpact, element::Children, geometry::point, prelude::*,
+};
 
 use crate::{
     icon::icon_stroke,
+    refresh::pull_indicator,
     tokens::{self, metrics, motion, type_default},
 };
 
@@ -90,6 +93,8 @@ pub struct NavPageProps {
     /// `"ultra-thin"`, `"thick"`, `"chrome"`). A material makes the bar float
     /// over the content, which scrolls under it and shows through the blur.
     pub material: Prop<Option<SharedString>>,
+    /// A pull to refresh runs: the indicator below the bar stays out, turning.
+    pub refreshing: Prop<Option<bool>>,
 }
 
 /// The events of a [`NavPage`].
@@ -99,6 +104,8 @@ pub enum NavPageEvent {
     Back,
     /// The trailing action was pressed.
     Trailing,
+    /// The user pulled the page past its top and let go.
+    Refresh,
 }
 
 /// A whole page: a navigation bar over a scrolling view whose large title
@@ -141,26 +148,53 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
         })),
         props.material.get_untracked(),
     );
-    let page = scroll()
+    let show = animated_value(0.0);
+    let refreshing = props.refreshing;
+    let shown = show;
+    effect(move || {
+        if refreshing.get().unwrap_or(false) {
+            shown.spring(1.0, crate::overlay::spring(0.82, 300.0));
+        } else {
+            shown.spring(0.0, crate::overlay::spring(0.9, 260.0));
+        }
+    });
+    let indicator = pull_indicator(&offset, &show, None).top(px(if floating {
+        metrics::NAV_HEIGHT
+    } else {
+        0.0
+    }));
+    let page = view()
+        .relative()
         .flex_1()
-        .bounces(true)
-        .scroll_value(&offset)
-        .element_ref(&scroll_ref)
         .child(
-            view()
-                .w_full()
-                // A floating bar sits over the content: the page starts below it.
-                .when(floating, |v| v.pt(px(metrics::NAV_HEIGHT)))
-                .gap(px(metrics::SECTION_TOP))
-                .pb_safe_area_plus(px(24.0))
-                .child(view().when(large.get_untracked().is_some(), |v| {
-                    v.px(px(metrics::NAV_EDGE))
-                        .h(px(over))
-                        .justify_end()
-                        .child(large_title_text(&large))
-                }))
-                .child(props.children),
-        );
+            scroll()
+                .flex_1()
+                .bounces(true)
+                .scroll_value(&offset)
+                .element_ref(&scroll_ref)
+                .on_scroll_end(move |at: &Point<Points>| {
+                    if at.y.0 <= -100.0 && !refreshing.get_untracked().unwrap_or(false) {
+                        nsh_core::element::haptic(Haptic::Impact(HapticImpact::Light));
+                        cx.emit(NavPageEvent::Refresh);
+                    }
+                })
+                .child(
+                    view()
+                        .w_full()
+                        // A floating bar sits over the content: the page starts below it.
+                        .when(floating, |v| v.pt(px(metrics::NAV_HEIGHT)))
+                        .gap(px(metrics::SECTION_TOP))
+                        .pb_safe_area_plus(px(24.0))
+                        .child(view().when(large.get_untracked().is_some(), |v| {
+                            v.px(px(metrics::NAV_EDGE))
+                                .h(px(over))
+                                .justify_end()
+                                .child(large_title_text(&large))
+                        }))
+                        .child(props.children),
+                ),
+        )
+        .child(indicator);
     view()
         .flex_1()
         .pt_safe_area()
@@ -287,7 +321,7 @@ fn bar(
             .left_0()
             .right_0()
             .bottom_0()
-            .h(tokens::hairline())
+            .h(tokens::separator_thickness)
             .bg(tokens::separator),
     ))
 }

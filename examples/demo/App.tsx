@@ -17,15 +17,26 @@ import {
   View,
 } from "nsh";
 import {
+  ActionSheet,
   ActivityIndicator,
+  AlertDialog,
   Button,
+  ContextMenu,
+  DatePicker,
   List,
   ListTile,
   NavPage,
+  Picker,
+  RefreshView,
   ScrollView,
   SearchField,
   Section,
+  SegmentedControl,
+  Sheet,
+  Slider,
+  SwipeRow,
   Switch,
+  TabBar,
   TextField,
   Theme,
 } from "cupertino";
@@ -43,12 +54,25 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
   { id: "materials", title: "Materials", blurb: "Glass on the floating layer", icon: "moon", tint: "system-teal" },
   { id: "colors", title: "Color", blurb: "Semantic roles, light and dark", icon: "sun.max", tint: "system-yellow" },
   { id: "type", title: "Typography", blurb: "The eleven steps of the scale", icon: "info.circle", tint: "system-red" },
+  { id: "sheet", title: "Sheets", blurb: "Detents, drag, grabber", icon: "square.grid.2x2", tint: "system-teal" },
+  { id: "actionsheet", title: "Action sheet", blurb: "Destructive, cancel, 10 pt", icon: "list.bullet", tint: "system-orange" },
+  { id: "alert", title: "Alert dialog", blurb: "Messages and text entry", icon: "info.circle", tint: "system-red" },
+  { id: "contextmenu", title: "Context menu", blurb: "Long press, lifted preview", icon: "square.grid.2x2", tint: "system-purple" },
+  { id: "picker", title: "Picker", blurb: "Wheel, snapping, haptics", icon: "slider.horizontal.3", tint: "system-indigo" },
+  { id: "datepicker", title: "Date picker", blurb: "Calendar, compact, wheel", icon: "sun.max", tint: "system-blue" },
+  { id: "segmented", title: "Segmented control", blurb: "Sliding thumb, 2–5 items", icon: "circle.lefthalf.filled", tint: "system-blue" },
+  { id: "slider", title: "Slider", blurb: "28 pt thumb, tint, ticks", icon: "slider.horizontal.3", tint: "system-green" },
+  { id: "tabbar", title: "Tab bar", blurb: "49 pt, badges, tint", icon: "square.grid.2x2", tint: "system-blue" },
+  { id: "swipe", title: "Swipe actions", blurb: "Leading, trailing, undo", icon: "envelope", tint: "system-red" },
+  { id: "refresh", title: "Pull to refresh", blurb: "Drag, spinner, release", icon: "arrow.up.right", tint: "system-teal" },
+  { id: "bar-materials", title: "Bar materials", blurb: "Blurred bar and tab bar", icon: "sparkles", tint: "system-gray" },
 ];
 
 const page = signal("gallery");
 const history = signal<string[]>([]);
 const contrast = signal("normal");
 const appearance = signal("system");
+const overlaySeed = signal("");
 const presses = new Count();
 const pressCount = signal(0);
 
@@ -92,6 +116,7 @@ function Page(props: {
   id: string;
   trailing?: string;
   onTrailing?: () => void;
+  material?: string;
   children: JSX.Element;
 }) {
   const hasHistory = () => history().length > 0;
@@ -103,6 +128,7 @@ function Page(props: {
       onBack={back}
       trailing={props.trailing}
       onTrailing={props.onTrailing ?? home}
+      material={props.material}
     >
       {props.children}
     </NavPage>
@@ -141,8 +167,8 @@ function Gallery() {
             onPress={() => contrast.set(contrast() === "high" ? "normal" : "high")}
           />
         </Section>
-        <Section header="About" footer="nsh-cupertino 0.1.0 · Native Shell">
-          <ListTile title="Components" subtitle="12 registered: 11 drawn here, plus Theme" accessory="none" separator={false} />
+        <Section header="About" footer="nsh-cupertino 0.2.0 · Native Shell">
+          <ListTile title="Components" subtitle="23 registered: 23 pages, plus Theme" accessory="none" separator={false} />
         </Section>
       </List>
     </NavPage>
@@ -596,6 +622,407 @@ function TypePage() {
   );
 }
 
+const HOURS = Array.from({ length: 24 }, (_, hour) => ({
+  value: `${hour}`.padStart(2, "0"),
+  title: `${hour}`.padStart(2, "0"),
+}));
+
+function SheetPage() {
+  const open = signal(overlaySeed() === "sheet");
+  const detent = signal("medium");
+  const notice = signal("No sheet open.");
+  return (
+    <Page id="sheet">
+      <List scroll={false}>
+        <Section header="Detents" footer="Drag the grabber between medium and large; a drag past medium closes it. The backdrop dims at large only.">
+          <View style={{ padding: 16, gap: 12 }}>
+            <Button title="Open at medium" variant="tinted" onPress={() => { detent.set("medium"); open.set(true); }} />
+            <Button title="Open at large" variant="tinted" onPress={() => { detent.set("large"); open.set(true); }} />
+          </View>
+          <ListTile title="Detent" subtitle={detent()} accessory="none" separator />
+          <ListTile title="Last event" subtitle={notice()} accessory="none" separator={false} />
+        </Section>
+      </List>
+      <Sheet
+        open={open()}
+        detent={detent()}
+        title="Filters"
+        trailing="Done"
+        onOpenChange={(event: { open: boolean }) => { open.set(event.open); if (!event.open) notice.set("Closed."); }}
+        onDetentChange={(event: { detent: string }) => detent.set(event.detent)}
+        onTrailing={() => { open.set(false); notice.set("Closed from Done."); }}
+        onCancel={() => notice.set("Cancelled.")}
+      >
+        <List scroll={false}>
+          <Section header="Show" footer="Rows inside the sheet, scrolling while it is at large.">
+            <ListTile title="Unread" subtitle="Only mail nobody opened" accessory="none" separator />
+            <ListTile title="Flagged" subtitle="Red, orange or yellow" accessory="none" separator />
+            <ListTile title="Attachments" subtitle="Anything with a file" accessory="none" separator={false} />
+          </Section>
+          <Section header="Filler">
+            <Each of={[1, 2, 3, 4, 5, 6]} key={(n) => n}>
+              {(n) => <ListTile title={`Option ${n()}`} accessory="none" separator={n() !== 6} />}
+            </Each>
+          </Section>
+        </List>
+      </Sheet>
+    </Page>
+  );
+}
+
+function ActionSheetPage() {
+  const open = signal(overlaySeed() === "actionsheet");
+  const result = signal("Nothing chosen.");
+  return (
+    <Page id="actionsheet">
+      <List scroll={false}>
+        <Section header="A choice" footer="One 10 pt group over the safe area, the cancel button apart; a press outside, Escape or back closes it.">
+          <View style={{ padding: 16, gap: 12 }}>
+            <Button title="Show action sheet" variant="tinted" onPress={() => open.set(true)} />
+          </View>
+          <ListTile title="Result" subtitle={result()} accessory="none" separator={false} />
+        </Section>
+      </List>
+      <ActionSheet
+        open={open()}
+        title="Message"
+        message="What do you want to do with it?"
+        actions={[
+          { id: "reply", title: "Reply" },
+          { id: "forward", title: "Forward" },
+          { id: "flag", title: "Flag" },
+          { id: "delete", title: "Delete", destructive: true },
+        ]}
+        onOpenChange={(event: { open: boolean }) => open.set(event.open)}
+        onAction={(event: { id: string }) => result.set(`Action: ${event.id}`)}
+        onCancel={() => result.set("Cancelled.")}
+      />
+    </Page>
+  );
+}
+
+function AlertPage() {
+  const simple = signal(overlaySeed() === "alert");
+  const entry = signal(false);
+  const result = signal("No answer yet.");
+  return (
+    <Page id="alert">
+      <List scroll={false}>
+        <Section header="Alert" footer="A 270 pt card on a dimmed page, entering with a short spring; two buttons sit side by side, three or more stack.">
+          <View style={{ padding: 16, gap: 12 }}>
+            <Button title="Delete this message?" variant="destructive" onPress={() => simple.set(true)} />
+            <Button title="Rename the folder" variant="tinted" onPress={() => entry.set(true)} />
+          </View>
+          <ListTile title="Result" subtitle={result()} accessory="none" separator={false} />
+        </Section>
+      </List>
+      <AlertDialog
+        open={simple()}
+        title="Delete Message"
+        message="This message will be deleted. This cannot be undone."
+        actions={[
+          { id: "cancel", title: "Cancel" },
+          { id: "delete", title: "Delete", destructive: true, preferred: true },
+        ]}
+        onOpenChange={(event: { open: boolean }) => simple.set(event.open)}
+        onAction={(event: { id: string; text: string }) => result.set(`Alert: ${event.id}`)}
+        onCancel={() => result.set("Alert cancelled.")}
+      />
+      <AlertDialog
+        open={entry()}
+        title="Rename Folder"
+        message="Enter a name for this folder."
+        input="Folder name"
+        value="Receipts"
+        actions={[
+          { id: "cancel", title: "Cancel" },
+          { id: "save", title: "Save", preferred: true },
+        ]}
+        onOpenChange={(event: { open: boolean }) => entry.set(event.open)}
+        onAction={(event: { id: string; text: string }) => result.set(`${event.id}: ${event.text || "(empty)"}`)}
+        onCancel={() => result.set("Rename cancelled.")}
+      />
+    </Page>
+  );
+}
+
+function ContextMenuPage() {
+  const preview = signal("Long-press the card, or right-click it.");
+  const open = signal(false);
+  return (
+    <Page id="contextmenu">
+      <List scroll={false}>
+        <Section header="About a message" footer="The page blurs behind the lifted preview; the menu keeps iOS's grouped surface, Escape closes it.">
+          <View style={{ padding: 16 }}>
+            <ContextMenu
+              actions={[
+                { id: "reply", title: "Reply", icon: "arrow.up.right" },
+                { id: "flag", title: "Flag", icon: "bell" },
+                { id: "delete", title: "Delete", icon: "xmark.circle.fill", destructive: true },
+              ]}
+              trigger={
+                <View class="bg-secondary-system-background" style={{ padding: 16, borderRadius: 14, gap: 6 }}>
+                  <Text class="text-label" style={{ fontSize: 17, fontWeight: 600 }}>Ada Lovelace</Text>
+                  <Text class="text-secondary-label" style={{ fontSize: 15 }}>The Analytical Engine weaves algebraic patterns.</Text>
+                  <Text class="text-tertiary-label" style={{ fontSize: 13 }}>Hold here for the menu</Text>
+                </View>
+              }
+              preview={
+                <View style={{ padding: 18, width: 300, gap: 8 }}>
+                  <Text class="text-label" style={{ fontSize: 20, fontWeight: 700 }}>Ada Lovelace</Text>
+                  <Text class="text-secondary-label" style={{ fontSize: 15 }}>The Analytical Engine weaves algebraic patterns just as the Jacquard loom weaves flowers and leaves.</Text>
+                </View>
+              }
+              open={open()}
+              onOpenChange={(event: { open: boolean }) => open.set(event.open)}
+              onAction={(event: { id: string }) => preview.set(`Chose ${event.id}.`)}
+            />
+          </View>
+          <ListTile title="Result" subtitle={preview()} accessory="none" separator={false} />
+        </Section>
+      </List>
+    </Page>
+  );
+}
+
+function PickerPage() {
+  const hour = signal("09");
+  return (
+    <Page id="picker">
+      <List scroll={false}>
+        <Section header="A wheel" footer="Drag it: the items fade and shrink with their distance, the wheel snaps to the item and a haptic ticks.">
+          <View style={{ paddingVertical: 8 }}>
+            <Picker
+              items={HOURS}
+              value={hour()}
+              label="Hour"
+              onChange={(event: { value: string; index: number }) => hour.set(event.value)}
+            />
+          </View>
+          <ListTile title="Hour" subtitle={hour()} accessory="none" separator={false} />
+        </Section>
+      </List>
+    </Page>
+  );
+}
+
+function DatePickerPage() {
+  const date = signal("2026-11-14");
+  return (
+    <Page id="datepicker">
+      <List scroll={false}>
+        <Section header="Inline" footer="Six weeks of days, week start and names from the locale; today is tinted, the chosen day filled.">
+          <View style={{ padding: 16 }}>
+            <DatePicker value={date()} label="Delivery date" onChange={(event: { value: string }) => date.set(event.value)} />
+          </View>
+          <ListTile title="Chosen" subtitle={date()} accessory="none" separator={false} />
+        </Section>
+        <Section header="Compact" footer="A button that opens the same calendar in a popover.">
+          <View style={{ padding: 16 }}>
+            <DatePicker value={date()} variant="compact" label="Delivery date, compact" onChange={(event: { value: string }) => date.set(event.value)} />
+          </View>
+        </Section>
+      </List>
+    </Page>
+  );
+}
+
+function SegmentedPage() {
+  const chosen = signal("week");
+  const size = signal("m");
+  return (
+    <Page id="segmented">
+      <List scroll={false}>
+        <Section header="Three" footer="A 32 pt track in a 50 pt target; the white thumb slides on a spring, with a haptic.">
+          <View style={{ padding: 16 }}>
+            <SegmentedControl
+              items={[
+                { value: "day", title: "Day" },
+                { value: "week", title: "Week" },
+                { value: "month", title: "Month" },
+              ]}
+              value={chosen()}
+              label="Range"
+              onChange={(event: { value: string; index: number }) => chosen.set(event.value)}
+            />
+          </View>
+          <ListTile title="Range" subtitle={chosen()} accessory="none" separator={false} />
+        </Section>
+        <Section header="Five" footer="Two to five segments; the thumb's width follows the track.">
+          <View style={{ padding: 16 }}>
+            <SegmentedControl
+              items={[
+                { value: "xs", title: "XS" },
+                { value: "s", title: "S" },
+                { value: "m", title: "M" },
+                { value: "l", title: "L" },
+                { value: "xl", title: "XL" },
+              ]}
+              value={size()}
+              label="Size"
+              onChange={(event: { value: string; index: number }) => size.set(event.value)}
+            />
+          </View>
+          <ListTile title="Size" subtitle={size()} accessory="none" separator={false} />
+        </Section>
+      </List>
+    </Page>
+  );
+}
+
+function SliderPage() {
+  const volume = signal(0.45);
+  const steps = signal(3);
+  return (
+    <Page id="slider">
+      <List scroll={false}>
+        <Section header="Continuous" footer="A 4 pt rail in the tint, a 28 pt white thumb, a value snapped to 0.05.">
+          <View style={{ paddingHorizontal: 16, paddingVertical: 20 }}>
+            <Slider value={volume()} min={0} max={1} step={0.05} label="Volume slider" onChange={(event: { value: number }) => volume.set(event.value)} />
+          </View>
+          <ListTile title="Volume" subtitle={`${Math.round(volume() * 100)} %`} accessory="none" separator={false} />
+        </Section>
+        <Section header="Steps" footer="A tick for each step while there are few enough to draw.">
+          <View style={{ paddingHorizontal: 16, paddingVertical: 20 }}>
+            <Slider value={steps()} min={0} max={5} step={1} label="Quality steps" onChange={(event: { value: number }) => steps.set(event.value)} />
+          </View>
+          <ListTile title="Quality" subtitle={`${steps()}`} accessory="none" separator={false} />
+        </Section>
+      </List>
+    </Page>
+  );
+}
+
+function TabBarPage() {
+  const tab = signal("inbox");
+  return (
+    <View style={{ flex: 1 }}>
+      <Page id="tabbar">
+        <List scroll={false}>
+          <Section header="Tabs" footer="A 49 pt bar over the safe area, the chosen tab in the tint, a badge over an icon; the bar's material blurs what scrolls under it.">
+            <ListTile title="Chosen" subtitle={tab()} accessory="none" separator />
+            <ListTile title="Badges" subtitle="A count, or a dot" accessory="none" separator={false} />
+          </Section>
+          <Section header="Filler" footer="Rows so the page scrolls under the bar.">
+            <Each of={[1, 2, 3, 4, 5]} key={(n) => n}>
+              {(n) => <ListTile title={`Row ${n()}`} accessory="none" separator={n() !== 5} />}
+            </Each>
+          </Section>
+        </List>
+      </Page>
+      <TabBar
+        items={[
+          { value: "inbox", title: "Inbox", icon: "envelope", badge: "3" },
+          { value: "flagged", title: "Flagged", icon: "bell" },
+          { value: "search", title: "Search", icon: "magnifyingglass" },
+          { value: "profile", title: "Profile", icon: "person", badge: "dot" },
+        ]}
+        value={tab()}
+        label="Mail"
+        onChange={(event: { value: string; index: number }) => tab.set(event.value)}
+      />
+    </View>
+  );
+}
+
+function SwipePage() {
+  const last = signal("Swipe a row: archive or delete behind it.");
+  return (
+    <Page id="swipe">
+      <List scroll={false}>
+        <Section header="Trailing actions" footer="Swipe left for Flag and Delete; a full swipe fires Archive and the row springs back.">
+          <SwipeRow
+            trailing={[
+              { id: "flag", title: "Flag", icon: "bell", tint: "system-orange" },
+              { id: "delete", title: "Delete", icon: "xmark.circle.fill", destructive: true },
+            ]}
+            fullSwipe="archive"
+            onAction={(event: { id: string; full: boolean }) => last.set(event.full ? "Full swipe: archived (undo available)." : `Action ${event.id}.`)}
+          >
+            <ListTile title="Ada Lovelace" subtitle="The Analytical Engine" accessory="none" separator />
+          </SwipeRow>
+          <SwipeRow
+            trailing={[{ id: "delete", title: "Delete", icon: "xmark.circle.fill", destructive: true }]}
+            onAction={(event: { id: string; full: boolean }) => last.set(`Deleted${event.full ? " by a full swipe" : ""}.`)}
+          >
+            <ListTile title="Grace Hopper" subtitle="A compiler for English" accessory="none" separator={false} />
+          </SwipeRow>
+        </Section>
+        <Section header="Leading action">
+          <SwipeRow
+            leading={[{ id: "unread", title: "Unread", icon: "envelope", tint: "system-blue" }]}
+            onAction={(event: { id: string; full: boolean }) => last.set(`Action ${event.id}.`)}
+          >
+            <ListTile title="Katherine Johnson" subtitle="Orbital mechanics" accessory="none" separator={false} />
+          </SwipeRow>
+        </Section>
+        <Section footer={last()}>
+          <ListTile title="Result" subtitle={last()} accessory="none" separator={false} />
+        </Section>
+      </List>
+    </Page>
+  );
+}
+
+function RefreshPage() {
+  const refreshing = signal(false);
+  const count = signal(12);
+  return (
+    <Page id="refresh">
+      <List scroll={false}>
+        <Section header="Pull" footer="Drag the page past its top: the indicator drops and grows with the pull; release past 100 pt to refresh.">
+          <ListTile title="Refresh" subtitle={refreshing() ? "Refreshing…" : "Pull the page down"} accessory="none" separator={false} />
+        </Section>
+      </List>
+      <RefreshView
+        refreshing={refreshing()}
+        onRefresh={() => {
+          refreshing.set(true);
+          count.update((n) => n + 1);
+          setTimeout(() => refreshing.set(false), 1200);
+        }}
+        style={{ flex: 1 }}
+      >
+        <View style={{ paddingVertical: 16 }}>
+          <Each of={Array.from({ length: 6 }, (_, i) => i + 1)} key={(n) => n}>
+            {(n) => <ListTile title={`Message ${n()}`} subtitle="Pulled in at 14:32" accessory="none" separator={n() !== 6} />}
+          </Each>
+        </View>
+      </RefreshView>
+    </Page>
+  );
+}
+
+function BarMaterialsPage() {
+  const tab = signal("inbox");
+  return (
+    <View style={{ flex: 1 }}>
+      <Page id="bar-materials" material="regular">
+        <List scroll={false}>
+          <Section header="The bar" footer="Scroll: the large title goes under the bar and the material blurs it, fading in with the compact title.">
+            <Each of={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} key={(n) => n}>
+              {(n) => <ListTile title={`Row ${n()}`} subtitle="Under the bar" accessory="none" separator={n() !== 10} />}
+            </Each>
+          </Section>
+          <Section header="The tab bar" footer="The same material under the tabs; a platform without a backdrop blur keeps the tint.">
+            <ListTile title="Tab" subtitle={tab()} accessory="none" separator={false} />
+          </Section>
+        </List>
+      </Page>
+      <TabBar
+        items={[
+          { value: "inbox", title: "Inbox", icon: "envelope" },
+          { value: "flagged", title: "Flagged", icon: "bell", badge: "2" },
+          { value: "search", title: "Search", icon: "magnifyingglass" },
+        ]}
+        value={tab()}
+        label="Materials"
+        onChange={(event: { value: string; index: number }) => tab.set(event.value)}
+      />
+    </View>
+  );
+}
+
 function CurrentPage() {
   const id = page();
   if (id === "gallery") return <Gallery />;
@@ -608,6 +1035,18 @@ function CurrentPage() {
   if (id === "indicators") return <IndicatorsPage />;
   if (id === "scroll") return <ScrollPage />;
   if (id === "materials") return <MaterialsPage />;
+  if (id === "sheet") return <SheetPage />;
+  if (id === "actionsheet") return <ActionSheetPage />;
+  if (id === "alert") return <AlertPage />;
+  if (id === "contextmenu") return <ContextMenuPage />;
+  if (id === "picker") return <PickerPage />;
+  if (id === "datepicker") return <DatePickerPage />;
+  if (id === "segmented") return <SegmentedPage />;
+  if (id === "slider") return <SliderPage />;
+  if (id === "tabbar") return <TabBarPage />;
+  if (id === "swipe") return <SwipePage />;
+  if (id === "refresh") return <RefreshPage />;
+  if (id === "bar-materials") return <BarMaterialsPage />;
   if (id === "colors") return <ColorsPage />;
   return <TypePage />;
 }
@@ -619,6 +1058,8 @@ function App() {
     const seedPage = await Storage.getItem("cupertino.page");
     const seedContrast = await Storage.getItem("cupertino.contrast");
     const seedAppearance = await Storage.getItem("cupertino.appearance");
+    const seedOverlay = await Storage.getItem("cupertino.overlay");
+    if (seedOverlay) overlaySeed.set(seedOverlay);
     if (seedContrast === "high" || seedContrast === "normal") contrast.set(seedContrast);
     if (seedAppearance === "light" || seedAppearance === "dark" || seedAppearance === "system") {
       appearance.set(seedAppearance);

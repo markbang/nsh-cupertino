@@ -1,3 +1,5 @@
+[简体中文](activity-indicator.zh-CN.md)
+
 # Activity indicator
 
 iOS's spinner: eight rounded blades around a circle, each at its own opacity, the

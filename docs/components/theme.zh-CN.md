@@ -1,3 +1,5 @@
+[English](theme.md)
+
 # 主题与 token
 
 `Theme` 为应用安装 Cupertino 的 token，并在应用要求时切换到高对比度取值。`tokens` 是它背后的数据。

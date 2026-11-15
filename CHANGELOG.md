@@ -4,7 +4,7 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-14
 
 ### Changed
 
@@ -35,9 +35,19 @@ All notable changes to `nsh-cupertino`. The format follows
 - `NOTICE`: what was taken from `cupertino_ui` (BSD-3-Clause), Lenso UI (MIT) and
   Framework7 (MIT), file by file.
 
-- Wave B, next: `ActionSheet`, `AlertDialog`, `ContextMenu`, `Sheet` with detents,
-  `Picker`, `DatePicker`, `SegmentedControl`, `Slider`, `TabBar`, swipe actions
-  and pull to refresh.
+- The rest of the component set, ported the same way: `Sheet` with medium and
+  large detents; `ActionSheet`; `AlertDialog` with its text-entry variant;
+  `ContextMenu` with a lifted preview; `Picker`; `DatePicker`; `SegmentedControl`;
+  `Slider`; `TabBar`; `SwipeRow`; `RefreshView` and the same pull in `NavPage`.
+- A material that covers a bar's whole surface, fading in with the compact title,
+  with a tint-only fallback where no backdrop blur is drawn.
+
+### Fixed
+
+- Grouped separators are one **device pixel** at every display scale
+  (`separator_thickness`); at 0.33 pt a 1x display rounded the hairline away, so
+  rows other than the first two lost their line. A layout test covers every row
+  type at 1x, 2x and 3x, and a screenshot pixel test covers light and dark.
 
 ## [0.1.0] - 2026-11-14
 

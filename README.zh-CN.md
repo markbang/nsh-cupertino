@@ -15,10 +15,12 @@
   用于内容在其下滚动的栏。
 - **原生行为。** 组件建立在 `nsh/base` 的行为之上（按压、焦点、键盘、角色），自己只负责外观，
   所以 VoiceOver、TalkBack、Tab、空格/回车与 Android 返回手势都照常工作。
-- **每个页面都有截图。** 每次 PR 都会用 Web 构建给演示应用的每个页面拍浅色与深色截图。
+- **每个页面都有截图。** 每次 PR 都会用 Web 构建给演示应用的每个页面拍浅色与深色截图，浮层在两种外观下打开；另有像素测试检查列表分隔线。
+- **一台设备像素。** 所有细分隔线在任何显示倍率下都不低于一台设备像素。
 
-状态：**wave A**（0.1.0）——基础与第一批组件。wave B（操作表、警告框、上下文菜单、带档位的
-Sheet、选择器、日期选择器、分段控件、滑块、标签栏、滑动操作、下拉刷新）是下一步。
+状态：**wave B**（0.2.0）——包含 token、设置类页面所需的组件，以及 iOS 其余浮层与控件：
+带档位的 Sheet、操作表、警告框、上下文菜单、滚轮、日期选择、分段控件、滑块、标签栏、
+滑动操作、下拉刷新与栏的材质。
 
 ## 安装
 
@@ -27,7 +29,7 @@ Native Shell 应用从 git 引入这个 crate，目前还没有发布到 registr
 ```toml
 # Cargo.toml
 [dependencies]
-nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.1.0" }
+nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.2.0" }
 ```
 
 `nsh.json` 在 `"rust"` 里列出这个 crate 的路径，并把 `"theme"` 指向主题文件，这样在第一个组件
@@ -117,6 +119,17 @@ pub fn Settings() -> impl IntoElement {
 | [`Switch`](docs/components/switch.zh-CN.md) | 51 × 31，开启为绿色，滑块 200 ms |
 | [`ActivityIndicator`](docs/components/activity-indicator.zh-CN.md) | 八片叶片依次淡出，原生绘制 |
 | [`ScrollView`](docs/components/scroll-view.zh-CN.md) | 带回弹的滚动视图，平台滚动条与键盘行为 |
+| [`Sheet`](docs/components/sheet.zh-CN.md) | 底部面板，中/大两档与把手 |
+| [`ActionSheet`](docs/components/action-sheet.zh-CN.md) | 10 pt 圆角分组的操作与取消按钮 |
+| [`AlertDialog`](docs/components/alert-dialog.zh-CN.md) | iOS 警告框，支持按钮与输入框 |
+| [`ContextMenu`](docs/components/context-menu.zh-CN.md) | 长按/右键菜单，带抬起预览 |
+| [`Picker`](docs/components/picker.zh-CN.md) | 吸附滚轮，边缘淡出 |
+| [`DatePicker`](docs/components/date-picker.zh-CN.md) | 日历、紧凑触发器与月/日/年滚轮 |
+| [`SegmentedControl`](docs/components/segmented-control.zh-CN.md) | 32 pt 轨道、滑动滑块，2–5 段 |
+| [`Slider`](docs/components/slider.zh-CN.md) | 28 pt 滑块、着色轨道与刻度 |
+| [`TabBar`](docs/components/tab-bar.zh-CN.md) | 49 pt 标签栏，图标、文字与徽标 |
+| [`SwipeRow`](docs/components/swipe-actions.zh-CN.md) | 行后的左右滑动操作 |
+| [`RefreshView`](docs/components/refresh.zh-CN.md) | 下拉落出活动指示器的滚动视图 |
 | [`Theme`](docs/components/theme.zh-CN.md) | 安装 token，并切换到高对比度取值 |
 | `Icon` | [`icon`](docs/components/icon.zh-CN.md) / `iconStroke`，NSH 里替代 SF Symbols |
 

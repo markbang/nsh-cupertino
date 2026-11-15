@@ -22,19 +22,44 @@
 //! )
 //! ```
 
+pub mod action_sheet;
+pub mod alert;
 pub mod button;
+pub mod context_menu;
+pub mod date_picker;
 pub mod field;
 pub mod icon;
 pub mod indicator;
 pub mod list;
 pub mod navigation;
+pub mod overlay;
+pub mod picker;
+pub mod refresh;
 pub mod scroll;
+pub mod segmented;
+pub mod sheet;
+pub mod slider;
+pub mod swipe;
 pub mod switch;
+pub mod tab_bar;
 pub mod theme;
 pub mod theme_file;
 pub mod tokens;
 
+pub use action_sheet::{
+    ActionSheet, ActionSheetElement, ActionSheetEvent, ActionSheetProps, SheetAction, action_sheet,
+};
+pub use alert::{
+    AlertDialog, AlertDialogElement, AlertDialogEvent, AlertDialogProps, DialogAction, alert_dialog,
+};
 pub use button::{Button, ButtonElement, ButtonEvent, ButtonProps, button};
+pub use context_menu::{
+    ContextAction, ContextMenu, ContextMenuElement, ContextMenuEvent, ContextMenuProps,
+    context_menu,
+};
+pub use date_picker::{
+    DatePicker, DatePickerElement, DatePickerEvent, DatePickerProps, date_picker,
+};
 pub use field::{
     SearchField, SearchFieldElement, SearchFieldEvent, SearchFieldProps, TextField,
     TextFieldElement, TextFieldEvent, TextFieldProps, search_field, text_field,
@@ -51,8 +76,20 @@ pub use navigation::{
     NavPage, NavPageElement, NavPageEvent, NavPageProps, NavigationBar, NavigationBarElement,
     NavigationBarEvent, NavigationBarProps, nav_page, navigation_bar,
 };
+pub use picker::{Picker, PickerElement, PickerEvent, PickerItem, PickerProps, picker};
+pub use refresh::{
+    RefreshView, RefreshViewElement, RefreshViewEvent, RefreshViewProps, refresh_view,
+};
 pub use scroll::{ScrollView, ScrollViewElement, ScrollViewProps, scroll_view};
+pub use segmented::{
+    SegmentItem, SegmentedControl, SegmentedControlElement, SegmentedControlEvent,
+    SegmentedControlProps, segmented_control,
+};
+pub use sheet::{Sheet, SheetElement, SheetEvent, SheetProps, sheet};
+pub use slider::{Slider, SliderElement, SliderEvent, SliderProps, slider};
+pub use swipe::{SwipeAction, SwipeRow, SwipeRowElement, SwipeRowEvent, SwipeRowProps, swipe_row};
 pub use switch::{Switch, SwitchElement, SwitchEvent, SwitchProps, switch};
+pub use tab_bar::{TabBar, TabBarElement, TabBarEvent, TabBarProps, TabItem, tab_bar};
 pub use theme::{Theme, ThemeElement, ThemeProps, theme};
 pub use tokens::TextStyle;
 
@@ -73,5 +110,16 @@ fn native(registry: &mut Registry) {
         .register::<SearchField>()
         .register::<Switch>()
         .register::<ActivityIndicator>()
-        .register::<ScrollView>();
+        .register::<ScrollView>()
+        .register::<Sheet>()
+        .register::<ActionSheet>()
+        .register::<AlertDialog>()
+        .register::<ContextMenu>()
+        .register::<Picker>()
+        .register::<DatePicker>()
+        .register::<SegmentedControl>()
+        .register::<Slider>()
+        .register::<TabBar>()
+        .register::<SwipeRow>()
+        .register::<RefreshView>();
 }

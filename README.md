@@ -21,11 +21,15 @@ text and search fields, switches and the activity indicator.
   focus, keyboard, roles) and draw only the look, so VoiceOver, TalkBack, Tab,
   Space/Return and the Android back gesture keep working.
 - **Checked by screenshots.** Every demo page is captured in light and dark from
-  the web build on each pull request.
+  the web build on each pull request, the overlays open in both, and a pixel test
+  looks for the separators in the rendered lists.
+- **One device pixel.** Every hairline is at least one device pixel at every
+  display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **wave A** (0.1.0) — the foundation and the first components. Wave B
-(action sheets, alerts, context menus, sheets with detents, pickers, segmented
-control, slider, tab bar, swipe actions, pull to refresh) is next.
+Status: **wave B** (0.2.0) — the tokens, the components settings screens need,
+and the overlays and controls of the rest of iOS: sheets with detents, action
+sheets, alerts, context menus, pickers, a date picker, the segmented control,
+the slider, the tab bar, swipe actions, pull to refresh and the bar materials.
 
 ## Install
 
@@ -34,7 +38,7 @@ Native Shell apps take the crate from git; there is no registry release yet.
 ```toml
 # Cargo.toml
 [dependencies]
-nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.1.0" }
+nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.2.0" }
 ```
 
 `nsh.json` lists the crate at its path and points `"theme"` at the theme file, so
@@ -124,6 +128,17 @@ pub fn Settings() -> impl IntoElement {
 | [`Switch`](docs/components/switch.md) | 51 × 31, green when on, 200 ms thumb |
 | [`ActivityIndicator`](docs/components/activity-indicator.md) | Eight blades fading in turn, drawn natively |
 | [`ScrollView`](docs/components/scroll-view.md) | Bouncing scroll with the platform's indicator and keyboard behavior |
+| [`Sheet`](docs/components/sheet.md) | A bottom panel with medium and large detents and a grabber |
+| [`ActionSheet`](docs/components/action-sheet.md) | Actions and a cancel button in 10 pt groups |
+| [`AlertDialog`](docs/components/alert-dialog.md) | iOS's alert, with buttons and a text field |
+| [`ContextMenu`](docs/components/context-menu.md) | A long-press / right-click menu with a lifted preview |
+| [`Picker`](docs/components/picker.md) | A snapping wheel that fades its edges |
+| [`DatePicker`](docs/components/date-picker.md) | A calendar, a compact trigger and a month/day/year wheel |
+| [`SegmentedControl`](docs/components/segmented-control.md) | A 32 pt track with a sliding thumb, 2–5 segments |
+| [`Slider`](docs/components/slider.md) | A 28 pt thumb on a tinted rail, with tick marks |
+| [`TabBar`](docs/components/tab-bar.md) | A 49 pt bar of icons, labels and badges |
+| [`SwipeRow`](docs/components/swipe-actions.md) | Leading and trailing actions behind a row |
+| [`RefreshView`](docs/components/refresh.md) | A scroll view whose pull drops an activity indicator |
 | [`Theme`](docs/components/theme.md) | Installs the tokens; switches to the high-contrast values |
 | `Icon` | [`icon`](docs/components/icon.md) / `iconStroke`, NSH's stand-in for SF Symbols |
 

@@ -1,3 +1,5 @@
+[English](switch.md)
+
 # 开关
 
 iOS 的开关：51 × 31 pt 胶囊，开启为 `systemGreen`，关闭为 `secondaryFill`，27 pt 白色滑块

@@ -1,3 +1,5 @@
+[简体中文](text-field.zh-CN.md)
+
 # Text field
 
 Two of iOS's text fields: `CupertinoTextField`'s rounded box (white on light,

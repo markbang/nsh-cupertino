@@ -1,3 +1,5 @@
+[English](icon.md)
+
 # 图标
 
 NSH 没有 SF Symbols；这个 crate 把组件需要的少量形状画成 SVG，使用元素的文字颜色，所以它们会跟随

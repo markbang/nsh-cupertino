@@ -1,3 +1,5 @@
+[简体中文](theme.zh-CN.md)
+
 # Theme and tokens
 
 `Theme` installs the Cupertino tokens for the app and switches to the

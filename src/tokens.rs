@@ -285,6 +285,26 @@ pub fn hairline() -> Points {
     length("hairline", 0.33)
 }
 
+/// `configured` points as a separator's thickness on a display of
+/// `pixel_ratio` device pixels per point: never thinner than one device
+/// pixel, and a whole number of them.
+///
+/// 0.33 pt is one pixel at @3x; at 1x it would round to nothing, which is
+/// what left rows on a 1x display without a separator.
+pub fn hairline_for(configured: f32, pixel_ratio: f32) -> f32 {
+    let ratio = pixel_ratio.max(1.0);
+    (configured * ratio).max(1.0).round() / ratio
+}
+
+/// The separator's thickness on this display: [`hairline`], at least one
+/// device pixel (`hairline_for`). Reading it follows the display's scale.
+pub fn separator_thickness() -> Points {
+    px(hairline_for(
+        length("hairline", 0.33).0,
+        nsh_core::element::pixel_ratio(),
+    ))
+}
+
 // --- Type ------------------------------------------------------------------
 
 /// One step of the type scale: size, line height, weight and tracking, in
