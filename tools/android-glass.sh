@@ -82,17 +82,28 @@ shot() {
   [ -s "$OUT/android-glass-$1.png" ] || { echo "screencap wrote nothing" >&2; exit 1; }
 }
 
-# A finger dragging for 3 s, with the frame taken while it moves: the rows are
-# part-way under the bar, which is where the lens and the blur follow content.
+# A flick, with the frame taken while the list still moves: the rows are
+# part-way under the bar, which is where the lens and the blur follow content
+# rather than the page's background.
 mid_scroll() {
-  adb shell input swipe 540 1900 540 500 3000 >/dev/null 2>&1 &
+  adb shell input swipe 540 1800 540 900 250 >/dev/null 2>&1 &
   local finger=$!
-  sleep 1.2
+  sleep 0.55
   shot "scrolled-$1"
   wait "$finger"
+  sleep 1
 }
 
-# The three pages of the glass: one appearance at a time.
+# A finger that drags the page by `$1` pixels and lifts, then the settle.
+scroll_by() {
+  adb shell input swipe 540 1600 540 $((1600 - $1)) 600 >/dev/null
+  sleep 1
+}
+
+# One appearance at a time. Every state is seeded (`cupertino.page`,
+# `cupertino.overlay`) and reached with a finger, never by a coordinate
+# guessed from the layout: the demo seeds the sheet the same way a screenshot
+# test opens it.
 capture() {
   local scheme=$1
   step "— $scheme —"
@@ -101,15 +112,14 @@ capture() {
   wait_for "Under the bar"
   shot "$scheme"
   mid_scroll "$scheme"
-  ui scroll-to "thick" --exact
-  sleep 0.8
+  launch
+  wait_for "Under the bar"
+  scroll_by 520
   shot "capsules-$scheme"
-  ui scroll-to "Glass sheet" --exact
-  ui tap "Glass sheet" --exact
-  sleep 1.2
-  shot "sheet-$scheme"
-  adb shell input keyevent KEYCODE_BACK
+  seed "cupertino.page=glass" "cupertino.overlay=glass"
+  launch
   sleep 1
+  shot "sheet-$scheme"
 
   local mode
   for mode in none material shader; do
