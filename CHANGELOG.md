@@ -4,6 +4,56 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-11-15
+
+### Added
+
+- The platform's type face: `tokens::font_family()` names the family list each
+  platform draws best (Roboto and Noto Sans CJK SC on Android, Segoe UI and
+  Microsoft YaHei UI on Windows, Inter and Cantarell on Linux, `-apple-system`
+  first on the web) and `Theme` sets it on its root view, where every text
+  inside inherits it. Apple platforms name none: SF Pro is the face the type
+  scale was drawn for.
+
+### Changed
+
+- iOS's tracking applies only where the face it was measured against is used
+  (`tokens::tracking`): the Apple platforms. Elsewhere it is none, as Roboto
+  and Noto carry their own spacing, and Chinese, full-width, shows the
+  difference most.
+
+## [0.3.0] - 2026-11-15
+
+### Added
+
+- **Liquid Glass**, the material of the floating layer: `Glass`, `GlassButton`
+  and `GlassGroup` draw Apple's iOS 26 material with a GPU shader — the backdrop
+  is read through `sample_backdrop`, bent by the height field of the surface's
+  rounded rect (the rim refracts and magnifies what lies just outside it), blurred,
+  tinted and given a specular rim that follows the light. `regular`, `clear`,
+  `thick`, `interactive` and `tinted` variants; rounded, capsule and circle
+  shapes; `quality` from 17 to 1 blur samples; an app-driven light angle.
+- `GlassGroup` merges two shapes into one material with a smooth neck, the
+  crate's reading of Apple's `GlassEffectContainer`.
+- Every surface of the floating layer draws it: the navigation bar (content
+  scrolls under it), the tab bar, sheets, action sheets, alerts, and the search
+  field's box (`SearchField`'s `glass`), plus `GlassButton` for floating controls.
+- `tokens::glass`: the material's numbers and its three fills, which follow
+  `Theme`'s increased-contrast setting (near opaque), and `tokens::glass_fill`.
+
+### Changed
+
+- `tokens::materials` stays the fallback: on a platform without GPU shaders, or
+  a machine whose GPU NSH cannot open, a bar, sheet or button draws the fill and
+  backdrop blur it drew before, from `tokens::materials`. Sheets and alerts are
+  a little more translucent over the lens than they were over a plain blur.
+
+### Notes
+
+- The web runtime of NSH 0.5.x binds only the fragment stage's uniform block, so
+  a WebGL 2 shader draws nothing; `tools/patch-runtime.mjs` fixes a built app
+  until NSH does (`docs/design-notes.md` says where).
+
 ## [0.2.2] - 2026-11-15
 
 ### Added

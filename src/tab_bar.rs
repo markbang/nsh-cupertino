@@ -188,7 +188,7 @@ pub fn TabBar(props: TabBarProps, cx: Scope<TabBarEvent>) -> impl IntoElement {
                     text(title)
                         .text_size(type_default::CAPTION2.size)
                         .line_height(type_default::CAPTION2.line_height)
-                        .letter_spacing(type_default::CAPTION2.tracking)
+                        .letter_spacing(tokens::tracking(type_default::CAPTION2))
                         .font_weight(FontWeight(500))
                         .text_color(move || {
                             if selected.get() == index {

@@ -52,6 +52,15 @@ Total line heights (not multipliers) are what iOS uses, and NSH's `lineHeight` i
 in points too, so the table transfers unchanged. See
 [Typography](https://developer.apple.com/design/human-interface-guidelines/typography).
 
+The tracking above is SF Pro's, measured at those sizes: it applies where that
+face is drawn, on the Apple platforms ([`tokens::tracking`]). The other
+platforms have their own system faces, and iOS's tracking loosens or crowds
+them — most visibly in Chinese, where every glyph is full-width. `Theme` names
+each platform's family list instead (`tokens::font_family`): Roboto with Noto
+Sans CJK SC on Android, Segoe UI with Microsoft YaHei UI on Windows, Inter and
+Cantarell on Linux, and `-apple-system` first on the web. Apple platforms name
+none: SF Pro and PingFang are the design's own faces.
+
 ## Metrics
 
 | What | Value | Source |
