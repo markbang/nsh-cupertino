@@ -46,6 +46,10 @@ const PREFIX = "nsh:dev.nsh.cupertino.demo:";
 const SHOTS = [
   { name: "glass-light", page: "glass", scheme: "light" },
   { name: "glass-dark", page: "glass", scheme: "dark" },
+  // Mid-scroll: the rows under the glass bar, where the lens and the blur follow
+  // the content rather than the page's background.
+  { name: "glass-scrolled-light", page: "glass", scheme: "light", scroll: 220 },
+  { name: "glass-scrolled-dark", page: "glass", scheme: "dark", scroll: 220 },
   { name: "glass-light-contrast", page: "glass", scheme: "light", contrast: "high" },
   { name: "glass-dark-contrast", page: "glass", scheme: "dark", contrast: "high" },
   ...["none", "material", "shader"].flatMap((mode) =>
@@ -212,8 +216,28 @@ async function shoot(page, base, shot) {
     expression: `(() => { localStorage.clear(); const prefix = ${JSON.stringify(PREFIX)}; for (const [key, value] of Object.entries(${seed})) localStorage.setItem(prefix + key, value); })()`,
   });
   await page.call("Page.navigate", { url: `${base}?shot=${encodeURIComponent(shot.name)}` });
-  // The app mounts, lays out, then the shader draws its first frame.
-  await new Promise((resolve) => setTimeout(resolve, 1400));
+  // The app mounts and lays out, then the shader draws its first frame. A
+  // reload that has not mounted yet is a white page: wait for the tree.
+  for (let i = 0; i < 100; i++) {
+    const mounted = await page
+      .call("Runtime.evaluate", { expression: "document.querySelector('#app')?.childElementCount > 0", returnByValue: true })
+      .then((result) => result.result.value === true)
+      .catch(() => false);
+    if (mounted) break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  if (shot.scroll) {
+    // A wheel over the page: the rows go under the bar and the material redraws.
+    await page.call("Input.dispatchMouseEvent", {
+      type: "mouseWheel",
+      x: WIDTH / 2,
+      y: HEIGHT * 0.7,
+      deltaX: 0,
+      deltaY: shot.scroll,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 900));
+  }
   const { data } = await page.call("Page.captureScreenshot", { format: "png" });
   const file = join(OUT, `${shot.name}.png`);
   writeFileSync(file, Buffer.from(data, "base64"));
