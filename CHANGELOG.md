@@ -4,6 +4,24 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-11-15
+
+### Added
+
+- The platform's type face: `tokens::font_family()` names the family list each
+  platform draws best (Roboto and Noto Sans CJK SC on Android, Segoe UI and
+  Microsoft YaHei UI on Windows, Inter and Cantarell on Linux, `-apple-system`
+  first on the web) and `Theme` sets it on its root view, where every text
+  inside inherits it. Apple platforms name none: SF Pro is the face the type
+  scale was drawn for.
+
+### Changed
+
+- iOS's tracking applies only where the face it was measured against is used
+  (`tokens::tracking`): the Apple platforms. Elsewhere it is none, as Roboto
+  and Noto carry their own spacing, and Chinese, full-width, shows the
+  difference most.
+
 ## [0.3.0] - 2026-11-15
 
 ### Added

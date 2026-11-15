@@ -367,6 +367,59 @@ pub mod type_default {
     pub const SUBTITLE: TextStyle = super::style(12.0, 16.0, 400, -0.08);
 }
 
+// --- The platform's type face ----------------------------------------------
+
+/// The face list the app draws with, as CSS writes `fontFamily`: first the
+/// platform's own Latin face, then the CJK face whose glyphs and widths match
+/// it, then the system's last resort. Characters a face lacks come from the
+/// next one (Android 10+, the web, CoreText).
+///
+/// The Apple platforms name none: their system font (SF Pro, PingFang for
+/// Chinese) is the face the type scale was drawn for. Android's Roboto is
+/// close to it but sets Chinese with Noto Sans CJK, and the phone's own
+/// default may pick another language's glyphs (Japanese forms for the same
+/// code points); naming the Simplified Chinese face keeps the shapes the
+/// design expects and the widths its layout assumed.
+pub fn font_family() -> Option<&'static str> {
+    match nsh_core::element::os() {
+        nsh_core::platform::Os::Ios | nsh_core::platform::Os::MacOs => None,
+        nsh_core::platform::Os::Android => {
+            Some("Roboto, 'Noto Sans CJK SC', 'Noto Sans SC', 'Noto Sans', sans-serif")
+        }
+        nsh_core::platform::Os::Windows => Some(
+            "'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif",
+        ),
+        nsh_core::platform::Os::Linux => {
+            Some("Inter, Cantarell, 'DejaVu Sans', 'Noto Sans CJK SC', 'Noto Sans', sans-serif")
+        }
+        nsh_core::platform::Os::Web => Some(
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans CJK SC', \
+             'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+        ),
+    }
+}
+
+/// Whether the type scale's tracking was drawn for the face in use: only on
+/// the Apple platforms, whose system font is the one the values were measured
+/// against. Roboto and Noto carry their own spacing, and the design's
+/// tracking would loosen or crowd them.
+pub fn tracking_applies() -> bool {
+    matches!(
+        nsh_core::element::os(),
+        nsh_core::platform::Os::Ios | nsh_core::platform::Os::MacOs
+    )
+}
+
+/// `style`'s tracking where the app draws it: the design's on Apple's system
+/// font, none on the other platforms' faces ([`tracking_applies`]).
+pub fn tracking(style: TextStyle) -> Points {
+    if tracking_applies() {
+        style.tracking
+    } else {
+        px(0.0)
+    }
+}
+
 /// The type scale, as the app's theme sets it.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TypeScale {

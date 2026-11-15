@@ -142,7 +142,7 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
                 text(move || title.get().unwrap_or_default())
                     .text_size(step.size)
                     .line_height(step.line_height)
-                    .letter_spacing(step.tracking)
+                    .letter_spacing(tokens::tracking(step))
                     .font_weight(FontWeight(step.weight))
                     .text_color(move || button_text(filled, destructive, disabled()))
             },

@@ -41,6 +41,13 @@ Apple 不发布十六进制值；上面的文件是 Flutter 团队对照 iOS UI 
 iOS 用的是绝对行高（不是倍数），NSH 的 `lineHeight` 也是点数，所以这张表可以直接搬。
 见 [Typography](https://developer.apple.com/design/human-interface-guidelines/typography)。
 
+上表的字距是 SF Pro 在这些字号下的值：只在绘制这款字体的平台上生效（Apple 平台，
+见 [`tokens::tracking`]）。其它平台有自己的系统字体，iOS 的字距会让它们变松或变挤，
+全角笔画的中文最明显。`Theme` 改为写上各平台的字体列表（`tokens::font_family`）：
+Android 是 Roboto 加 Noto Sans CJK SC，Windows 是 Segoe UI 加微软雅黑 UI，
+Linux 是 Inter 与 Cantarell，Web 以 `-apple-system` 优先。Apple 平台不指定：
+SF Pro 与苹方就是这套设计自己的字体。
+
 ## 度量
 
 | 项目 | 取值 | 来源 |
