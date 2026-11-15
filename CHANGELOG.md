@@ -4,6 +4,15 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-11-15
+
+### Fixed
+
+- `Sheet`'s panel is at most 640 pt wide (`metrics::SHEET_MAX_WIDTH`): on a
+  window wider than that it is a centred card with four rounded corners and
+  16 pt above the bottom edge, as an iPad's form sheet, instead of stretching
+  a settings form across the whole width.
+
 ## [0.3.1] - 2026-11-15
 
 ### Added

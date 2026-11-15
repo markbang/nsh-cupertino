@@ -599,6 +599,9 @@ pub mod metrics {
     pub const BUTTON_SMALL: f32 = 28.0;
     /// A section header's text size (`CupertinoListSection.insetGrouped`).
     pub const SECTION_HEADER_SIZE: f32 = 20.0;
+    /// The widest a sheet's panel gets: wider windows centre it as a card
+    /// (an iPad form sheet's width; the panel is full width on a phone).
+    pub const SHEET_MAX_WIDTH: f32 = 640.0;
 }
 
 /// The materials of the functional layer: the fills and blur radii a bar or a
