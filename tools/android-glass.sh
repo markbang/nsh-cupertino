@@ -87,14 +87,17 @@ launch() {
   exit 1
 }
 
-# A page that did not mount says what is on screen instead: a seeded page the
-# app did not read is the likely misstep, and the tree names the one it showed.
+# A page that did not mount says what is on screen instead. The tree is a
+# reading aid, not the gate: a window that never idles (a shader redrawing, a
+# list settling) makes `uiautomator` fail, and the capture still has to happen —
+# `tools/android-glass-check.mjs` is what judges the frames.
 wait_for() {
   ui wait "$1" --timeout 40 && return 0
-  step "\"$1\" never appeared; the screen holds:"
+  step "\"$1\" did not show through the accessibility tree; the screen holds:"
   ui dump || true
-  adb logcat -d -s nsh:V | tail -20 || true
-  exit 1
+  adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" || true
+  step "capturing anyway"
+  sleep 3
 }
 
 shot() {

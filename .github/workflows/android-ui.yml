@@ -3,12 +3,20 @@ name: Android UI
 # The Liquid Glass pages, captured on an Android emulator: the material is a
 # GPU shader (`docs/components/glass.md`), and an emulator is the only Android
 # device CI has. `tools/android-glass-check.mjs` fails the run when a capture is
-# blank (mean luminance 0 or a single colour), and measures the calibration
-# stills the way `tools/glass-pixels.mjs` measures the web ones: the rim is
-# brighter than the flat middle and a hard edge under the rim moves.
+# blank (black or a single colour), and measures the calibration stills the way
+# `tools/glass-pixels.mjs` measures the web ones: the edge under the capsule's
+# rim must move, which a fill cannot do.
 
 on:
   pull_request:
+    paths:
+      - 'src/**'
+      - 'examples/demo/**'
+      - 'theme/**'
+      - 'tools/**'
+      - '.github/workflows/android-ui.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   push:
     branches: [main]
     tags: ['v*']
