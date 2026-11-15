@@ -273,7 +273,7 @@ fn bar(
                     text(label)
                         .text_size(type_default::BODY.size)
                         .line_height(type_default::BODY.line_height)
-                        .letter_spacing(type_default::BODY.tracking)
+                        .letter_spacing(tokens::tracking(type_default::BODY))
                         .text_color(tokens::system_blue)
                         .max_w(px(120.0))
                         .truncate(),
@@ -285,7 +285,7 @@ fn bar(
     let compact_text = text(move || compact.get().unwrap_or_default())
         .text_size(type_default::HEADLINE.size)
         .line_height(type_default::HEADLINE.line_height)
-        .letter_spacing(type_default::HEADLINE.tracking)
+        .letter_spacing(tokens::tracking(type_default::HEADLINE))
         .font_weight(FontWeight(type_default::HEADLINE.weight))
         .text_color(tokens::label)
         .truncate();
@@ -360,7 +360,7 @@ fn large_title_text(title: &Prop<Option<SharedString>>) -> impl IntoElement {
     text(move || title.get().unwrap_or_default())
         .text_size(type_default::LARGE_TITLE.size)
         .line_height(type_default::LARGE_TITLE.line_height)
-        .letter_spacing(type_default::LARGE_TITLE.tracking)
+        .letter_spacing(tokens::tracking(type_default::LARGE_TITLE))
         .font_weight(FontWeight(type_default::LARGE_TITLE.weight))
         .text_color(tokens::label)
         .role(AccessibilityRole::Header)

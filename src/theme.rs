@@ -7,7 +7,7 @@ use nsh_core::{
 };
 
 use crate::theme_file::theme_json;
-use crate::tokens::{ALIASES, ROLES, high_contrast_tokens};
+use crate::tokens::{self, ALIASES, ROLES, high_contrast_tokens};
 
 /// The Cupertino tokens on their own (`nsh.json` `"theme"` points at the same
 /// values, in `theme/theme.json`).
@@ -115,5 +115,9 @@ pub fn Theme(props: ThemeProps) -> impl IntoElement {
         };
         set_tokens(tokens);
     });
-    view().flex_1().child(props.children)
+    // The platform's own faces, inherited by every text inside: the app's too.
+    view()
+        .flex_1()
+        .when_some(tokens::font_family(), |view, family| view.font_family(family))
+        .child(props.children)
 }

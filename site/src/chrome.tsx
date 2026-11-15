@@ -8,7 +8,7 @@ import { language, strings, t, tr } from "./i18n";
 import { appearance, contrast, frame, liquidGlass, resetPreferences, typeScale, wide } from "./prefs";
 import { hairline, label, muted, page, surface, tint } from "./ui";
 
-export const version = () => appInfo().version ?? "0.2.2";
+export const version = () => appInfo().version ?? "0.3.1";
 
 const GITHUB = "https://github.com/markbang/nsh-cupertino";
 

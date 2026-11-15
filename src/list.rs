@@ -257,7 +257,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                     text(move || title.get().unwrap_or_default())
                                         .text_size(type_default::BODY.size)
                                         .line_height(type_default::BODY.line_height)
-                                        .letter_spacing(type_default::BODY.tracking)
+                                        .letter_spacing(tokens::tracking(type_default::BODY))
                                         .text_color(move || {
                                             if disabled() {
                                                 tokens::tertiary_label()
@@ -275,7 +275,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                         text(move || subtitle.get().unwrap_or_default())
                                             .text_size(type_default::SUBTITLE.size)
                                             .line_height(type_default::SUBTITLE.line_height)
-                                            .letter_spacing(type_default::SUBTITLE.tracking)
+                                            .letter_spacing(tokens::tracking(type_default::SUBTITLE))
                                             .text_color(tokens::secondary_label)
                                             .truncate()
                                     },
