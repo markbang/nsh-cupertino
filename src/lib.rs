@@ -29,6 +29,7 @@ pub mod context_menu;
 pub mod date_picker;
 pub mod field;
 pub mod icon;
+pub mod icon_view;
 pub mod indicator;
 pub mod list;
 pub mod navigation;
@@ -65,6 +66,7 @@ pub use field::{
     TextFieldElement, TextFieldEvent, TextFieldProps, search_field, text_field,
 };
 pub use icon::{NAMES as ICON_NAMES, icon, icon_stroke, svg_markup};
+pub use icon_view::{Icon, IconProps};
 pub use indicator::{
     ActivityIndicator, ActivityIndicatorElement, ActivityIndicatorProps, activity_indicator,
 };
@@ -100,6 +102,7 @@ use nsh_core::prelude::*;
 fn native(registry: &mut Registry) {
     registry
         .register::<Theme>()
+        .register::<Icon>()
         .register::<NavigationBar>()
         .register::<NavPage>()
         .register::<List>()
