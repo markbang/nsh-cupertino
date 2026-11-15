@@ -114,7 +114,11 @@ impl Presence {
     }
 }
 
-/// A `position: fixed` layer filling the root, above the page.
+/// The top layer every overlay of the library is drawn in: a `position:
+/// fixed` overlay filling the root, above the page and above scroll content
+/// whatever clips it (documented by NSH's Overlay). Sheets, action sheets,
+/// alerts, the context menu and its preview all use it, so an overlay opened
+/// from a row inside a scroll view paints over the page on every platform.
 pub(crate) fn layer() -> Overlay {
     overlay().absolute().inset_0().focusable(false)
 }

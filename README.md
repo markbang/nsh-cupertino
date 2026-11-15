@@ -38,7 +38,7 @@ Native Shell apps take the crate from git; there is no registry release yet.
 ```toml
 # Cargo.toml
 [dependencies]
-nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.2.0" }
+nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.2.1" }
 ```
 
 `nsh.json` lists the crate at its path and points `"theme"` at the theme file, so

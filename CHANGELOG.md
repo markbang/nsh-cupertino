@@ -4,13 +4,23 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.1] - 2026-11-15
 
 ### Changed
 
 - Sheets, action sheets, alerts and context menus draw with
   `tokens::materials` (`thick` and `regular` fills with their blur radii)
   instead of a solid background with a hard-coded blur.
+- Every overlay of the library is drawn in the same top layer
+  (`overlay::layer()`): Sheet, ActionSheet, AlertDialog, and ContextMenu with
+  its lifted preview.
+
+### Fixed
+
+- A context menu opened from a row inside a scroll view paints its preview and
+  menu above the page text on the web, as it does natively. A web regression
+  test opens it from the demo's scrolling list and presses the preview, which
+  only reaches it when it is above the trigger.
 
 ## [0.2.0] - 2026-11-14
 

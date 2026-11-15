@@ -234,20 +234,9 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
                         ..nsh_core::BoxShadow::default()
                     }])
             });
-            overlay()
-                .absolute()
-                .inset_0()
-                .z_index(1000)
-                .focusable(false)
+            layer()
                 .pointer_events(PointerEvents::None)
-                .child(
-                    overlay()
-                        .absolute()
-                        .inset_0()
-                        .focusable(false)
-                        .bg(rgba(0x000000ff))
-                        .opacity(0.18),
-                )
+                .child(layer().bg(rgba(0x000000ff)).opacity(0.18))
                 .child(
                     layer()
                         .items_center()

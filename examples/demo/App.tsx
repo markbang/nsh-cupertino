@@ -768,7 +768,11 @@ function ContextMenuPage() {
                 </View>
               }
               preview={
-                <View style={{ padding: 18, width: 300, gap: 8 }}>
+                <View
+                  testID="context-preview"
+                  onPress={() => preview.set("Preview pressed.")}
+                  style={{ padding: 18, width: 300, gap: 8 }}
+                >
                   <Text class="text-label" style={{ fontSize: 20, fontWeight: 700 }}>Ada Lovelace</Text>
                   <Text class="text-secondary-label" style={{ fontSize: 15 }}>The Analytical Engine weaves algebraic patterns just as the Jacquard loom weaves flowers and leaves.</Text>
                 </View>
