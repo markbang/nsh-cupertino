@@ -10,6 +10,21 @@ test("a sheet opens on a detent and closes from its Done", async () => {
   expect(app.texts()).toContain("Closed from Done.");
 });
 
+test("a sheet is a card at most 640 pt wide on a wide window", async () => {
+  const app = await open("./App.tsx", {
+    storage: { "cupertino.page": "sheet" },
+    platform: "linux",
+    width: 1920,
+    height: 1080,
+  });
+  await app.press("text:Open at large");
+  await app.waitFor("text:Unread");
+  await app.press("text:Done");
+  await app.waitFor("text:Panel width");
+  const measured = app.texts().find((text) => /^\d+ pt$/.test(text));
+  expect(measured).toBe("640 pt");
+});
+
 test("an action sheet reports the action and cancels", async () => {
   const app = await open("./App.tsx", { storage: { "cupertino.page": "actionsheet" } });
   await app.press("text:Show action sheet");

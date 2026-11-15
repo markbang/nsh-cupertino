@@ -29,6 +29,7 @@
 - 遮罩只在大档时明显变暗（0.32），中档几乎不暗（0.03），与 iOS 一致。
 - Escape、Android 返回、点击遮罩和拖过中档都会关闭；"完成"会上报 `onTrailing` 并请求关闭。
 - 应用若自己持有 `detent`，要跟随 `onDetentChange`。
+- 面板最宽 640 pt（`metrics::SHEET_MAX_WIDTH`）。窗口比这更宽时，面板居中成一张四角圆角、距底边 16 pt 的卡片，与 iPad 的表单面板一致；手机上则为全屏宽。
 
 ## 无障碍
 

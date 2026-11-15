@@ -16,6 +16,7 @@ import {
   Storage,
   Text,
   View,
+  windowSize,
 } from "nsh";
 import {
   ActionSheet,
@@ -635,6 +636,7 @@ function SheetPage() {
   const open = signal(overlaySeed() === "sheet");
   const detent = signal("medium");
   const notice = signal("No sheet open.");
+  const width = signal(0);
   return (
     <Page id="sheet">
       <List scroll={false}>
@@ -645,6 +647,10 @@ function SheetPage() {
           </View>
           <ListTile title="Detent" subtitle={detent()} accessory="none" separator />
           <ListTile title="Last event" subtitle={notice()} accessory="none" separator={false} />
+          {/* The panel's measured width, so a test can check the cap on a wide window. */}
+          <If when={windowSize().width > 700}>
+            <ListTile title="Panel width" subtitle={`${Math.round(width())} pt`} accessory="none" separator={false} />
+          </If>
         </Section>
       </List>
       <Sheet
@@ -657,18 +663,20 @@ function SheetPage() {
         onTrailing={() => { open.set(false); notice.set("Closed from Done."); }}
         onCancel={() => notice.set("Cancelled.")}
       >
-        <List scroll={false}>
-          <Section header="Show" footer="Rows inside the sheet, scrolling while it is at large.">
-            <ListTile title="Unread" subtitle="Only mail nobody opened" accessory="none" separator />
-            <ListTile title="Flagged" subtitle="Red, orange or yellow" accessory="none" separator />
-            <ListTile title="Attachments" subtitle="Anything with a file" accessory="none" separator={false} />
-          </Section>
-          <Section header="Filler">
-            <Each of={[1, 2, 3, 4, 5, 6]} key={(n) => n}>
-              {(n) => <ListTile title={`Option ${n()}`} accessory="none" separator={n() !== 6} />}
-            </Each>
-          </Section>
-        </List>
+        <View class="min-h-0 flex-1" onLayout={({ bounds }) => width.set(bounds.size.width)}>
+          <List scroll={false}>
+            <Section header="Show" footer="Rows inside the sheet, scrolling while it is at large.">
+              <ListTile title="Unread" subtitle="Only mail nobody opened" accessory="none" separator />
+              <ListTile title="Flagged" subtitle="Red, orange or yellow" accessory="none" separator />
+              <ListTile title="Attachments" subtitle="Anything with a file" accessory="none" separator={false} />
+            </Section>
+            <Section header="Filler">
+              <Each of={[1, 2, 3, 4, 5, 6]} key={(n) => n}>
+                {(n) => <ListTile title={`Option ${n()}`} accessory="none" separator={n() !== 6} />}
+              </Each>
+            </Section>
+          </List>
+        </View>
       </Sheet>
     </Page>
   );
