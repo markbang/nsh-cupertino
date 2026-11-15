@@ -215,21 +215,22 @@ docs are the source, so the site cannot drift from them.
 - It is a static site under GitHub Pages, deployed from `main` by
   `.github/workflows/pages.yml`.
 
-Measured on the packaged site (GitHub Pages serves the same bytes gzipped) in
-headless Chrome 155 through the DevTools protocol: cache disabled and cleared
-before each load, no other tab open, at 1440 × 900 and 390 × 844, median of five
-cold loads. `node tools/site-check.mjs --url <the site>` repeats this and prints
-the numbers.
+Measured on the deployed site in headless Chrome 155 over the DevTools
+protocol: cache disabled and cleared before every load, one tab, 1440 × 900, a
+fresh browser profile for the first-visit figure (three of them) and five
+reloads on an open connection. `node tools/site-check.mjs --url
+https://markbang.github.io/nsh-cupertino/` repeats the checks and prints the
+numbers.
 
 | Home, cold cache | |
 | --- | --- |
-| First paint | 24 ms |
-| First contentful paint | 0.81 s |
-| First-load transfer | 2.60 MB in 20 requests |
+| First contentful paint, first visit | 0.55 s |
+| First contentful paint, reload | 0.18 s |
+| First-load transfer | 2.64 MB in 20 requests |
 
-The first load is the web runtime: `nsh.<digest>.wasm` is 6.6 MB uncompressed,
-2.43 MB of it gzipped, and the home screen is drawn about 0.8 s in. The other
-pages are routes inside the same runtime and cost nothing extra.
+Most of that is the web runtime: `nsh.<digest>.wasm` is 6.6 MB uncompressed,
+2.46 MB of it gzipped. The other pages are routes inside the same runtime and
+cost nothing extra.
 
 ## Development
 

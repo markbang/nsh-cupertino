@@ -9,7 +9,7 @@
 //
 // Prints a JSON summary; screenshots go to --out.
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -22,7 +22,7 @@ const arg = (name, fallback) => {
 const BASE = arg("url", "http://127.0.0.1:4173/nsh-cupertino/");
 const OUT = arg("out", "/workspace/out/screens/cupertino-site");
 const CHROME = arg("chrome", "/workspace/tools/bin/chrome-nosandbox");
-const PORT = Number(arg("port", "9222"));
+const PORT = Number(arg("port", "0"));
 const WITH_SCREENSHOTS = !args.includes("--no-screenshots");
 const ONLY = arg("only", "");
 const SKIP_LINKS = args.includes("--no-links");
@@ -151,8 +151,10 @@ class Cdp {
   }
 }
 
-async function launch() {
+/** Starts Chrome, and the address of its DevTools endpoint out of its profile. */
+async function startChrome() {
   const profile = mkdtempSync(join(tmpdir(), "cupertino-chrome-"));
+  const errors = [];
   const child = spawn(
     CHROME,
     [
@@ -161,21 +163,59 @@ async function launch() {
       "--disable-gpu",
       "--hide-scrollbars",
       "--force-device-scale-factor=1",
+      // Port 0: the browser picks one and writes it to the profile, so a busy
+      // 9222 on a shared runner cannot fail the run.
       `--remote-debugging-port=${PORT}`,
       `--user-data-dir=${profile}`,
       "about:blank",
     ],
-    { stdio: "ignore" },
+    { stdio: ["ignore", "ignore", "pipe"] },
   );
+  child.stderr?.on("data", (chunk) => {
+    errors.push(String(chunk));
+    if (errors.length > 20) errors.shift();
+  });
+  // A cold runner can take a while to start the browser. With `--port 0` it
+  // writes the port it chose to `DevToolsActivePort` in the profile.
   let wsUrl;
-  for (let i = 0; i < 120 && !wsUrl; i++) {
-    try {
-      wsUrl = (await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json()).webSocketDebuggerUrl;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  for (let i = 0; i < 300 && !wsUrl && child.exitCode === null; i++) {
+    let port = PORT;
+    if (port === 0) {
+      try {
+        port = Number(readFileSync(join(profile, "DevToolsActivePort"), "utf8").split("\n")[0]);
+      } catch {
+        port = 0;
+      }
     }
+    if (port) {
+      try {
+        const version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+        wsUrl = version.webSocketDebuggerUrl;
+      } catch {
+        // Not listening yet.
+      }
+    }
+    if (!wsUrl) await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  if (!wsUrl) throw new Error("Chrome did not start");
+  if (!wsUrl) {
+    child.kill();
+    throw new Error(
+      `Chrome did not start (exit ${child.exitCode}): ${errors.join("").trim().split("\n").slice(-3).join(" | ")}`,
+    );
+  }
+  return { child, profile, wsUrl };
+}
+
+async function launch() {
+  let started;
+  try {
+    started = await startChrome();
+  } catch (error) {
+    // One retry: a browser that died on startup usually does so once.
+    console.error(`${error.message}; starting it again`);
+    started = await startChrome();
+  }
+  const { child, profile, wsUrl } = started;
   const ws = new WebSocket(wsUrl);
   await new Promise((resolve, reject) => {
     ws.addEventListener("open", resolve);
