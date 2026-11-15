@@ -202,30 +202,34 @@ pub fn TabBar(props: TabBarProps, cx: Scope<TabBarEvent>) -> impl IntoElement {
         );
     }
 
-    view()
-        .w_full()
-        .flex_col()
-        .flex_none()
-        .bg(move || {
-            let dark = nsh_core::element::dark();
-            tokens::materials::fill("regular", dark, false)
-        })
-        .when(blur, |bar| {
-            bar.backdrop_blur(tokens::materials::blur("regular"))
-        })
-        .child(
-            view()
-                .h(tokens::separator_thickness)
-                .w_full()
-                .bg(tokens::separator),
-        )
-        .child(
-            view()
-                .w_full()
-                .h(px(49.0))
-                .role(AccessibilityRole::Tablist)
-                .label(props.label.get_untracked().unwrap_or_else(|| "Tabs".into()))
-                .child(tabs),
-        )
-        .pb_safe_area()
+    let glass = if blur {
+        Some(crate::glass::material_spec("regular", [0.0; 4]))
+    } else {
+        None
+    };
+    let mut bar = view().relative().w_full().flex_col().flex_none();
+    match glass {
+        Some(spec) => bar = bar.child(crate::glass::layer(spec, None)),
+        None => {
+            bar = bar.bg(move || {
+                let dark = nsh_core::element::dark();
+                tokens::materials::fill("regular", dark, false)
+            });
+        }
+    }
+    bar.child(
+        view()
+            .h(tokens::separator_thickness)
+            .w_full()
+            .bg(tokens::separator),
+    )
+    .child(
+        view()
+            .w_full()
+            .h(px(49.0))
+            .role(AccessibilityRole::Tablist)
+            .label(props.label.get_untracked().unwrap_or_else(|| "Tabs".into()))
+            .child(tabs),
+    )
+    .pb_safe_area()
 }

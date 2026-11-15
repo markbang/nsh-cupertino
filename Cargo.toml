@@ -1,6 +1,6 @@
 [package]
 name = "nsh-cupertino"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Cupertino (iOS) design system for Native Shell (NSH) apps: semantic tokens and native-feeling components"
@@ -34,6 +34,10 @@ path = "tests/separators.rs"
 [[test]]
 name = "theme_files"
 path = "tests/theme_files.rs"
+
+[[test]]
+name = "glass"
+path = "tests/glass.rs"
 
 # The separator test opens a page headlessly and reads its layout.
 [dev-dependencies]

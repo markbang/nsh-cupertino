@@ -139,28 +139,32 @@ fn action_sheet_panel(
     if title.get_untracked().is_some() || message.get_untracked().is_some() {
         groups = groups.child(
             view()
-                .flex_col()
+                .relative()
                 .w_full()
                 .rounded(radius::ROW)
                 .overflow_hidden()
-                .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
-                .backdrop_blur(tokens::materials::blur("regular"))
-                .px(px(16.0))
-                .py(px(14.0))
-                .gap(px(4.0))
-                .items_center()
+                .child(material())
                 .child(
-                    text(move || title.get().unwrap_or_default())
-                        .text_size(type_default::FOOTNOTE.size)
-                        .line_height(type_default::FOOTNOTE.line_height)
-                        .font_weight(FontWeight(600))
-                        .text_color(tokens::secondary_label),
-                )
-                .child(
-                    text(move || message.get().unwrap_or_default())
-                        .text_size(type_default::FOOTNOTE.size)
-                        .line_height(type_default::FOOTNOTE.line_height)
-                        .text_color(tokens::secondary_label),
+                    view()
+                        .flex_col()
+                        .w_full()
+                        .px(px(16.0))
+                        .py(px(14.0))
+                        .gap(px(4.0))
+                        .items_center()
+                        .child(
+                            text(move || title.get().unwrap_or_default())
+                                .text_size(type_default::FOOTNOTE.size)
+                                .line_height(type_default::FOOTNOTE.line_height)
+                                .font_weight(FontWeight(600))
+                                .text_color(tokens::secondary_label),
+                        )
+                        .child(
+                            text(move || message.get().unwrap_or_default())
+                                .text_size(type_default::FOOTNOTE.size)
+                                .line_height(type_default::FOOTNOTE.line_height)
+                                .text_color(tokens::secondary_label),
+                        ),
                 ),
         );
     }
@@ -173,8 +177,7 @@ fn action_sheet_panel(
         .w_full()
         .rounded(radius::ROW)
         .overflow_hidden()
-        .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
-        .backdrop_blur(tokens::materials::blur("regular"));
+        .child(material());
     for (index, action) in items.into_iter().enumerate() {
         let label = action.title.clone();
         let id = action.id.clone();
@@ -248,14 +251,14 @@ fn action_sheet_panel(
                 .min_h(px(57.0))
                 .items_center()
                 .justify_center()
+                .relative()
                 .rounded(radius::ROW)
                 .overflow_hidden()
-                .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
-                .backdrop_blur(tokens::materials::blur("regular"))
                 .active(|s| s.bg(tokens::fill))
                 .accessibility_label(cancel_label.clone())
                 .role(AccessibilityRole::Button)
                 .on_press(move || close())
+                .child(material())
                 .child(
                     text(cancel_label)
                         .text_size(type_default::TITLE3.size)
@@ -288,5 +291,13 @@ fn action_sheet_panel(
                     .role(AccessibilityRole::Dialog)
                     .child(groups),
             ),
+    )
+}
+
+/// The glass of the action sheet's groups: `regular` glass, 10 pt corners.
+fn material() -> impl IntoElement {
+    crate::glass::layer(
+        crate::glass::material_spec("regular", [radius::ROW.0; 4]),
+        None,
     )
 }
