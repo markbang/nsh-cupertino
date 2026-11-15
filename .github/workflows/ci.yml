@@ -205,12 +205,20 @@ jobs:
       - run: nsh test
       - name: Package the site for the web
         run: nsh package App.tsx --target web -o "$RUNNER_TEMP/out"
+      # `nsh package` writes `<out>/<Name>/`; the site is served from a directory
+      # named after its base path, so a URL under it resolves as GitHub Pages
+      # resolves it.
       - name: Serve it under its base path
         run: |
           set -eu
-          mkdir -p "$RUNNER_TEMP/pages/nsh-cupertino"
-          shopt -s dotglob nullglob
-          mv "$RUNNER_TEMP"/out/* "$RUNNER_TEMP/pages/nsh-cupertino/"
+          mkdir -p "$RUNNER_TEMP/pages"
+          shopt -s nullglob
+          entries=("$RUNNER_TEMP"/out/*)
+          if [ ${#entries[@]} -ne 1 ] || [ ! -d "${entries[0]}" ]; then
+            echo "expected one directory in $RUNNER_TEMP/out, got: ${entries[*]}" >&2
+            exit 1
+          fi
+          mv "${entries[0]}" "$RUNNER_TEMP/pages/nsh-cupertino"
           cd "$RUNNER_TEMP/pages"
           python3 -m http.server 4173 --bind 127.0.0.1 &
           for i in $(seq 1 50); do

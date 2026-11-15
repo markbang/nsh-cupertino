@@ -69,14 +69,13 @@ jobs:
       - name: Move the site to the artifact root
         run: |
           set -eu
-          mkdir -p "$RUNNER_TEMP/site"
-          shopt -s dotglob nullglob
+          shopt -s nullglob
           entries=("$RUNNER_TEMP/out"/*)
           if [ ${#entries[@]} -ne 1 ] || [ ! -d "${entries[0]}" ]; then
             echo "expected one directory in $RUNNER_TEMP/out, got: ${entries[*]}" >&2
             exit 1
           fi
-          mv "${entries[0]}"/* "$RUNNER_TEMP/site/"
+          mv "${entries[0]}" "$RUNNER_TEMP/site"
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
