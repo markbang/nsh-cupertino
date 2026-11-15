@@ -8,6 +8,7 @@
 // in a test, or the app's own storage elsewhere.
 import {
   Keyboard,
+  ShaderEffect,
   type JSX,
   mount,
   setColorScheme,
@@ -23,6 +24,8 @@ import {
   Button,
   ContextMenu,
   DatePicker,
+  Glass,
+  GlassButton,
   List,
   ListTile,
   NavPage,
@@ -51,7 +54,8 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
   { id: "switches", title: "Switch", blurb: "51 × 31, green when on", icon: "slider.horizontal.3", tint: "system-green" },
   { id: "indicators", title: "Activity indicator", blurb: "Eight blades, turning natively", icon: "circle.lefthalf.filled", tint: "system-gray" },
   { id: "scroll", title: "Scroll view", blurb: "Bounce, indicators, horizontal", icon: "square.grid.2x2", tint: "system-pink" },
-  { id: "materials", title: "Materials", blurb: "Glass on the floating layer", icon: "moon", tint: "system-teal" },
+  { id: "materials", title: "Materials", blurb: "Fills and blur of the floating layer", icon: "moon", tint: "system-teal" },
+  { id: "glass", title: "Liquid Glass", blurb: "Lens, specular rim, adaptive tint", icon: "sparkles", tint: "system-indigo" },
   { id: "colors", title: "Color", blurb: "Semantic roles, light and dark", icon: "sun.max", tint: "system-yellow" },
   { id: "type", title: "Typography", blurb: "The eleven steps of the scale", icon: "info.circle", tint: "system-red" },
   { id: "sheet", title: "Sheets", blurb: "Detents, drag, grabber", icon: "square.grid.2x2", tint: "system-teal" },
@@ -76,7 +80,7 @@ const overlaySeed = signal("");
 const presses = new Count();
 const pressCount = signal(0);
 
-const PAGE_IDS = ["gallery", ...PAGES.map((entry) => entry.id)];
+const PAGE_IDS = ["gallery", "glass-calibration", ...PAGES.map((entry) => entry.id)];
 
 function titleOf(id: string): string {
   return PAGES.find((entry) => entry.id === id)?.title ?? "Cupertino";
@@ -1027,6 +1031,168 @@ function BarMaterialsPage() {
   );
 }
 
+
+// Solid blocks, not a gradient: a web page's backdrop picture is painted from
+// the views themselves, so what refracts behind the glass has to be drawn.
+const STRIPES = Array.from({ length: 60 }, (_, i) => i);
+
+function Stripes(props: { height: number; light?: string; dark?: string; width?: number }) {
+  const light = props.light ?? "#f5f5f7";
+  const dark = props.dark ?? "#1d4ed8";
+  const width = props.width ?? 12;
+  return (
+    <View style={{ flexDirection: "row", height: props.height, overflow: "hidden" }}>
+      <Each of={STRIPES} key={(i) => i}>
+        {(i) => (
+          <View style={{ width, height: props.height, backgroundColor: i() % 2 === 0 ? light : dark }} />
+        )}
+      </Each>
+    </View>
+  );
+}
+
+function GlassPage() {
+  const sheet = signal(overlaySeed() === "glass");
+  const actions = signal(false);
+  const notice = signal(pressCount() + "");
+  return (
+    <View style={{ flex: 1 }}>
+      <Page id="glass" material="regular">
+        <List scroll={false}>
+          <Section
+            header="Under the bar"
+            footer="The page scrolls under the glass bar: the material lenses and blurs the rows, and its rim follows them, not the page's background."
+          >
+            <Stripes height={132} />
+            <ListTile title="Scroll the page" subtitle="The bar's glass follows what goes under it" accessory="none" separator />
+            <ListTile title="Lens" subtitle="The rim bends what lies just outside the shape" accessory="none" separator={false} />
+          </Section>
+          <Section
+            header="Glass controls"
+            footer="The interactive variant: a press squashes the capsule to 96,5 %, widens its specular rim and lenses harder, over 250 ms. Reduce Motion keeps the values and drops the springs."
+          >
+            <View style={{ flexDirection: "row", gap: 12, padding: 16, backgroundColor: "#e5e7eb" }}>
+              <GlassButton icon="square.and.pencil" label="Compose" onPress={() => notice.set("Compose")} />
+              <GlassButton icon="trash" label="Delete" onPress={() => notice.set("Delete")} />
+            </View>
+          </Section>
+          <Section
+            header="Variants"
+            footer="Regular for bars, thick under text, clear for media only, tinted for one action. High contrast makes the fill nearly opaque."
+          >
+            <View style={{ gap: 10 }}>
+              <Stripes height={120} />
+              <View style={{ position: "absolute", left: 12, top: 10, right: 12, flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1, height: 46 }}>
+                  <Glass shape="capsule" variant="regular" style={{ flex: 1 }}>
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                      <Text class="text-label" style={{ fontSize: 13, fontWeight: 600 }}>
+                        regular
+                      </Text>
+                    </View>
+                  </Glass>
+                </View>
+                <View style={{ flex: 1, height: 46 }}>
+                  <Glass shape="capsule" variant="clear" style={{ flex: 1 }}>
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                      <Text class="text-label" style={{ fontSize: 13, fontWeight: 600 }}>
+                        clear
+                      </Text>
+                    </View>
+                  </Glass>
+                </View>
+                <View style={{ flex: 1, height: 46 }}>
+                  <Glass shape="capsule" variant="thick" style={{ flex: 1 }}>
+                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                      <Text class="text-label" style={{ fontSize: 13, fontWeight: 600 }}>
+                        thick
+                      </Text>
+                    </View>
+                  </Glass>
+                </View>
+              </View>
+            </View>
+          </Section>
+          <Section header="Sheets" footer="A sheet is the floating layer too: thick glass at 14 pt, its content over it.">
+            <View style={{ padding: 16, gap: 12 }}>
+              <Button title="Glass sheet" variant="tinted" onPress={() => sheet.set(true)} />
+              <Button title="Glass action sheet" variant="tinted" onPress={() => actions.set(true)} />
+            </View>
+            <ListTile title="Last press" subtitle={notice()} accessory="none" separator={false} />
+          </Section>
+          <Section header="Filler" footer="Rows so the page scrolls under the bar.">
+            <Each of={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} key={(n) => n}>
+              {(n) => <ListTile title={`Row ${n()}`} subtitle="Under the bar" accessory="none" separator={n() !== 10} />}
+            </Each>
+          </Section>
+        </List>
+      </Page>
+      <Sheet
+        open={sheet()}
+        title="Liquid Glass"
+        trailing="Done"
+        onOpenChange={(event: { open: boolean }) => sheet.set(event.open)}
+        onTrailing={() => sheet.set(false)}
+      >
+        <List scroll={false}>
+          <Section header="A sheet of glass" footer="The sheet's surface is one shader: its top corners are the shape, and the page behind it is what refracts.">
+            <Stripes height={96} />
+            <ListTile title="Regular glass" subtitle="Thick here, because the sheet carries text" accessory="none" separator={false} />
+          </Section>
+        </List>
+      </Sheet>
+      <ActionSheet
+        open={actions()}
+        title="Glass"
+        message="The action sheet's groups are glass."
+        actions={[
+          { id: "keep", title: "Keep" },
+          { id: "delete", title: "Delete", destructive: true },
+        ]}
+        onOpenChange={(event: { open: boolean }) => actions.set(event.open)}
+        onAction={(event: { id: string }) => {
+          actions.set(false);
+          notice.set(event.id);
+        }}
+      />
+    </View>
+  );
+}
+
+// The material's own picture, for the pixel test in `tools/glass-pixels.mjs`:
+// one capsule over a hard vertical edge (a solid blue field to the light page),
+// drawn three ways — no glass at all, the material without a GPU (`material`)
+// and the shader (`shader`). `cupertino.glass` picks one. The edge sits 10 pt
+// inside the capsule's left rim, where the lens works hardest, and a blur
+// cannot move a step edge while refraction does.
+const glassMode = signal("shader");
+
+function GlassCalibrationPage() {
+  const mode = glassMode();
+  return (
+    <View style={{ flex: 1, backgroundColor: "#f5f5f7" }}>
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: 70,
+          bottom: 0,
+          backgroundColor: "#1d4ed8",
+        }}
+      />
+      <View style={{ position: "absolute", left: 60, top: 120, width: 180, height: 64 }}>
+        <If when={mode === "material"}>
+          <View class="bg-material-ultra-thin backdrop-blur-xl" style={{ flex: 1, borderRadius: 32 }} />
+        </If>
+        <If when={mode === "shader"}>
+          <Glass shape="capsule" style={{ flex: 1 }} />
+        </If>
+      </View>
+    </View>
+  );
+}
+
 function CurrentPage() {
   const id = page();
   if (id === "gallery") return <Gallery />;
@@ -1039,6 +1205,8 @@ function CurrentPage() {
   if (id === "indicators") return <IndicatorsPage />;
   if (id === "scroll") return <ScrollPage />;
   if (id === "materials") return <MaterialsPage />;
+  if (id === "glass") return <GlassPage />;
+  if (id === "glass-calibration") return <GlassCalibrationPage />;
   if (id === "sheet") return <SheetPage />;
   if (id === "actionsheet") return <ActionSheetPage />;
   if (id === "alert") return <AlertPage />;
@@ -1063,6 +1231,8 @@ function App() {
     const seedContrast = await Storage.getItem("cupertino.contrast");
     const seedAppearance = await Storage.getItem("cupertino.appearance");
     const seedOverlay = await Storage.getItem("cupertino.overlay");
+    const seedGlass = await Storage.getItem("cupertino.glass");
+    if (seedGlass) glassMode.set(seedGlass);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     if (seedContrast === "high" || seedContrast === "normal") contrast.set(seedContrast);
     if (seedAppearance === "light" || seedAppearance === "dark" || seedAppearance === "system") {
