@@ -25,6 +25,7 @@ iOS 的警告框：暗色页面中央的 270 pt 卡片，包含标题、正文�
 
 说明
 
+- 卡片使用 `thick` 材质：填充叠加 30 pt 模糊。次要文字沿用 Apple 的对比度（[issue #3](https://github.com/markbang/nsh-cupertino/issues/3)）。
 - 文本输入变体就是标准的单输入框警告框；输入内容随动作一起返回，应用不必自己保存草稿。
 - 按钮之间的分隔线是一台设备像素（`separatorThickness`）。
 - 点击外部、Escape、返回和取消动作都会上报 `onCancel`。

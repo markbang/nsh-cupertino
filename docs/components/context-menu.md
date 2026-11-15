@@ -30,6 +30,7 @@ Notes
 - The preview is a separate card lifted over a dimmed page; it follows the
   trigger's content but its own copy is drawn (a `<ContextMenu>` cannot copy
   a subtree, so pass the preview explicitly).
+- The menu and the preview are the `thick` material: its fill over a 30 pt blur.
 - Items are 44 pt, 17 pt, with a leading icon and hairline separators.
 
 ## Accessibility

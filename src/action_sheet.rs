@@ -143,8 +143,8 @@ fn action_sheet_panel(
                 .w_full()
                 .rounded(radius::ROW)
                 .overflow_hidden()
-                .bg(tokens::secondary_system_background)
-                .backdrop_blur(px(20.0))
+                .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
+                .backdrop_blur(tokens::materials::blur("regular"))
                 .px(px(16.0))
                 .py(px(14.0))
                 .gap(px(4.0))
@@ -173,8 +173,8 @@ fn action_sheet_panel(
         .w_full()
         .rounded(radius::ROW)
         .overflow_hidden()
-        .bg(tokens::secondary_system_background)
-        .backdrop_blur(px(20.0));
+        .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
+        .backdrop_blur(tokens::materials::blur("regular"));
     for (index, action) in items.into_iter().enumerate() {
         let label = action.title.clone();
         let id = action.id.clone();
@@ -189,7 +189,6 @@ fn action_sheet_panel(
             .justify_center()
             .px(px(16.0))
             .py(px(8.0))
-            .bg(tokens::secondary_system_background)
             .child(
                 text(label.clone())
                     .text_size(type_default::TITLE3.size)
@@ -251,8 +250,8 @@ fn action_sheet_panel(
                 .justify_center()
                 .rounded(radius::ROW)
                 .overflow_hidden()
-                .bg(tokens::secondary_system_background)
-                .backdrop_blur(px(20.0))
+                .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
+                .backdrop_blur(tokens::materials::blur("regular"))
                 .active(|s| s.bg(tokens::fill))
                 .accessibility_label(cancel_label.clone())
                 .role(AccessibilityRole::Button)

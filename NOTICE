@@ -32,6 +32,7 @@ as a reference for specific numbers or an approach; nothing was copied as code.
 | The tab bar's 50 pt height (49 pt plus the hairline), inactive gray and top border | `bottom_tab_bar.dart` |
 | The refresh trigger's 100 pt pull and 60 pt indicator extent | `refresh.dart` |
 | The sheet's 0.0835 scale under a stacked sheet and 0.08 top gap | `sheet.dart` |
+| The compact date trigger's placement and the date formats the wheel starts from | `date_picker.dart` |
 
 ## Lenso UI — MIT
 

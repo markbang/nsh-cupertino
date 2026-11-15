@@ -26,6 +26,8 @@ Events: `onOpenChange(open)`, `onDetentChange(detent)`, `onCancel()`,
 
 Notes
 
+- The panel is the `thick` material (`tokens::materials`): its fill over a
+  30 pt blur, so the page shows through faintly as it does on iOS.
 - One large panel is moved by an animated offset, so the drag, the finger's
   release velocity and the springs between detents run on the UI thread.
 - The backdrop dims only at large (0.32) and hardly at medium (0.03), as iOS.
