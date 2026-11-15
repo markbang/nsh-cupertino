@@ -24,6 +24,8 @@ Events: `onOpenChange(open)`, `onAction(id)`.
 
 Notes
 
+- The preview and the menu are drawn in the library's top layer: a menu opened
+  from a row inside a scroll view paints above the page, and follows the row.
 - Behavior is `nsh/base`'s `ContextMenu`: the menu opens at the pointer on the
   desktops and as a sheet on phones, with the keyboard's menu keys and screen
   readers' show-menu action working.

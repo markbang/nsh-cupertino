@@ -29,7 +29,7 @@ Native Shell 应用从 git 引入这个 crate，目前还没有发布到 registr
 ```toml
 # Cargo.toml
 [dependencies]
-nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.2.0" }
+nsh-cupertino = { git = "https://github.com/markbang/nsh-cupertino", tag = "v0.2.1" }
 ```
 
 `nsh.json` 在 `"rust"` 里列出这个 crate 的路径，并把 `"theme"` 指向主题文件，这样在第一个组件
