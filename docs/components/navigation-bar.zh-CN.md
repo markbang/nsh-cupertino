@@ -11,9 +11,10 @@
 
 ## NavPage
 
-`NavPage` 就是整页：栏 + 滚动视图。大标题是滚动内容的第一项，所以它会滚到栏下面；紧凑标题与
-细线在大标题最后 10 pt 内淡入。淡入由滚动偏移在原生侧驱动（`scrollValue` + 插值），滚动的
-每一帧都不会回到你的代码里。
+`NavPage` 就是整页：栏是覆盖在滚动视图上的一层。内容一直排到屏幕顶边，顶部内边距是栏高加安全区，
+所以内容会滚到栏下面，而不是停在栏的边缘：设置 `material` 时玻璃就在那里取到下面的行。大标题是
+滚动内容的第一项，所以它会滚到栏下面；紧凑标题与细线在大标题最后 10 pt 内淡入。淡入由滚动偏移在
+原生侧驱动（`scrollValue` + 插值），滚动的每一帧都不会回到你的代码里。
 
 | TSX | Rust | 类型 | 默认值 | |
 | --- | --- | --- | --- | --- |
@@ -22,7 +23,7 @@
 | `back` | `.back(..)` | `string` | 无 | 返回按钮的文案；不传就没有返回按钮 |
 | `trailing` | `.trailing(..)` | `string` | 无 | 右侧着色操作（"完成"、"编辑"） |
 | `background` | `.background(..)` | token 名 | `system-grouped-background` | 页面背景 |
-| `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | 材质让栏浮在内容之上，内容在其模糊下滚动 |
+| `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | 栏的表面：不透明，或用材质折射并模糊下面滚过的内容 |
 | `refreshing` | `.refreshing(..)` | `boolean` | `false` | 下拉刷新进行中，指示器停在栏下 |
 | `children` | `.child(..)` | JSX | — | 页面内容 |
 
@@ -36,9 +37,11 @@
   一致。
 - 从顶部下拉会请求刷新（`onRefresh`），`refreshing` 把活动指示器固定在栏下。
 - 分隔线在任何倍率下都是一台设备像素，规则同 [列表](list.zh-CN.md#分隔线)。
-- 设置 `material` 时内容从栏下滚过：紧凑标题提前 44 pt 接管，页面内容从栏下方开始。
+- 栏在所有平台上都浮在内容之上，有没有 `material` 都一样：内容顶部内边距是栏高加安全区，从第一帧
+  起就从栏下滚过。紧凑标题在滚动 44 pt 后接管。
 - 按下标题会把页面滚回顶部，与 iOS 一致。
-- 安全区：页面自己处理顶部 inset；内容结束在 home indicator 之上。
+- 安全区：栏画到状态栏之后，栏内的一行按 inset 下移；内容按栏高加 inset 留出顶部内边距，并结束在
+  home indicator 之上。
 
 ## NavigationBar
 

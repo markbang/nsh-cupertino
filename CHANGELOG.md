@@ -4,6 +4,26 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-11-16
+
+### Fixed
+
+- **The navigation bar's glass gets a backdrop on Android (#16).** `NavPage`
+  lays the bar as a layer over the scrolling content on every platform: the
+  content runs to the top edge, padded by the bar's height plus the safe-area
+  inset, and scrolls under the bar. Before, the scroll view's viewport began at
+  the bar's lower edge on Android, so a material bar drew as a flat white or
+  black slab with a rim. The bar now also draws into the status bar area, with
+  its row below the inset, and the pull-to-refresh indicator at its lower edge.
+  `material` now chooses the surface only: an opaque bar floats over content too.
+
+### Added
+
+- The Android run captures `android-glass-behind-{light,dark}.png`, scrolled
+  until the striped band is behind the bar, and `tools/android-glass-check.mjs`
+  fails when the bar's row there is one colour (a flat bar). `tools/android-bar.mjs`
+  is the probe the driver scrolls against.
+
 ## [0.3.4] - 2026-11-16
 
 ### Fixed

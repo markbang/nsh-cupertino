@@ -35,12 +35,13 @@ text and search fields, switches and the activity indicator.
   emulator (API 34, SwiftShader) captures the glass pages in light and dark, the
   capsules and the sheet, and measures the lens on the calibration page
   ([the frames](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)).
-  What that run also showed, and this release does not fix: a bar gets no content
-  behind it on Android yet ([#16](https://github.com/markbang/nsh-cupertino/issues/16)).
+  The bar's glass has the page behind it: `NavPage` lays the bar over the
+  scrolling content on every platform, so what the material samples is the page
+  itself ([#16](https://github.com/markbang/nsh-cupertino/issues/16)).
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **0.3.4** — the tokens, the components settings screens need, the
+Status: **0.3.5** — the tokens, the components settings screens need, the
 overlays and controls of the rest of iOS, and real Liquid Glass: `Glass`,
 `GlassButton` and `GlassGroup` draw Apple's iOS 26 material with a shader on
 every bar, sheet, alert and floating control, falling back to the material's

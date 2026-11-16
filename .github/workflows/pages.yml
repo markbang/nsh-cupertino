@@ -3,6 +3,11 @@ name: Pages
 # The documentation site: https://markbang.github.io/nsh-cupertino/, built for
 # the web from `site/` and deployed as a static site. `site/nsh.json` sets
 # `"base": "/nsh-cupertino/"`, the path GitHub Pages serves a project site from.
+#
+# A tag's run still builds the site (a release must not ship a site that does
+# not compile), but only `main` and a manual run deploy it: the `github-pages`
+# environment allows deployments from the default branch, and Pages refuses a
+# tag's ref. A release's tag points at a commit `main` already deployed.
 on:
   push:
     branches: [main]
@@ -84,6 +89,7 @@ jobs:
   deploy:
     name: deploy to Pages
     needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     environment:
       name: github-pages

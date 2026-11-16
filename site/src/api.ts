@@ -717,7 +717,7 @@ export const API: Record<string, ApiGroup[]> = {
           "rust": "`.material(..)`",
           "type": "`\"opaque\"` | `\"regular\"` | `\"thin\"` | `\"ultra-thin\"` | `\"thick\"` | `\"chrome\"`",
           "default": "`opaque`",
-          "note": "A material floats the bar over the content, which scrolls under its blur"
+          "note": "The bar's surface: opaque, or a material that lenses and blurs the content scrolling under it"
         },
         {
           "tsx": "`refreshing`",
