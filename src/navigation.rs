@@ -302,7 +302,12 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
         .scroll_value(&offset)
         .element_ref(&scroll_ref)
         .on_scroll(move |event: &ScrollEvent| {
-            cx.emit(NavPageEvent::Scroll(event.offset.y.0));
+            // Only a floating bar reads the offset, and an event per frame into
+            // an app that has no handler is work (and a re-entrant dispatch on
+            // the web runtime).
+            if floating {
+                cx.emit(NavPageEvent::Scroll(event.offset.y.0));
+            }
         })
         .on_scroll_end(move |at: &Point<Points>| {
             if at.y.0 <= -100.0 && !refreshing.get_untracked().unwrap_or(false) {
