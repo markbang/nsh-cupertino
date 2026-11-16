@@ -15,6 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readPng } from "./png.mjs";
+import { describeBar } from "./android-bar.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -27,7 +28,7 @@ const DIR = arg("dir", join(root, "docs", "screenshots"));
 
 const SCHEMES = ["light", "dark"];
 /** The demonstration pages: rich enough that a blank frame is unmistakable. */
-const PAGES = ["", "scrolled-", "capsules-", "sheet-"];
+const PAGES = ["", "scrolled-", "capsules-", "sheet-", "behind-"];
 const MODES = ["none", "material", "shader"];
 
 const failures = [];
@@ -131,6 +132,49 @@ function changedRows(a, b) {
   return { rows, most };
 }
 
+/** How many stripes a row of the page crosses: strong blue to the page's light. */
+function stripeTransitions(image, y) {
+  const from = Math.round(image.width * 0.05);
+  const until = Math.round(image.width * 0.95);
+  let count = 0;
+  let previous = null;
+  for (let x = from; x < until; x += 2) {
+    const [r, , b] = image.pixel(x, y);
+    const blue = b - r > 100;
+    if (previous !== null && blue !== previous) count += 1;
+    previous = blue;
+  }
+  return count;
+}
+
+/** The share of a row that is the stripes' blue. */
+function stripeBlue(image, y) {
+  const from = Math.round(image.width * 0.05);
+  const until = Math.round(image.width * 0.95);
+  let blue = 0;
+  let count = 0;
+  for (let x = from; x < until; x += 2) {
+    const [r, , b] = image.pixel(x, y);
+    if (b - r > 100) blue += 1;
+    count += 1;
+  }
+  return blue / count;
+}
+
+/** The row of the page's striped band that crosses the most stripes, or null. */
+function stripeRow(image) {
+  let best = null;
+  let most = 0;
+  for (let y = 0; y < image.height; y += 4) {
+    const stripes = stripeTransitions(image, y);
+    if (stripes > most) {
+      most = stripes;
+      best = y;
+    }
+  }
+  return most >= 10 ? best : null;
+}
+
 for (const scheme of SCHEMES) {
   for (const page of PAGES) {
     const name = `${page}${scheme}`;
@@ -153,7 +197,7 @@ const tops = Object.fromEntries(SCHEMES.map((scheme) => [scheme, must(scheme) ??
 for (const scheme of SCHEMES) {
   const top = tops[scheme];
   if (!top) continue;
-  for (const [what, least] of [["scrolled", 0.02], ["capsules", 0.02], ["sheet", 0.05]]) {
+  for (const [what, least] of [["scrolled", 0.02], ["capsules", 0.02], ["sheet", 0.05], ["behind", 0.02]]) {
     const other = must(`${what}-${scheme}`);
     if (!other) continue;
     const moved = difference(top, other);
@@ -162,6 +206,29 @@ for (const scheme of SCHEMES) {
     } else {
       report(`${what}-${scheme}.png differs from the top by ${moved.toFixed(3)}`);
     }
+  }
+}
+
+// The bar's backdrop (#16): scrolled until the striped band is behind it, the
+// bar's own row must hold the stripes' blue and more than one colour. A bar the
+// content stops at is the page's fill — one colour, no blue — and fails, which
+// is what `tools/android-glass.sh` scrolls against.
+for (const scheme of SCHEMES) {
+  const top = tops[scheme];
+  const behind = must(`behind-${scheme}`);
+  if (!top || !behind) continue;
+  const { striped, measured } = describeBar(behind);
+  report(`behind-${scheme}.png: the bar's ${measured}`);
+  if (!striped) {
+    fail(`behind-${scheme}.png: the bar is flat (${measured}) — the page does not scroll under it`);
+  }
+  // The reference the row is read against: the page's own striped band, in the
+  // same still frame at the top, so a run where the band never drew is named.
+  const band = stripeRow(top);
+  if (band === null) {
+    fail(`${scheme}.png holds no striped band to compare the bar against`);
+  } else {
+    report(`behind-${scheme}.png: the page's band at row ${band} is ${stripeTransitions(top, band)} stripes wide, ${(stripeBlue(top, band) * 100).toFixed(0)}% of it blue`);
   }
 }
 

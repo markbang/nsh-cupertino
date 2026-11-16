@@ -2,8 +2,10 @@
 # The Liquid Glass pages, captured on an Android emulator from the packaged
 # demo — the evidence that the material draws on Android, where nobody had run
 # it (`docs/releases/v0.3.1.md`). Light and dark, the page scrolled so its
-# striped band is under the bar, the capsule variants, the glass sheet, and the
-# calibration page `tools/android-glass-check.mjs` measures for the lens.
+# striped band is under the bar (and scrolled further until `tools/android-bar.mjs`
+# reads the stripes through the bar itself), the capsule variants, the glass
+# sheet, and the calibration page `tools/android-glass-check.mjs` measures for
+# the lens.
 #
 #   tools/android-glass.sh <apk or directory of APKs> [out dir]
 #
@@ -126,6 +128,26 @@ scroll_by() {
   sleep 1
 }
 
+# The striped band behind the bar: the frame the check fails a flat bar on. A
+# finger is not 1:1 with the page (touch slop, the title's collapse), so scroll
+# until `tools/android-bar.mjs` reads the stripes' blue in the bar's own row.
+behind() {
+  local scheme=$1 attempt
+  seed "cupertino.page=glass"
+  launch
+  wait_for "Under the bar"
+  for attempt in 1 2 3 4 5 6; do
+    scroll_by 300
+    shot "behind-$scheme"
+    if node "$here/tools/android-bar.mjs" "$OUT/android-glass-behind-$scheme.png"; then
+      return 0
+    fi
+    step "the band is not behind the bar yet; scrolling again"
+  done
+  echo "the striped band never reached the bar: the bar has no backdrop" >&2
+  exit 1
+}
+
 # One appearance at a time. Every state is seeded (`cupertino.page`,
 # `cupertino.overlay`) and reached with a finger, never by a coordinate
 # guessed from the layout: the demo seeds the sheet the same way a screenshot
@@ -142,6 +164,7 @@ capture() {
   # page — the touch slop and the large title's collapse take about a quarter.
   scroll_by 650
   shot "scrolled-$scheme"
+  behind "$scheme"
   launch
   wait_for "Under the bar"
   scroll_by 900
