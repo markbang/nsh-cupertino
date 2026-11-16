@@ -4,6 +4,20 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-11-15
+
+### Added
+
+- **The material on Android, verified.** 0.3.0 said no Android frame had ever
+  been drawn where it was written; an emulator run in CI (API 34, SwiftShader)
+  now installs the demo, drives it with `adb`, and captures the glass pages in
+  light and dark, the page scrolled so its striped band is under the bar, the
+  capsule variants and the glass sheet (`.github/workflows/android-ui.yml`).
+- `tools/android-glass-check.mjs`: the run fails when a capture is blank (black,
+  one colour, or a window that never drew) or a step did nothing, and measures
+  the lens on the calibration stills — the blue field behind the capsule must
+  reach further inside it than the fill lets it.
+
 ## [0.3.2] - 2026-11-15
 
 ### Fixed

@@ -31,14 +31,21 @@ text and search fields, switches and the activity indicator.
 - **Checked by screenshots.** Every demo page is captured in light and dark from
   the web build on each pull request, the overlays open in both, and a pixel test
   looks for the separators in the rendered lists.
+- **Verified on Android.** The material draws on a real Android device too: a CI
+  emulator (API 34, SwiftShader) captures the glass pages in light and dark, the
+  capsules and the sheet, and measures the lens on the calibration page
+  ([the frames](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)).
+  What that run also showed, and this release does not fix: a bar gets no content
+  behind it on Android yet ([#16](https://github.com/markbang/nsh-cupertino/issues/16)).
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **0.3.0** — the tokens, the components settings screens need, the
+Status: **0.3.3** — the tokens, the components settings screens need, the
 overlays and controls of the rest of iOS, and real Liquid Glass: `Glass`,
 `GlassButton` and `GlassGroup` draw Apple's iOS 26 material with a shader on
 every bar, sheet, alert and floating control, falling back to the material's
-fill and blur where there is no GPU.
+fill and blur where there is no GPU. The material is verified on Android as
+well as on the web.
 
 ## Install
 

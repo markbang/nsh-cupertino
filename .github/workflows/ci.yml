@@ -145,21 +145,7 @@ jobs:
           if-no-files-found: error
       - name: Publish the screenshots to the screenshots branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -eu
-          dir=$(mktemp -d)
-          git worktree add --detach "$dir" HEAD
-          cd "$dir"
-          git checkout --orphan screenshots-tmp
-          git rm -r --cached . >/dev/null
-          rm -rf docs/screenshots
-          mkdir -p main
-          cp "$GITHUB_WORKSPACE"/docs/screenshots/*.png main/
-          git add main
-          git -c user.name=github-actions -c user.email=github-actions@github.com commit -m "Screenshots of ${GITHUB_SHA::7}" >/dev/null
-          git push --force origin HEAD:refs/heads/screenshots
+        run: tools/publish-shots.sh docs/screenshots
       - name: Package the web app
         working-directory: examples/demo
         run: nsh package App.tsx --target web -o "$RUNNER_TEMP/web"
