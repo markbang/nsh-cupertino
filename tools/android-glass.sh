@@ -169,8 +169,8 @@ capture() {
   for mode in none material shader; do
     seed "cupertino.page=glass-calibration" "cupertino.glass=$mode"
     launch
-    sleep 1
-    shot "calibration-$mode-$scheme"
+    sleep 2
+    shot "calibration-$mode-$scheme" 30
   done
 }
 

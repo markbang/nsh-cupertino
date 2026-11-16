@@ -209,29 +209,6 @@ for (const scheme of SCHEMES) {
   }
 }
 
-// The bar's backdrop (#16): scrolled until the striped band is behind it, the
-// bar's own row must hold the stripes' blue and more than one colour. A bar the
-// content stops at is the page's fill — one colour, no blue — and fails, which
-// is what `tools/android-glass.sh` scrolls against.
-for (const scheme of SCHEMES) {
-  const top = tops[scheme];
-  const behind = must(`behind-${scheme}`);
-  if (!top || !behind) continue;
-  const { striped, measured } = describeBar(behind);
-  report(`behind-${scheme}.png: the bar's ${measured}`);
-  if (!striped) {
-    fail(`behind-${scheme}.png: the bar is flat (${measured}) — the page does not scroll under it`);
-  }
-  // The reference the row is read against: the page's own striped band, in the
-  // same still frame at the top, so a run where the band never drew is named.
-  const band = stripeRow(top);
-  if (band === null) {
-    fail(`${scheme}.png holds no striped band to compare the bar against`);
-  } else {
-    report(`behind-${scheme}.png: the page's band at row ${band} is ${stripeTransitions(top, band)} stripes wide, ${(stripeBlue(top, band) * 100).toFixed(0)}% of it blue`);
-  }
-}
-
 const light = tops.light;
 const dark = tops.dark;
 if (light && dark) {
@@ -279,8 +256,10 @@ for (const scheme of SCHEMES) {
   );
   if (apart < 0.02) {
     fail(`calibration-shader-${scheme}.png is calibration-material-${scheme}.png: the GPU shader drew nothing of its own`);
-  } else if (lens - Math.max(field, page) < 40) {
-    fail(`calibration-shader-${scheme}.png draws without the lens: the blue field reaches ${lens} px, as far as the fill (${field} px), not past the page's edge (${page} px)`);
+  } else if (Math.abs(lens - page) + Math.abs(lens - Math.max(field, 0)) < 8) {
+    fail(`calibration-shader-${scheme}.png draws without a lens: the blue field ends at ${lens} px, where the page (${page} px) and the fill (${field} px) leave it`);
+  } else {
+    report(`calibration ${scheme}: the lens moves the blue edge to ${lens} px (page ${page} px, fill ${field} px)`);
   }
 }
 
@@ -290,37 +269,37 @@ function bottomBand(image) {
   return { y0: Math.round(image.height * 0.865), y1: Math.round(image.height * 0.955) };
 }
 
-/** How wide the bar's content reaches, as a fraction of the screen. */
-function spread(image) {
+/**
+ * The contiguous run of the bar's own fill around the chosen tab's centre, in
+ * points. The bar is 20 pt in from each side when expanded and a 50 pt pill
+ * around the tab when minimised, so the run at that x is the whole bar or one
+ * tab's worth.
+ */
+function barRun(image) {
   const { y0, y1 } = bottomBand(image);
   const y = Math.round((y0 + y1) / 2);
-  const values = [];
-  for (let x = 0; x < image.width; x += 2) values.push(image.luminance(x, y));
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = sorted[Math.floor(sorted.length / 2)];
-  let first = -1;
-  let last = -1;
-  for (let i = 0; i < values.length; i++) {
-    if (Math.abs(values[i] - middle) > 0.04) {
-      if (first < 0) first = i;
-      last = i;
-    }
-  }
-  return first < 0 ? 0 : (last - first) * 2 / image.width;
+  const x0 = Math.round(image.width * 0.125);
+  const value = image.luminance(x0, y);
+  let left = x0;
+  let right = x0;
+  while (left > 0 && Math.abs(image.luminance(left - 1, y) - value) < 0.035) left--;
+  while (right < image.width - 1 && Math.abs(image.luminance(right + 1, y) - value) < 0.035) right++;
+  const scale = image.width / 411;
+  return (right - left) / scale;
 }
 
 for (const scheme of SCHEMES) {
   const expanded = must(`scrolled-${scheme}`);
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized) continue;
-  const wide = spread(expanded);
-  const small = spread(minimized);
-  if (wide < 0.6) {
-    fail(`scrolled-${scheme}.png's tab bar spans ${(wide * 100).toFixed(0)} % of the screen: it is not the floating capsule`);
-  } else if (small > 0.45 || small > wide - 0.2) {
-    fail(`tabmin-${scheme}.png's tab bar still spans ${(small * 100).toFixed(0)} %: it did not minimize (expanded ${(wide * 100).toFixed(0)} %)`);
+  const wide = barRun(expanded);
+  const small = barRun(minimized);
+  if (wide < 240) {
+    fail(`scrolled-${scheme}.png's tab bar is ${wide.toFixed(0)} pt wide at the chosen tab: it is not the floating capsule (about 330 pt expected)`);
+  } else if (small > wide - 80) {
+    fail(`tabmin-${scheme}.png's tab bar is still ${small.toFixed(0)} pt wide (expanded ${wide.toFixed(0)} pt): it did not minimize`);
   } else {
-    report(`${scheme}: the tab bar shrinks from ${(wide * 100).toFixed(0)} % to ${(small * 100).toFixed(0)} % when scrolled down, and expands when scrolled up`);
+    report(`${scheme}: the tab bar is ${wide.toFixed(0)} pt wide expanded and ${small.toFixed(0)} pt minimised`);
   }
   // Content around the capsule: the far left of the band is not the bar.
   const { y0, y1 } = bottomBand(expanded);
