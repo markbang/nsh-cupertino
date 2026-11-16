@@ -25,7 +25,7 @@
 - **在 Android 上验证过。** 材质在真实 Android 设备上同样绘制：CI 模拟器（API 34、SwiftShader）拍摄浅色与深色的玻璃页面、胶囊与 sheet，并在校准页上测量透镜效果（[这些画面](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)）。这次运行同时暴露出、本版尚未修的问题：Android 上栏的后面还没有内容经过（[#16](https://github.com/markbang/nsh-cupertino/issues/16)）。
 - **一台设备像素。** 所有细分隔线在任何显示倍率下都不低于一台设备像素。
 
-状态：**0.3.3**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及真正的液态玻璃：
+状态：**0.3.4**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及真正的液态玻璃：
 `Glass`、`GlassButton` 与 `GlassGroup` 用 shader 绘制 Apple 的 iOS 26 材质，用于所有栏、sheet、
 弹窗与浮动控件；没有 GPU 时退回材质自身的填充与模糊。材质在 Web 与 Android 上都有验证。
 

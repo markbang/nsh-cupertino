@@ -4,6 +4,17 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-11-16
+
+### Fixed
+
+- The demo's *Glass controls* panel is the `secondary-fill` token instead of a
+  hard-coded `#e5e7eb`: in dark mode it was a light grey block glowing on the
+  dark page. The rest of the demo's colours were audited with it — the tinted
+  cards, the gradient behind the materials and the stripe picture the lens bends
+  are content, and the calibration page keeps its fixed backdrop because the
+  pixel checks measure against it.
+
 ## [0.3.3] - 2026-11-15
 
 ### Added

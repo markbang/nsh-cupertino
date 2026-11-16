@@ -40,7 +40,7 @@ text and search fields, switches and the activity indicator.
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **0.3.3** — the tokens, the components settings screens need, the
+Status: **0.3.4** — the tokens, the components settings screens need, the
 overlays and controls of the rest of iOS, and real Liquid Glass: `Glass`,
 `GlassButton` and `GlassGroup` draw Apple's iOS 26 material with a shader on
 every bar, sheet, alert and floating control, falling back to the material's
