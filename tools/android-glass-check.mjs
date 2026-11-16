@@ -270,48 +270,55 @@ function bottomBand(image) {
 }
 
 /**
- * The contiguous run of the bar's own fill around the chosen tab's centre, in
- * points. The bar is 20 pt in from each side when expanded and a 50 pt pill
- * around the tab when minimised, so the run at that x is the whole bar or one
- * tab's worth.
+ * The bar's top edge: the row in the bottom of the screen with the most
+ * horizontal change (the capsule's upper rim), and how far that edge reaches.
+ * Expanded it spans the screen's width less the 20 pt insets; minimised it is a
+ * 50 pt pill, so the same measurement needs no colour assumptions.
  */
-function barRun(image) {
-  const { y0, y1 } = bottomBand(image);
-  const y = Math.round((y0 + y1) / 2);
-  const x0 = Math.round(image.width * 0.125);
-  const value = image.luminance(x0, y);
-  let left = x0;
-  let right = x0;
-  while (left > 0 && Math.abs(image.luminance(left - 1, y) - value) < 0.035) left--;
-  while (right < image.width - 1 && Math.abs(image.luminance(right + 1, y) - value) < 0.035) right++;
+function barEdge(image) {
+  let best = { row: 0, count: 0, first: 0, last: 0 };
+  const from = Math.round(image.height * 0.82);
+  for (let y = from; y < image.height - 4; y += 2) {
+    let count = 0;
+    let first = -1;
+    let last = -1;
+    for (let x = 3; x < image.width; x += 2) {
+      if (Math.abs(image.luminance(x, y) - image.luminance(x - 2, y)) > 0.02) {
+        count += 1;
+        if (first < 0) first = x;
+        last = x;
+      }
+    }
+    if (count > best.count) best = { row: y, count, first, last };
+  }
   const scale = image.width / 411;
-  return (right - left) / scale;
+  return { ...best, width: (best.last - best.first) / scale, inset: best.first / scale };
 }
 
 for (const scheme of SCHEMES) {
   const expanded = must(`scrolled-${scheme}`);
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized) continue;
-  const wide = barRun(expanded);
-  const small = barRun(minimized);
-  if (wide < 240) {
-    fail(`scrolled-${scheme}.png's tab bar is ${wide.toFixed(0)} pt wide at the chosen tab: it is not the floating capsule (about 330 pt expected)`);
-  } else if (small > wide - 80) {
-    fail(`tabmin-${scheme}.png's tab bar is still ${small.toFixed(0)} pt wide (expanded ${wide.toFixed(0)} pt): it did not minimize`);
+  const wide = barEdge(expanded);
+  if (wide.width < 340) {
+    fail(`scrolled-${scheme}.png's tab bar is ${wide.width.toFixed(0)} pt wide: it is not the floating capsule (about 370 pt expected)`);
+  } else if (wide.inset < 12 || wide.inset > 34) {
+    fail(`scrolled-${scheme}.png's tab bar starts ${wide.inset.toFixed(0)} pt from the screen edge: it is not inset by 20 pt`);
   } else {
-    report(`${scheme}: the tab bar is ${wide.toFixed(0)} pt wide expanded and ${small.toFixed(0)} pt minimised`);
+    report(`${scheme}: the tab bar spans ${wide.width.toFixed(0)} pt, ${wide.inset.toFixed(0)} pt in from the edge`);
   }
-  // Content around the capsule: the far left of the band is not the bar.
-  const { y0, y1 } = bottomBand(expanded);
-  const y = Math.round((y0 + y1) / 2);
-  let edge = 0;
-  for (let x = 1; x < 10; x++) edge += expanded.luminance(x, y);
-  edge /= 9;
-  const inside = expanded.luminance(Math.round(expanded.width / 2), y);
-  if (Math.abs(edge - inside) < 0.02) {
-    fail(`scrolled-${scheme}.png's tab bar reaches the screen edge (${edge.toFixed(2)} at the edge, ${inside.toFixed(2)} inside): it is not inset`);
+  // Minimised, the bar is a 50 pt pill at the chosen tab: three quarters of the
+  // way across the row it is content again, where the expanded bar's glass was.
+  const y = wide.row + Math.round(expanded.height * 0.015);
+  const at = (image, x) => image.luminance(Math.round(image.width * x), y);
+  const spread = Math.abs(at(minimized, 0.35) - at(expanded, 0.35));
+  const beside = Math.abs(at(minimized, 0.35) - at(minimized, 0.6));
+  if (spread < 0.05) {
+    fail(`tabmin-${scheme}.png still shows the bar's glass at x = 0.35 of the screen (${at(minimized, 0.35).toFixed(2)} against ${at(expanded, 0.35).toFixed(2)}): it did not minimize`);
+  } else if (beside > 0.06) {
+    fail(`tabmin-${scheme}.png is neither the bar nor the page at x = 0.35 (${at(minimized, 0.35).toFixed(2)} against ${at(minimized, 0.6).toFixed(2)})`);
   } else {
-    report(`${scheme}: content shows in the 20 pt either side of the tab bar (${edge.toFixed(2)} against ${inside.toFixed(2)})`);
+    report(`${scheme}: minimised, the bar is gone from x = 0.35 (${at(expanded, 0.35).toFixed(2)} → ${at(minimized, 0.35).toFixed(2)}, the page's ${at(minimized, 0.6).toFixed(2)})`);
   }
 }
 
