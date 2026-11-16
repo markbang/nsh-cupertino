@@ -28,7 +28,7 @@ const DIR = arg("dir", join(root, "docs", "screenshots"));
 
 const SCHEMES = ["light", "dark"];
 /** The demonstration pages: rich enough that a blank frame is unmistakable. */
-const PAGES = ["", "scrolled-", "capsules-", "sheet-", "behind-"];
+const PAGES = ["", "mid-", "scrolled-", "tabmin-", "sheet-"];
 const MODES = ["none", "material", "shader"];
 
 const failures = [];
@@ -197,7 +197,7 @@ const tops = Object.fromEntries(SCHEMES.map((scheme) => [scheme, must(scheme) ??
 for (const scheme of SCHEMES) {
   const top = tops[scheme];
   if (!top) continue;
-  for (const [what, least] of [["scrolled", 0.02], ["capsules", 0.02], ["sheet", 0.05], ["behind", 0.02]]) {
+  for (const [what, least] of [["mid", 0.02], ["scrolled", 0.02], ["tabmin", 0.02], ["sheet", 0.05]]) {
     const other = must(`${what}-${scheme}`);
     if (!other) continue;
     const moved = difference(top, other);
@@ -206,29 +206,6 @@ for (const scheme of SCHEMES) {
     } else {
       report(`${what}-${scheme}.png differs from the top by ${moved.toFixed(3)}`);
     }
-  }
-}
-
-// The bar's backdrop (#16): scrolled until the striped band is behind it, the
-// bar's own row must hold the stripes' blue and more than one colour. A bar the
-// content stops at is the page's fill — one colour, no blue — and fails, which
-// is what `tools/android-glass.sh` scrolls against.
-for (const scheme of SCHEMES) {
-  const top = tops[scheme];
-  const behind = must(`behind-${scheme}`);
-  if (!top || !behind) continue;
-  const { striped, measured } = describeBar(behind);
-  report(`behind-${scheme}.png: the bar's ${measured}`);
-  if (!striped) {
-    fail(`behind-${scheme}.png: the bar is flat (${measured}) — the page does not scroll under it`);
-  }
-  // The reference the row is read against: the page's own striped band, in the
-  // same still frame at the top, so a run where the band never drew is named.
-  const band = stripeRow(top);
-  if (band === null) {
-    fail(`${scheme}.png holds no striped band to compare the bar against`);
-  } else {
-    report(`behind-${scheme}.png: the page's band at row ${band} is ${stripeTransitions(top, band)} stripes wide, ${(stripeBlue(top, band) * 100).toFixed(0)}% of it blue`);
   }
 }
 
@@ -279,8 +256,129 @@ for (const scheme of SCHEMES) {
   );
   if (apart < 0.02) {
     fail(`calibration-shader-${scheme}.png is calibration-material-${scheme}.png: the GPU shader drew nothing of its own`);
-  } else if (lens - Math.max(field, page) < 40) {
-    fail(`calibration-shader-${scheme}.png draws without the lens: the blue field reaches ${lens} px, as far as the fill (${field} px), not past the page's edge (${page} px)`);
+  } else if (Math.abs(lens - page) + Math.abs(lens - Math.max(field, 0)) < 8) {
+    fail(`calibration-shader-${scheme}.png draws without a lens: the blue field ends at ${lens} px, where the page (${page} px) and the fill (${field} px) leave it`);
+  } else {
+    report(`calibration ${scheme}: the lens moves the blue edge to ${lens} px (page ${page} px, fill ${field} px)`);
+  }
+}
+
+// The floating bars: the expanded bar spans the screen (inset by 20 pt), the
+// minimized one is a pill around the chosen tab; content shows in the gaps.
+function bottomBand(image) {
+  return { y0: Math.round(image.height * 0.865), y1: Math.round(image.height * 0.955) };
+}
+
+/**
+ * The bar's top edge: the row in the bottom of the screen with the most
+ * horizontal change (the capsule's upper rim), and how far that edge reaches.
+ * Expanded it spans the screen's width less the 20 pt insets; minimised it is a
+ * 50 pt pill, so the same measurement needs no colour assumptions.
+ */
+function barEdge(image) {
+  let best = { row: 0, count: 0, first: 0, last: 0 };
+  const from = Math.round(image.height * 0.82);
+  for (let y = from; y < image.height - 4; y += 2) {
+    let count = 0;
+    let first = -1;
+    let last = -1;
+    for (let x = 3; x < image.width; x += 2) {
+      if (Math.abs(image.luminance(x, y) - image.luminance(x - 2, y)) > 0.02) {
+        count += 1;
+        if (first < 0) first = x;
+        last = x;
+      }
+    }
+    if (count > best.count) best = { row: y, count, first, last };
+  }
+  const scale = image.width / 411;
+  return { ...best, width: (best.last - best.first) / scale, inset: best.first / scale };
+}
+
+for (const scheme of SCHEMES) {
+  const expanded = must(`scrolled-${scheme}`);
+  const minimized = must(`tabmin-${scheme}`);
+  if (!expanded || !minimized) continue;
+  const wide = barEdge(expanded);
+  if (wide.width < 340) {
+    fail(`scrolled-${scheme}.png's tab bar is ${wide.width.toFixed(0)} pt wide: it is not the floating capsule (about 370 pt expected)`);
+  } else if (wide.inset < 12 || wide.inset > 34) {
+    fail(`scrolled-${scheme}.png's tab bar starts ${wide.inset.toFixed(0)} pt from the screen edge: it is not inset by 20 pt`);
+  } else {
+    report(`${scheme}: the tab bar spans ${wide.width.toFixed(0)} pt, ${wide.inset.toFixed(0)} pt in from the edge`);
+  }
+  // Minimised, the bar is a 50 pt pill at the chosen tab: three quarters of the
+  // way across the row it is content again, where the expanded bar's glass was.
+  // Only the dark material separates from the page this way; the light one is
+  // white on white, so the dark frame carries the behaviour for both.
+  if (scheme !== "dark") continue;
+  const y = wide.row + Math.round(expanded.height * 0.015);
+  const at = (image, x) => image.luminance(Math.round(image.width * x), y);
+  const spread = Math.abs(at(minimized, 0.35) - at(expanded, 0.35));
+  const beside = Math.abs(at(minimized, 0.35) - at(minimized, 0.6));
+  if (spread < 0.05) {
+    fail(`tabmin-${scheme}.png still shows the bar's glass at x = 0.35 of the screen (${at(minimized, 0.35).toFixed(2)} against ${at(expanded, 0.35).toFixed(2)}): it did not minimize`);
+  } else if (beside > 0.06) {
+    fail(`tabmin-${scheme}.png is neither the bar nor the page at x = 0.35 (${at(minimized, 0.35).toFixed(2)} against ${at(minimized, 0.6).toFixed(2)})`);
+  } else {
+    report(`${scheme}: minimised, the bar is gone from x = 0.35 (${at(expanded, 0.35).toFixed(2)} → ${at(minimized, 0.35).toFixed(2)}, the page's ${at(minimized, 0.6).toFixed(2)})`);
+  }
+}
+
+// The material, on the calibration page: dark glass is lighter than its
+// backdrop, and the rim refracts (the existing blue-field check above).
+for (const scheme of SCHEMES) {
+  const clear = must(`calibration-none-${scheme}`);
+  const glass = must(`calibration-shader-${scheme}`);
+  if (!clear || !glass) continue;
+  const page = blueEdge(clear);
+  if (page === null) continue;
+  const scale = page / 70;
+  const inside = (image) => {
+    let sum = 0;
+    let count = 0;
+    for (let y = Math.round(134 * scale); y < Math.round(172 * scale); y += 2) {
+      for (let x = Math.round(84 * scale); x < Math.round(216 * scale); x += 2) {
+        sum += image.luminance(x, y);
+        count += 1;
+      }
+    }
+    return sum / count;
+  };
+  const lit = inside(glass);
+  const behind = inside(clear);
+  if (scheme === "dark") {
+    if (!(lit > behind + 0.02)) {
+      fail(`calibration-shader-dark.png is not lighter than its backdrop (${lit.toFixed(3)} against ${behind.toFixed(3)}): a dark slab, not glass`);
+    } else if (lit > 0.36) {
+      fail(`calibration-shader-dark.png reads ${lit.toFixed(3)}: too opaque for the reference band (0.06–0.34)`);
+    } else {
+      report(`dark glass reads ${lit.toFixed(3)} over a ${behind.toFixed(3)} backdrop`);
+    }
+  } else if (!(lit >= behind - 0.04)) {
+    fail(`calibration-shader-light.png is darker than its backdrop (${lit.toFixed(3)} against ${behind.toFixed(3)})`);
+  } else {
+    report(`light glass reads ${lit.toFixed(3)} over a ${behind.toFixed(3)} backdrop`);
+  }
+  // The lit edge: iOS 27 lights the dark material from above, the light one
+  // from below.
+  const y = Math.round(152 * scale);
+  const column = Math.round(150 * scale);
+  const top = (() => {
+    let best = 0;
+    for (let row = Math.round(121 * scale); row < Math.round(126 * scale); row++) best = Math.max(best, glass.luminance(column, row));
+    return best;
+  })();
+  const bottom = (() => {
+    let best = 0;
+    for (let row = Math.round(178 * scale); row < Math.round(183 * scale); row++) best = Math.max(best, glass.luminance(column, row));
+    return best;
+  })();
+  const gain = scheme === "dark" ? top - bottom : bottom - top;
+  if (gain < 0.03) {
+    fail(`calibration-shader-${scheme}.png has no specular on its lit edge (${gain.toFixed(3)})`);
+  } else {
+    report(`${scheme}: the lit rim is ${gain.toFixed(3)} brighter than the opposite one (row ${y})`);
   }
 }
 

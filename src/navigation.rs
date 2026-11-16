@@ -107,6 +107,10 @@ pub enum NavPageEvent {
     Trailing,
     /// The user pulled the page past its top and let go.
     Refresh,
+    /// Where the page is scrolled, in points (fed to a floating tab bar's
+    /// minimize behaviour).
+    #[args(offset)]
+    Scroll(f32),
 }
 
 /// A whole page: a navigation bar over a scrolling view whose large title
@@ -141,20 +145,146 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
     let to_top = scroll_ref;
     let trailing = props.trailing;
     let large = props.large_title;
-    let bar_view = bar(
-        props.title,
-        props.back,
-        trailing_button(trailing, move || cx.emit(NavPageEvent::Trailing)),
-        Fade::Animated(fade),
-        move || cx.emit(NavPageEvent::Back),
-        Some(Rc::new(move || {
-            to_top.scroll_to(point(px(0.0), px(0.0)), true)
-        })),
-        props.material.get_untracked(),
-    )
-    // The bar spans the status bar too: its fill and glass draw to the top
-    // edge, its row under the safe area.
-    .pt_safe_area();
+    let material = props.material.get_untracked();
+    let floating = matches!(
+        material.as_deref(),
+        Some(name) if name != "opaque"
+    );
+    let title_float = props.title;
+    let back_float = props.back;
+    let title_classic = props.title;
+    let back_classic = props.back;
+    let trailing_classic = props.trailing;
+    let reveal = offset.interpolate(&[0.0, crate::tokens::glass::REVEAL_DISTANCE], &[0.0, 1.0]);
+    let page_background = match background.get_untracked().as_deref() {
+        Some(name) => tokens::system(name),
+        None => tokens::system_grouped_background(),
+    };
+    let edge =
+        crate::scroll_edge::ScrollEdgeSpec::new(crate::scroll_edge::Edge::Top, bar_height + 40.0)
+            .background(page_background)
+            .material_only(material.as_deref() == Some("material"))
+            .reveal(&reveal);
+    let bar_view = if floating {
+        // The floating layer: the bar's controls each sit in their own glass,
+        // 16 pt in from the page and 8 pt below the safe area, and the content
+        // dissolves under them through a scroll edge effect. At the top of the
+        // page the effect is off and the glass is faint; as content scrolls
+        // under, both harden.
+
+        let title = title_float;
+        let back = back_float;
+        let to_top_title = scroll_ref;
+        let on_title: Option<Rc<dyn Fn()>> = Some(Rc::new(move || {
+            to_top_title.scroll_to(point(px(0.0), px(0.0)), true)
+        }));
+        let mut row = view()
+            .pt_safe_area()
+            .h(px(metrics::NAV_HEIGHT))
+            .px(px(metrics::NAV_EDGE))
+            .flex_row()
+            .items_center()
+            .gap(px(10.0));
+        if let Some(label) = back.get_untracked() {
+            let press = move || cx.emit(NavPageEvent::Back);
+            row = row.child(
+                button()
+                    .size(px(40.0))
+                    .rounded_full()
+                    .accessibility_label(label)
+                    .role(AccessibilityRole::Button)
+                    .on_press(press)
+                    .child(crate::glass::layer(
+                        crate::glass::GlassSpec::circle()
+                            .variant(crate::glass::GlassVariant::Regular)
+                            .material_only(material.as_deref() == Some("material")),
+                        None,
+                    ))
+                    .child(
+                        view()
+                            .absolute()
+                            .inset_0()
+                            .items_center()
+                            .justify_center()
+                            .child(
+                                icon_stroke("chevron.left", 20.0, 2.6)
+                                    .text_color(tokens::system_blue),
+                            ),
+                    ),
+            );
+        }
+        let compact = title;
+        let compact_text = text(move || compact.get().unwrap_or_default())
+            .text_size(type_default::HEADLINE.size)
+            .line_height(type_default::HEADLINE.line_height)
+            .letter_spacing(tokens::tracking(type_default::HEADLINE))
+            .font_weight(FontWeight(type_default::HEADLINE.weight))
+            .text_color(tokens::label)
+            .truncate()
+            .bind_opacity(&fade);
+        let centre = view()
+            .flex_1()
+            .items_center()
+            .justify_center()
+            .child(match on_title {
+                Some(press) => compact_text.on_press(move || press()).into_element(),
+                None => compact_text.into_element(),
+            });
+        row = row.child(centre);
+        let trailing = props.trailing;
+        let trailing_row = view().child(when(
+            move || trailing.get().is_some(),
+            move || {
+                let label = trailing.get().unwrap_or_default();
+                let element = button()
+                    .h(px(40.0))
+                    .px(px(16.0))
+                    .rounded(px(20.0))
+                    .accessibility_label(label.clone())
+                    .role(AccessibilityRole::Button)
+                    .on_press(move || cx.emit(NavPageEvent::Trailing))
+                    .child(crate::glass::layer(
+                        crate::glass::GlassSpec::capsule()
+                            .variant(crate::glass::GlassVariant::Regular)
+                            .material_only(material.as_deref() == Some("material")),
+                        None,
+                    ))
+                    .child(
+                        text(move || trailing.get().unwrap_or_default())
+                            .text_size(type_default::BODY.size)
+                            .line_height(type_default::BODY.line_height)
+                            .font_weight(FontWeight(600))
+                            .text_color(tokens::system_blue()),
+                    );
+                element.into_element()
+            },
+        ));
+        row = row.child(trailing_row);
+        view()
+            .absolute()
+            .z_index(10)
+            .left_0()
+            .right_0()
+            .top_0()
+            .child(row)
+            .into_element()
+    } else {
+        bar(
+            title_classic,
+            back_classic,
+            trailing_button(trailing_classic, move || cx.emit(NavPageEvent::Trailing)),
+            Fade::Animated(fade),
+            move || cx.emit(NavPageEvent::Back),
+            Some(Rc::new(move || {
+                to_top.scroll_to(point(px(0.0), px(0.0)), true)
+            })),
+            material,
+        )
+        // The bar spans the status bar too: its fill and glass draw to the top
+        // edge, its row under the safe area.
+        .pt_safe_area()
+        .into_element()
+    };
     let show = animated_value(0.0);
     let refreshing = props.refreshing;
     let shown = show;
@@ -171,6 +301,14 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
         .bounces(true)
         .scroll_value(&offset)
         .element_ref(&scroll_ref)
+        .on_scroll(move |event: &ScrollEvent| {
+            // Only a floating bar reads the offset, and an event per frame into
+            // an app that has no handler is work (and a re-entrant dispatch on
+            // the web runtime).
+            if floating {
+                cx.emit(NavPageEvent::Scroll(event.offset.y.0));
+            }
+        })
         .on_scroll_end(move |at: &Point<Points>| {
             if at.y.0 <= -100.0 && !refreshing.get_untracked().unwrap_or(false) {
                 nsh_core::element::haptic(Haptic::Impact(HapticImpact::Light));
@@ -199,7 +337,21 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
         })
         .child(page)
         .child(indicator)
-        .child(view().absolute().left_0().right_0().top_0().child(bar_view))
+        .child(when(
+            move || floating,
+            move || {
+                view()
+                    .absolute()
+                    .z_index(9)
+                    .left_0()
+                    .right_0()
+                    .top_0()
+                    .h(px(edge.spacing()))
+                    .child(crate::scroll_edge::layer(&edge))
+                    .into_element()
+            },
+        ))
+        .child(bar_view)
 }
 
 /// How a bar's compact title and hairline come in.

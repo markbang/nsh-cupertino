@@ -80,3 +80,16 @@ Apple iOS 26 的材质：一件覆在身后内容之上的玻璃。表面通过 
 - `Glass` 是装饰：除非 `interactive`，否则不接受按压，也没有名称。
 - `GlassButton` 是按钮：有标签、禁用状态和 `onPress`；按压同时伴随缩放反馈，读屏用户得到同样的结果。
 - 材质从不移动文字：`Reduce Motion` 去掉压缩与弹簧，数值直接到位。
+
+## 它所属的结构
+
+Liquid Glass 是一套设计语言，不只是这个表面。本库承载它的部件：
+
+- [`GlassTabBar`](tab-bar.zh-CN.md#glass-bar)：屏幕底部的浮动胶囊（高 64 pt、圆角 32、两侧内缩 20 pt），
+  页面向下滚动时收成环绕所选标签的胶囊，向上滚动再展开。
+- 带 `material` 的 `NavPage`：浮动导航组——40 pt 返回圆、标题、尾部操作的胶囊，下面用滚动边缘效果
+  代替整宽的栏。
+- [`ScrollEdge`](scroll-edge.zh-CN.md)：页面边缘的渐进模糊与淡出，让内容在这些控件下面化开。
+
+材质在它们下面是同一个。`tools/glass-pixels.mjs` 在标定页上度量它；`docs/design-notes.md`
+记录数字与来源。

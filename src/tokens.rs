@@ -90,9 +90,13 @@ roles! {
     // backdrop. Thinner than `materials`, because the lens carries part of the
     // separation; the increased-contrast values are near opaque, as the HIG
     // asks of glass it cannot guarantee contrast over.
-    "glass-regular" = 0xffff_ff6b, 0x1c1c_1ea6, 0xffff_ffe6, 0x1c1c_1ef2;
-    "glass-clear" = 0xffff_ff24, 0x0000_0059, 0xffff_ffc4, 0x0000_00cc;
-    "glass-thick" = 0xffff_ffb0, 0x1c1c_1ec4, 0xffff_fffa, 0x1c1c_1efa;
+    // The values are iOS 27's `glassEffect(.regular)`, read from the
+    // calibrated presets in `liquid_glass_widgets` (MIT): #87F8F8F8 in light
+    // (53 % white) and #1FFFFFFF in dark (12 % white; the material is lighter
+    // than what lies behind it, not a black slab).
+    "glass-regular" = 0xf8f8_f887, 0xffff_ff24, 0xf8f8_f8f2, 0xffff_ff4d;
+    "glass-clear" = 0xffff_ff38, 0xffff_ff0d, 0xffff_ffd9, 0xffff_ff33;
+    "glass-thick" = 0xf8f8_f8ad, 0xffff_ff33, 0xf8f8_f8f7, 0xffff_ff66;
     // System colors.
     "system-blue" = 0x007a_ffff, 0x0a84_ffff, 0x0040_ddff, 0x409c_ffff;
     "system-green" = 0x34c7_59ff, 0x30d1_58ff, 0x248a_3dff, 0x30db_5bff;
@@ -719,26 +723,49 @@ pub mod materials {
 pub mod glass {
     /// The width of the lensed rim, in points: inside it the height field
     /// rises from the edge to the flat middle.
-    pub const BEVEL: f32 = 18.0;
-    /// How far a ray shifts at the very rim, in points.
-    pub const THICKNESS: f32 = 7.0;
-    /// The magnification of the picture under the sheet (2 %).
-    pub const LENS: f32 = 0.02;
-    /// The blur radius of the material, in points.
-    pub const BLUR: f32 = 20.0;
+    pub const BEVEL: f32 = 10.0;
+    /// How far a ray shifts at the very rim, in points: a paraxial lens of
+    /// 1.24 through 32 pt of glass bends by `(n - 1) * thickness`.
+    pub const THICKNESS: f32 = 8.0;
+    /// The magnification of the picture under the sheet (0.8 %).
+    pub const LENS: f32 = 0.008;
+    /// The blur radius of the material, in points: small, so the detail under
+    /// the bar survives (the scroll edge effect carries the dissolve).
+    pub const BLUR: f32 = 5.0;
     /// The strength of the specular rim.
-    pub const SPECULAR: f32 = 0.5;
+    pub const SPECULAR: f32 = 0.7;
     /// The width of the specular rim, as the exponent of the bevel's falloff
     /// (higher: a tighter rim).
-    pub const BLOOM: f32 = 2.4;
+    pub const BLOOM: f32 = 2.0;
     /// The strength of the hairline at the very edge.
     pub const EDGE: f32 = 0.5;
     /// The inner shadow opposite the light.
-    pub const INNER: f32 = 0.4;
+    pub const INNER: f32 = 0.22;
     /// The chromatic separation of the rim, in points (one pixel at @3x).
-    pub const CHROMA: f32 = 0.33;
-    /// The direction the light comes from, in degrees (the upper left).
-    pub const LIGHT: f32 = 225.0;
+    pub const CHROMA: f32 = 0.12;
+    /// The direction the light comes from, in degrees: iOS 27 lights its light
+    /// material from below and its dark one from above.
+    pub const LIGHT: f32 = 90.0;
+    /// The light of the dark appearance, in degrees.
+    pub const LIGHT_DARK: f32 = 270.0;
+    /// Rec. 709 saturation of the backdrop (iOS 27: 2.1 light, 1.4 dark).
+    pub const SATURATION: f32 = 2.1;
+    /// See [`SATURATION`].
+    pub const SATURATION_DARK: f32 = 1.4;
+    /// The frost: opacity, clamp and weight (iOS 27 light: 0.73, 0.40, 2.0).
+    pub const FROST: [f32; 3] = [0.73, 0.40, 2.0];
+    /// The frost of the dark appearance (0.85, −0.45, 0.5).
+    pub const FROST_DARK: [f32; 3] = [0.9, -0.45, 0.5];
+    /// The hairline's darkening, and the rim light's strength.
+    pub const RIM: [f32; 2] = [1.0, 1.0];
+    /// See [`RIM`], dark (the rim light is a little stronger).
+    pub const RIM_DARK: [f32; 2] = [1.0, 1.15];
+    /// How far a bright backdrop is pulled down (dark glass only).
+    pub const BODY_SHADE: f32 = 0.32;
+    /// The radius of a minimized floating bar, in points.
+    pub const MIN_RADIUS: f32 = 25.0;
+    /// How far content scrolls before a floating bar's glass is fully shown.
+    pub const REVEAL_DISTANCE: f32 = 26.0;
     /// The alpha of a `tinted` glass fill.
     pub const TINTED_ALPHA: f32 = 0.16;
 

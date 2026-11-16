@@ -128,24 +128,10 @@ scroll_by() {
   sleep 1
 }
 
-# The striped band behind the bar: the frame the check fails a flat bar on. A
-# finger is not 1:1 with the page (touch slop, the title's collapse), so scroll
-# until `tools/android-bar.mjs` reads the stripes' blue in the bar's own row.
-behind() {
-  local scheme=$1 attempt
-  seed "cupertino.page=glass"
-  launch
-  wait_for "Under the bar"
-  for attempt in 1 2 3 4 5 6; do
-    scroll_by 300
-    shot "behind-$scheme"
-    if node "$here/tools/android-bar.mjs" "$OUT/android-glass-behind-$scheme.png"; then
-      return 0
-    fi
-    step "the band is not behind the bar yet; scrolling again"
-  done
-  echo "the striped band never reached the bar: the bar has no backdrop" >&2
-  exit 1
+# The same finger the other way: the content comes back, the tab bar expands.
+scroll_up_by() {
+  adb shell input swipe 540 $((1600 - $1)) 540 1600 600 >/dev/null
+  sleep 1
 }
 
 # One appearance at a time. Every state is seeded (`cupertino.page`,
@@ -157,22 +143,23 @@ capture() {
   step "— $scheme —"
   seed "cupertino.page=glass"
   launch
-  wait_for "Under the bar"
+  wait_for "Liquid Glass"
   shot "$scheme"
-  # The striped band is 132 pt tall and starts 200 pt into the page: a drag of
-  # 650 px carries its top behind the 44 pt bar. A finger is not 1:1 with the
-  # page — the touch slop and the large title's collapse take about a quarter.
-  scroll_by 650
+  # The hero band and the sections below it: the controls float over content
+  # and the scroll edge dissolves it under them.
+  scroll_by 300
+  shot "mid-$scheme"
+  # Further down the tab bar minimizes to its selected tab; a drag back up
+  # expands it again, which is the state the material is measured in.
+  scroll_by 500
+  sleep 1
+  shot "tabmin-$scheme"
+  scroll_up_by 120
+  sleep 1
   shot "scrolled-$scheme"
-  behind "$scheme"
-  launch
-  wait_for "Under the bar"
-  scroll_by 900
-  shot "capsules-$scheme"
 
   # The glass sheet, seeded open at launch — the seed a screenshot test uses.
-  # Its window takes seconds to draw on a software GPU: the dialog is white
-  # until the surface does.
+  # Its window takes seconds to draw on a software GPU.
   seed "cupertino.page=glass" "cupertino.overlay=glass"
   launch
   sleep 1
@@ -182,8 +169,8 @@ capture() {
   for mode in none material shader; do
     seed "cupertino.page=glass-calibration" "cupertino.glass=$mode"
     launch
-    sleep 1
-    shot "calibration-$mode-$scheme"
+    sleep 2
+    shot "calibration-$mode-$scheme" 30
   done
 }
 

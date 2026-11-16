@@ -4,6 +4,31 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-16
+
+### Added
+
+- `GlassTabBar`: the floating capsule tab bar (64 pt, radius 32, 20 pt insets),
+  with iPhone's minimise-on-scroll behaviour (`on-scroll-down`, `on-scroll-up`,
+  `never`) and a 50 pt minimised pill.
+- A floating navigation bar in `NavPage` (a 40 pt back circle, a glass capsule
+  for the trailing action, the title between them) and `NavPageEvent::Scroll`.
+- `ScrollEdge`: a graduated blur and fade at a page's edge, reveal-driven.
+- `tools/glass-pixels.mjs` and `tools/android-glass-check.mjs` assert structure
+  visibility, dark luminance, rim displacement and the lit edge.
+
+### Changed
+
+- The material is retuned to iOS 27's calibrated presets: `#F8F8F8` 53 % light,
+  `#FFFFFF` 12 % dark, saturation 2.1/1.4, a luminance-weighted frost, a 0.28
+  body shade, a 32 pt paraxial lens, a lit rim lobe, 5 pt of blur, a 70 % tint
+  cap and the iOS 27 shadow. Visual breaking change for glass users.
+
+### Fixed
+
+- The backdrop sample mapped the view's box to the middle of the texture, so the
+  lens refracted the wrong pixels at every rim.
+
 ## [0.3.5] - 2026-11-16
 
 ### Fixed

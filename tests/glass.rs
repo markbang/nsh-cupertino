@@ -33,6 +33,17 @@ fn the_glass_shader_compiles_with_the_uniforms_the_components_set() {
         "adapt",
         "dark",
         "tilt",
+        "saturation",
+        "frost_opacity",
+        "frost_clamp",
+        "frost_weight",
+        "rim_shade",
+        "rim_light",
+        "body_shade",
+        "reveal",
+        "morph",
+        "anchor",
+        "min_radius",
     ] {
         assert!(
             declared.contains(&name),

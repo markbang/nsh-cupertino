@@ -233,3 +233,322 @@ pub fn TabBar(props: TabBarProps, cx: Scope<TabBarEvent>) -> impl IntoElement {
     )
     .pb_safe_area()
 }
+
+/// The props of [`GlassTabBar`]: iOS 26's floating capsule at the bottom of the
+/// screen, which minimizes as the content scrolls.
+#[derive(Debug, Clone, PartialEq, Props)]
+pub struct GlassTabBarProps {
+    /// The tabs, in order.
+    #[prop(default)]
+    pub items: Prop<Vec<TabItem>>,
+    /// The chosen tab's `value` (controlled).
+    pub value: Prop<Option<SharedString>>,
+    /// The chosen value at first, while `value` is not set.
+    pub default_value: Prop<Option<SharedString>>,
+    /// `"on-scroll-down"` (the default: minimize on the way down, expand on
+    /// the way up), `"on-scroll-up"` (the other way round, for a transcript
+    /// that rests at its end) or `"never"`.
+    pub behavior: Prop<Option<SharedString>>,
+    /// Where the page is scrolled: the bar reads its travel to minimize and
+    /// expand (feed it from the page's `onScroll`). No offset, no minimizing.
+    pub scroll_offset: Prop<Option<f32>>,
+    /// Forces the bar minimized (or expanded) while set.
+    pub minimized: Prop<Option<bool>>,
+    /// `"glass"` (the shader, the default) or `"material"` (the blur-only fill
+    /// of a platform without a GPU), for comparing the two.
+    pub material: Prop<Option<SharedString>>,
+    /// What screen readers call the bar.
+    pub label: Prop<Option<SharedString>>,
+}
+
+/// The events of a [`GlassTabBar`].
+#[derive(Debug, Clone, PartialEq, Event)]
+pub enum GlassTabBarEvent {
+    /// Another tab was chosen: its value and index.
+    #[args(value, index)]
+    Change(String, usize),
+}
+
+/// iOS 26's tab bar: an inset capsule of glass floating over the content, the
+/// chosen tab in a capsule of its own, which minimizes to a small pill around
+/// the chosen tab as the page scrolls down and expands as it scrolls back up.
+///
+/// The bar floats: 20 pt from the sides, 12 pt above the home indicator, 64 pt
+/// tall, radius 32 — concentric with the screen's corners — so the page keeps
+/// scrolling behind and *around* it. `behavior` is UIKit's
+/// `UITabBarController.MinimizeBehavior`: the bar minimizes only when the app
+/// asks for it, and always comes back at the top of the page.
+#[component]
+pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl IntoElement {
+    const HEIGHT: f32 = 64.0;
+    const INSET: f32 = 20.0;
+    const LIFT: f32 = 12.0;
+
+    let items = props.items;
+    let values = items.get_untracked();
+    let count = values.len().max(1);
+    let initial = props
+        .value
+        .get_untracked()
+        .or(props.default_value.get_untracked())
+        .and_then(|value| values.iter().position(|item| item.value == value))
+        .unwrap_or(0);
+    let selected = signal(initial);
+    let value_prop = props.value;
+    let items_effect = items;
+    let index_effect = selected;
+    effect(move || {
+        if let Some(value) = value_prop.get()
+            && let Some(index) = items_effect
+                .get()
+                .iter()
+                .position(|item| item.value == value)
+        {
+            index_effect.set(index);
+        }
+    });
+
+    // The minimize state machine, ported from `liquid_glass_widgets`'
+    // `GlassTabBarMinimizeController` (MIT): travel accumulated since the last
+    // direction reversal, 20 pt down to minimize and 12 pt up to expand, and
+    // always expanded at the top of the page.
+    let minimized = signal(false);
+    let progress = animated_value(0.0);
+    let behavior = props
+        .behavior
+        .get_untracked()
+        .unwrap_or_else(|| "on-scroll-down".into());
+    let down_first = behavior.as_ref() != "on-scroll-up";
+    let enabled = behavior.as_ref() != "never";
+    let forced = props.minimized;
+    let offset = props.scroll_offset;
+    let accumulator = stored(0.0_f32);
+    let baseline = stored(f32::MIN);
+    let state = minimized;
+    let animator = progress;
+    effect(move || {
+        let wanted = match forced.get() {
+            Some(value) => value,
+            None if !enabled => false,
+            None => {
+                let now = offset.get().unwrap_or(0.0);
+                if now <= 0.5 {
+                    accumulator.replace(0.0);
+                    baseline.replace(now);
+                    false
+                } else {
+                    let previous = baseline.get();
+                    baseline.replace(now);
+                    if previous == f32::MIN || (now - previous).abs() > 600.0 {
+                        accumulator.replace(0.0);
+                        state.get()
+                    } else {
+                        let travel = accumulator.get()
+                            + if down_first {
+                                now - previous
+                            } else {
+                                previous - now
+                            };
+                        accumulator.replace(travel);
+                        if travel >= 20.0 {
+                            accumulator.replace(0.0);
+                            true
+                        } else if travel <= -12.0 {
+                            accumulator.replace(0.0);
+                            false
+                        } else {
+                            state.get()
+                        }
+                    }
+                }
+            }
+        };
+        if state.get() == wanted {
+            return;
+        }
+        state.set(wanted);
+        let target = if wanted { 1.0 } else { 0.0 };
+        if reduce_motion() {
+            animator.set(target);
+        } else {
+            animator.spring(target, crate::overlay::spring(0.78, 340.0));
+        }
+    });
+
+    let material = props.material.get_untracked();
+    let glass = material.as_deref() != Some("material");
+    let anchor = move || (selected.get() as f32 + 0.5) / count as f32;
+    let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
+    let spec = crate::glass::GlassSpec::rounded(32.0)
+        .minimized(&morph, anchor())
+        .material_only(!glass);
+
+    let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
+    for (index, item) in values.iter().enumerate() {
+        let value = item.value.clone();
+        let title = item.title.clone();
+        let icon_name = item.icon.clone();
+        let badge = item.badge.clone();
+        let badge_shown = item.badge.clone();
+        let label = title.clone();
+        let shown = move || selected.get() == index;
+        tabs = tabs.child(
+            button()
+                .flex_1()
+                .h(px(HEIGHT - 8.0))
+                .rounded(px(26.0))
+                .flex_col()
+                .items_center()
+                .justify_center()
+                .gap(px(2.0))
+                .accessibility_label(label)
+                .selected(move || selected.get() == index)
+                .role(AccessibilityRole::Button)
+                .bg(move || {
+                    if !shown() {
+                        return rgba(0x0000_0000);
+                    }
+                    if nsh_core::element::dark() {
+                        rgba(0xffff_ff24)
+                    } else {
+                        rgba(0xffff_ff99)
+                    }
+                })
+                .on_press(move || {
+                    if selected.get_untracked() == index {
+                        return;
+                    }
+                    nsh_core::element::haptic(Haptic::Selection);
+                    selected.set(index);
+                    cx.emit(GlassTabBarEvent::Change(value.to_string(), index));
+                })
+                .child(
+                    view()
+                        .relative()
+                        .size(px(27.5))
+                        .items_center()
+                        .justify_center()
+                        .child(
+                            icon(
+                                icon_name.as_deref().unwrap_or("circle.lefthalf.filled"),
+                                27.5,
+                            )
+                            .text_color(move || {
+                                if shown() {
+                                    tokens::system_blue()
+                                } else {
+                                    tokens::secondary_label()
+                                }
+                            }),
+                        )
+                        .child(when(
+                            move || badge_shown.is_some(),
+                            move || {
+                                let badge = badge.clone().unwrap_or_default();
+                                view()
+                                    .absolute()
+                                    .top(px(-4.0))
+                                    .right(px(-8.0))
+                                    .min_w(px(18.0))
+                                    .h(px(18.0))
+                                    .px(px(5.0))
+                                    .rounded_full()
+                                    .items_center()
+                                    .justify_center()
+                                    .bg(tokens::system_red())
+                                    .child(
+                                        text(badge)
+                                            .text_size(px(11.0))
+                                            .line_height(px(13.0))
+                                            .font_weight(FontWeight(600))
+                                            .text_color(rgba(0xffff_ffff)),
+                                    )
+                            },
+                        )),
+                )
+                .child(
+                    text(title)
+                        .text_size(type_default::CAPTION2.size)
+                        .line_height(type_default::CAPTION2.line_height)
+                        .letter_spacing(tokens::tracking(type_default::CAPTION2))
+                        .font_weight(FontWeight(500))
+                        .text_color(move || {
+                            if shown() {
+                                tokens::system_blue()
+                            } else {
+                                tokens::secondary_label()
+                            }
+                        })
+                        .number_of_lines(1),
+                ),
+        );
+    }
+
+    let chosen = values
+        .get(selected.get_untracked().min(values.len().saturating_sub(1)))
+        .cloned();
+    let expanded_opacity = progress.interpolate(&[0.0, 1.0], &[1.0, 0.0]);
+    let minimized_opacity = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
+    let lift = progress.interpolate(&[0.0, 1.0], &[0.0, 6.0]);
+    let place = move || percentage(anchor());
+    let mut minimized_view = view()
+        .absolute()
+        .h(px(HEIGHT))
+        .bottom_0()
+        .left(place())
+        .translate_x(px(-25.0))
+        .w(px(50.0))
+        .items_center()
+        .justify_center()
+        .bind_opacity(&minimized_opacity);
+    if let Some(item) = &chosen {
+        minimized_view = minimized_view.label(item.title.to_string()).child(
+            icon(
+                item.icon.as_deref().unwrap_or("circle.lefthalf.filled"),
+                24.0,
+            )
+            .text_color(tokens::system_blue()),
+        );
+    }
+
+    let shadow = view()
+        .absolute()
+        .inset_0()
+        .rounded(px(32.0))
+        .bg(rgba(0xffff_ff01))
+        .shadow(vec![BoxShadow {
+            offset_x: px(0.0),
+            offset_y: px(7.0),
+            blur: px(10.0),
+            spread: px(0.0),
+            color: rgba(0x0000_000a).into(),
+            inset: false,
+        }])
+        .bind_opacity(&expanded_opacity);
+
+    view()
+        .absolute()
+        .z_index(10)
+        .left(px(INSET))
+        .right(px(INSET))
+        .bottom(px(nsh_core::element::safe_area().bottom.0 + LIFT))
+        .h(px(HEIGHT))
+        .bind_translate_y(&lift)
+        .role(AccessibilityRole::Tablist)
+        .label(props.label.get_untracked().unwrap_or_else(|| "Tabs".into()))
+        .child(shadow)
+        .child(crate::glass::layer(spec, None))
+        .child(
+            view()
+                .absolute()
+                .left_0()
+                .right_0()
+                .bottom_0()
+                .h(px(HEIGHT))
+                .flex_row()
+                .items_center()
+                .child(tabs)
+                .bind_opacity(&expanded_opacity),
+        )
+        .child(minimized_view)
+}

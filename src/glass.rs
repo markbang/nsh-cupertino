@@ -56,10 +56,23 @@ struct Uniforms {
   adapt: f32,
   dark: f32,
   tilt: f32,
+  saturation: f32,
+  frost_opacity: f32,
+  frost_clamp: f32,
+  frost_weight: f32,
+  rim_shade: f32,
+  rim_light: f32,
+  body_shade: f32,
+  reveal: f32,
+  morph: f32,
+  anchor: f32,
+  min_radius: f32,
+  pad: f32,
 }
 
 const TAU: f32 = 6.283185307;
 const GOLDEN: f32 = 2.39996323;
+const LUMA: vec3f = vec3f(0.2126, 0.7152, 0.0722);
 
 fn hash_cell(p: vec2f) -> f32 {
   var q = fract(p * vec2f(123.34, 456.21));
@@ -132,10 +145,22 @@ fn sd_shape(p: vec2f) -> f32 {
   return d;
 }
 
+// The floating bar's minimized silhouette: a small pill around the selected
+// tab, blended into the bar's own as `morph` runs.
+fn sd_silhouette(p: vec2f) -> f32 {
+  let d = sd_shape(p);
+  if (uniforms.morph <= 0.0 || uniforms.min_radius <= 0.0) {
+    return d;
+  }
+  let centre = vec2f((uniforms.anchor - 0.5) * nsh.size.x, 0.0);
+  let min = sd_one(p - centre, vec2f(uniforms.min_radius), vec4f(-1.0, 0.0, 0.0, 0.0));
+  return mix(d, min, clamp(uniforms.morph, 0.0, 1.0));
+}
+
 fn sd_gradient(p: vec2f) -> vec2f {
   let e = 0.6;
-  let gx = sd_shape(p + vec2f(e, 0.0)) - sd_shape(p - vec2f(e, 0.0));
-  let gy = sd_shape(p + vec2f(0.0, e)) - sd_shape(p - vec2f(0.0, e));
+  let gx = sd_silhouette(p + vec2f(e, 0.0)) - sd_silhouette(p - vec2f(e, 0.0));
+  let gy = sd_silhouette(p + vec2f(0.0, e)) - sd_silhouette(p - vec2f(0.0, e));
   let g = vec2f(gx, gy);
   let l = length(g);
   return select(vec2f(0.0, -1.0), g / l, l > 1e-5);
@@ -147,7 +172,7 @@ fn sd_gradient(p: vec2f) -> vec2f {
 // never a transparent band.
 fn backdrop_at(p: vec2f) -> vec4f {
   let size = max(nsh.size, vec2f(1.0));
-  let uv = p / size;
+  let uv = p / size + vec2f(0.5);
   let pad = vec2f(nsh.overflow) * 0.98 / size;
   let c = sample_backdrop(clamp(uv, -pad, vec2f(1.0) + pad));
   if (c.a > 0.0) {
@@ -162,10 +187,20 @@ fn backdrop_at(p: vec2f) -> vec4f {
   return sample_backdrop(clamp(mirrored, vec2f(0.0), vec2f(1.0)));
 }
 
-fn blurred(p: vec2f, jitter: f32) -> vec3f {
-  let count = max(uniforms.taps, 1.0);
+fn apply_saturation(color: vec3f, amount: f32) -> vec3f {
+  let l = dot(color, LUMA);
+  return clamp(mix(vec3f(l), color, amount), vec3f(0.0), vec3f(1.0));
+}
+
+// A short, cheap blur: iOS 27's glass blurs by a few points, not twenty, so the
+// structure under the bar survives. The ghost is the same disc weighted toward
+// white texels (the frost's `blurWeight`): it is what makes dark glass read as
+// lit rather than smoked.
+fn sample(p: vec2f, jitter: f32) -> vec3f {
+  let count = max(min(uniforms.taps, 17.0), 1.0);
   var sum = vec3f(0.0);
-  var total = 0.0;
+  var ghost = vec3f(0.0);
+  var weight = 0.0;
   for (var i = 0; i < 17; i = i + 1) {
     if (f32(i) >= count) {
       break;
@@ -173,10 +208,23 @@ fn blurred(p: vec2f, jitter: f32) -> vec3f {
     let fi = f32(i) + 0.5;
     let angle = fi * GOLDEN + jitter;
     let radius = pow(fi / count, 0.7) * uniforms.blur;
-    sum = sum + backdrop_at(p + vec2f(cos(angle), sin(angle)) * radius).rgb;
-    total = total + 1.0;
+    let c = backdrop_at(p + vec2f(cos(angle), sin(angle)) * radius).rgb;
+    let w = 1.0 + uniforms.frost_weight * pow(dot(c, LUMA), 2.0);
+    sum = sum + c;
+    ghost = ghost + c * w;
+    weight = weight + w;
   }
-  return sum / max(total, 1.0);
+  let cloud = sum / count;
+  let lit = ghost / max(weight, 1e-4);
+  // frost = op * cloud + (1 - op) * held, as `liquid_glass_widgets` writes it:
+  // a positive clamp keeps the ghost at most that much darker than the cloud,
+  // a negative one at most that much brighter.
+  let held = select(
+    max(lit, cloud - vec3f(uniforms.frost_clamp)),
+    min(lit, cloud - vec3f(uniforms.frost_clamp)),
+    uniforms.frost_clamp > 0.0,
+  );
+  return mix(held, cloud, uniforms.frost_opacity);
 }
 
 fn shade(uv: vec2f) -> vec4f {
@@ -185,8 +233,8 @@ fn shade(uv: vec2f) -> vec4f {
     return vec4f(0.0);
   }
   let p = uv * size - size * 0.5;
-  let sdf = sd_shape(p);
-  let coverage = clamp(0.5 - sdf, 0.0, 1.0);
+  let sdf = sd_silhouette(p);
+  let coverage = clamp(0.5 - sdf, 0.0, 1.0) * clamp(uniforms.reveal, 0.0, 1.0);
   if (coverage <= 0.0) {
     return vec4f(0.0);
   }
@@ -197,33 +245,42 @@ fn shade(uv: vec2f) -> vec4f {
   let rim = 1.0 - t;
   let normal = sd_gradient(p);
 
-  // The lens: the bevel's slope bends the backdrop, strongest at the rim, and
-  // the sheet magnifies the picture under it a little.
-  let shift = normal * (uniforms.thickness * rim * rim) - p * uniforms.lens;
+  // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
+  // the rim by (n - 1) * thickness * slope; the sheet also magnifies a little.
+  let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * uniforms.lens;
   let jitter = hash_cell(floor(uv * size * nsh.scale)) * 0.5;
-  var rgb = blurred(p + shift, jitter);
+  var rgb = sample(p + shift, jitter);
 
-  // A pixel of chromatic separation along the rim, as a thick edge spreads
-  // the channels.
-  if (uniforms.chroma > 0.0 && rim > 0.3) {
+  // A pixel of chromatic separation along the rim, as a thick edge spreads the
+  // channels.
+  if (uniforms.chroma > 0.0 && rim > 0.5) {
     let off = normal * (uniforms.chroma * rim);
-    let weight = 0.35 * (rim - 0.3) / 0.7;
+    let weight = 0.22 * (rim - 0.5) / 0.5;
     rgb.r = mix(rgb.r, backdrop_at(p + shift + off).r, weight);
     rgb.b = mix(rgb.b, backdrop_at(p + shift - off).b, weight);
   }
 
-  // The tint thickens where the backdrop would fight the label: a bright
-  // picture under dark glass, a dark one under light glass.
-  let luminance = dot(rgb, vec3f(0.2126, 0.7152, 0.0722));
+  // Dark glass pulls a bright backdrop down (`bodyShade`), and both
+  // appearances lift toward white where the backdrop is dark: the frost's
+  // clamp does that, and the tint adds its 12 % (dark) or 53 % (light).
+  var luminance = dot(rgb, LUMA);
+  rgb = rgb * (1.0 - uniforms.body_shade * luminance);
+
+  // The tint thickens only where the backdrop would fight a label, and never
+  // past 70 %: it is a tint on glass, not an opaque slab.
   let fight = select(
     smoothstep(0.62, 0.16, luminance),
     smoothstep(0.32, 0.86, luminance),
     uniforms.dark > 0.5,
   );
-  let alpha = clamp(uniforms.tint.a + uniforms.adapt * fight * 0.45, 0.0, 0.96);
+  let alpha = clamp(uniforms.tint.a + uniforms.adapt * fight * 0.16, 0.0, 0.7);
   rgb = mix(rgb, uniforms.tint.rgb, alpha);
 
-  // The light, a direction the app may turn with `tilt`.
+  rgb = apply_saturation(rgb, uniforms.saturation);
+  luminance = dot(rgb, LUMA);
+
+  // The light, a direction the app may turn with `tilt` (iOS 27 lights the
+  // light material from below and the dark one from above).
   let c = cos(uniforms.tilt);
   let s = sin(uniforms.tilt);
   let light = vec2f(
@@ -231,18 +288,32 @@ fn shade(uv: vec2f) -> vec4f {
     uniforms.light.x * s + uniforms.light.y * c,
   );
   let facing = clamp(dot(normal, light), 0.0, 1.0);
+  let lit = max(facing, 0.0);
+  let opposite = max(-facing, 0.0);
+  let lobe = lit * lit * lit + 0.85 * opposite * opposite * opposite;
 
-  // The specular rim: the bevel's slope catches the light, and the flat middle
-  // stays flat, as a sheet of glass does.
-  let sheen = pow(facing, 2.0) * pow(rim, max(uniforms.bloom, 0.05));
-  rgb = rgb + vec3f(1.0) * sheen * (uniforms.specular + uniforms.lift);
+  // The iOS 27 rim light: a sharp core one point inside the hairline, a tail
+  // a few points into the body, on the two ends of the light axis; stronger
+  // where the body is dark. Plus a soft sheen across the surface.
+  let ease = pow(1.0 - clamp(luminance, 0.0, 1.0), 0.3);
+  let core = exp(-max(inside - 0.7, 0.0) / 1.4);
+  let tail = exp(-max(inside - 0.7, 0.0) / 7.0);
+  rgb = rgb + vec3f(1.0) * uniforms.rim_light * lobe * ease * (0.30 * core + 0.05 * tail);
+  let along = clamp(0.5 + 0.5 * dot(p / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
+  rgb = rgb + vec3f(1.0) * uniforms.specular * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
   // The inner shadow opposite the light: the sheet's thickness shows.
-  rgb = rgb * (1.0 - uniforms.inner * 0.28 * pow(1.0 - facing, 2.0) * rim);
+  rgb = rgb * (1.0 - uniforms.inner * pow(opposite, 2.0) * rim);
 
-  // The edge itself: a hairline, brightest where the light is.
-  let line = smoothstep(1.4, 0.0, inside);
-  rgb = rgb + vec3f(1.0) * line * uniforms.edge * (0.45 + 0.55 * facing);
+  // The hairline: the backdrop at its own position, darkened; strongest across
+  // the light axis and fading at its ends.
+  let line = smoothstep(1.1, 0.0, inside);
+  let ends = 0.55 + 0.45 * (lit - opposite);
+  rgb = rgb - vec3f(1.0) * line * uniforms.rim_shade * 0.055 * clamp(ends, 0.0, 1.0);
+
+  // The very edge catches the light: a bright hairline all round, stronger
+  // on the side the light comes from.
+  rgb = rgb + vec3f(1.0) * line * ease * (0.18 + 0.35 * lit);
 
   return vec4f(clamp(rgb, vec3f(0.0), vec3f(1.0)), coverage);
 }
@@ -324,6 +395,10 @@ pub struct GlassSpec {
     second: Vec<[f32; 4]>,
     merge: Option<AnimatedNode>,
     spacing: f32,
+    reveal: Option<AnimatedNode>,
+    morph: Option<AnimatedNode>,
+    anchor: f32,
+    material_only: bool,
 }
 
 impl Default for GlassSpec {
@@ -344,6 +419,10 @@ impl GlassSpec {
             second: Vec::new(),
             merge: None,
             spacing: 0.0,
+            reveal: None,
+            morph: None,
+            anchor: 0.5,
+            material_only: false,
         }
     }
 
@@ -413,12 +492,35 @@ impl GlassSpec {
     /// The height of the lens and the blur radius, by variant.
     fn thickness_and_blur(&self) -> (f32, f32) {
         match self.variant {
-            GlassVariant::Clear => (numbers::THICKNESS * 0.7, numbers::BLUR * 0.6),
-            GlassVariant::Thick => (numbers::THICKNESS * 1.1, numbers::BLUR * 1.3),
+            GlassVariant::Clear => (numbers::THICKNESS * 0.6, numbers::BLUR * 0.55),
+            GlassVariant::Thick => (numbers::THICKNESS, numbers::BLUR * 1.35),
             GlassVariant::Tinted(..) | GlassVariant::Interactive | GlassVariant::Regular => {
                 (numbers::THICKNESS, numbers::BLUR)
             }
         }
+    }
+
+    /// How much of the material shows: 0 hides it (a bar at rest over the top
+    /// of its content), 1 is the full material. The scroll edge drives it.
+    pub fn reveal(mut self, value: &AnimatedNode) -> Self {
+        self.reveal = Some(*value);
+        self
+    }
+
+    /// Draws the fill and blur of [`crate::tokens::materials`] instead of the
+    /// shader, whatever the GPU can do: the "material" side of a comparison.
+    pub fn material_only(mut self, only: bool) -> Self {
+        self.material_only = only;
+        self
+    }
+
+    /// Morphs the silhouette into the minimized floating bar of a
+    /// [`crate::GlassTabBar`]: `progress` runs 0 (the bar) to 1 (a pill of
+    /// about 50 pt around the tab at `anchor`).
+    pub fn minimized(mut self, progress: &AnimatedNode, anchor: f32) -> Self {
+        self.morph = Some(*progress);
+        self.anchor = anchor.clamp(0.0, 1.0);
+        self
     }
 
     /// How far beyond its box the shader reads the backdrop: the lens and the
@@ -539,6 +641,24 @@ fn spring(damping: f32, stiffness: f32) -> Spring {
     .damping_ratio(damping)
 }
 
+/// The frost's opacity, clamp and weight for the appearance.
+fn frost(dark: bool) -> [f32; 3] {
+    if dark {
+        numbers::FROST_DARK
+    } else {
+        numbers::FROST
+    }
+}
+
+/// The hairline's darkening and the rim light's strength for the appearance.
+fn rim(dark: bool) -> [f32; 2] {
+    if dark {
+        numbers::RIM_DARK
+    } else {
+        numbers::RIM
+    }
+}
+
 fn vector(values: [f32; 4]) -> UniformValue {
     UniformValue::List(values.map(UniformValue::Number).to_vec())
 }
@@ -574,7 +694,7 @@ pub fn layer(spec: GlassSpec, press: Option<Press>) -> impl IntoElement {
     let shader_spec = spec.clone();
     let material_spec = spec;
     when(
-        move || shaders_available() && program().is_some(),
+        move || !material_spec.material_only && shaders_available() && program().is_some(),
         move || shader_layer(shader_spec.clone(), press),
     )
     .otherwise(move || material_layer(&material_spec))
@@ -588,7 +708,7 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     };
     let tint = spec.clone();
     let quality = spec.quality.taps();
-    let light = spec.light.to_radians();
+    let light_degrees = spec.light;
     let (first, second) = shape_slots(&spec.first, &spec.second);
     let grouped = !spec.first.is_empty();
     let radii = if grouped {
@@ -610,7 +730,21 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("second", second)
         .uniform("count", if spec.first.len() > 1 { 2.0_f32 } else { 1.0 })
         .uniform("spacing", spec.spacing)
-        .uniform("light", [light.cos(), light.sin()])
+        .uniform("light", move || {
+            // iOS 27 lights its light material from below and its dark one
+            // from above, unless the app chose a direction of its own.
+            let degrees = if light_degrees == numbers::LIGHT {
+                if dark() {
+                    numbers::LIGHT_DARK
+                } else {
+                    numbers::LIGHT
+                }
+            } else {
+                light_degrees
+            };
+            let angle = degrees.to_radians();
+            [angle.cos(), angle.sin()]
+        })
         .uniform("bevel", numbers::BEVEL)
         .uniform("thickness", thickness)
         .uniform("lens", numbers::LENS)
@@ -622,7 +756,33 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("inner", numbers::INNER)
         .uniform("edge", numbers::EDGE)
         .uniform("adapt", spec.adapts())
-        .uniform("dark", move || if dark() { 1.0_f32 } else { 0.0 });
+        .uniform("dark", move || if dark() { 1.0_f32 } else { 0.0 })
+        .uniform("saturation", move || {
+            if dark() {
+                numbers::SATURATION_DARK
+            } else {
+                numbers::SATURATION
+            }
+        })
+        .uniform("frost_opacity", move || frost(dark())[0])
+        .uniform("frost_clamp", move || frost(dark())[1])
+        .uniform("frost_weight", move || frost(dark())[2])
+        .uniform("rim_shade", move || rim(dark())[0])
+        .uniform("rim_light", move || rim(dark())[1])
+        .uniform(
+            "body_shade",
+            move || if dark() { numbers::BODY_SHADE } else { 0.0 },
+        )
+        .uniform("reveal", 1.0_f32)
+        .uniform("morph", 0.0_f32)
+        .uniform("anchor", spec.anchor)
+        .uniform("min_radius", numbers::MIN_RADIUS);
+    if let Some(reveal) = &spec.reveal {
+        glass = glass.uniform("reveal", reveal);
+    }
+    if let Some(morph) = &spec.morph {
+        glass = glass.uniform("morph", morph);
+    }
     if let Some(progress) = &spec.merge {
         glass = glass.uniform("progress", progress);
     }

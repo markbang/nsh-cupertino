@@ -88,14 +88,17 @@ the SDFs and the numbers are this crate's own. These were read for the approach
 | [archisvaze/liquid-glass](https://github.com/archisvaze/liquid-glass) | MIT | The split between the WebGL pass and a plain CSS blur where there is no GPU — this crate's fallback rule |
 | [iyinchao/liquid-glass-studio](https://github.com/iyinchao/liquid-glass-studio) | MIT | Chromatic separation along the rim, and its order of magnitude (a pixel) |
 | [samasante/liquid-glass](https://github.com/samasante/liquid-glass) | MIT | Sampling a live DOM backdrop, and where that costs redraws |
-| [DnV1eX/LiquidGlassKit](https://github.com/DnV1eX/LiquidGlassKit) | no licence file | The feature list a backport must keep: refraction, chromatic dispersion, Fresnel-style edge light, a glare that follows the surface's normals |
-| [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Apache-2.0 | Backdrop sampling in a Compose renderer, and the variant split (regular/clear) of the same material |
-| [sdegenaar/liquid_glass_widgets](https://github.com/sdegenaar/liquid_glass_widgets) | MIT | Merging neighbouring shapes into one material (`GlassGroup`'s smooth union) |
+| [DnV1eX/LiquidGlassKit](https://github.com/DnV1eX/LiquidGlassKit) | MIT | The feature list a backport must keep (refraction, chromatic dispersion, Fresnel-style edge light, a glare that follows the surface's normals), and `LiquidLensView.swift`'s resting pill that lifts under a press |
+| [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) | Apache-2.0 | Backdrop sampling in a Compose renderer, the variant split (regular/clear) of the same material, and the floating capsule tabs of `LiquidBottomTabs.kt` |
+| [sdegenaar/liquid_glass_widgets](https://github.com/sdegenaar/liquid_glass_widgets) | MIT | Merging neighbouring shapes into one material (`GlassGroup`'s smooth union); the iOS 27 calibrated presets (`lib/theme/glass_theme_settings.dart`: glass colour, saturation, blur, frost, thickness, n = 1.24, paraxial lens, light angle, rim shade/light, body shade, shadow), the iOS 26 presets; the floating tab bar's geometry and placements (`lib/widgets/surfaces/glass_tab_bar.dart`); the minimise state machine and its thresholds (`lib/widgets/surfaces/shared/tab_bar_minimize_controller.dart`); the graduated blur (`docs/PROGRESSIVE_BLUR.md`); the rim light's lobe shape and magnitudes (`shaders/liquid_glass_render.frag`, `shaders/render.glsl`); and the native-vs-implementation stills `docs/assets/ios27_parity_light.png` / `ios27_parity_dark.png` used as the visual target |
 | [whynotmake-it/flutter_liquid_glass](https://github.com/whynotmake-it/flutter_liquid_glass) | Apache-2.0 | Shape and container APIs for a glass widget set |
 | [conorluddy/LiquidGlassReference](https://github.com/conorluddy/LiquidGlassReference) | none | The written specification of the feature set: lensing against blur, specular response, variants, containers |
 
 Apple's own sources, used as the specification and as acceptance criteria:
 [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/),
 HIG [Materials](https://developer.apple.com/design/human-interface-guidelines/materials)
-and [Liquid Glass](https://developer.apple.com/design/human-interface-guidelines/liquid-glass).
+[Tab bars](https://developer.apple.com/design/human-interface-guidelines/tab-bars),
+[Adopting Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass),
+[`UITabBarController.MinimizeBehavior`](https://developer.apple.com/documentation/uikit/uitabbarcontroller/minimizebehavior)
+and [`UIScrollEdgeEffect`](https://developer.apple.com/documentation/uikit/uiscrolledgeeffect).
 No text is reproduced in this repository.

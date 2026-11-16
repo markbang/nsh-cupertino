@@ -212,3 +212,131 @@ an app that gates contrast at 4.5:1 passes the user's Increase Contrast setting 
   requires.
 - **Platform text fields.** `TextField` uses NSH's native input; on iOS that is the
   system text field and the system keyboard, which is what the design expects.
+
+## Liquid Glass, measured
+
+The iOS 26/27 material is not a frosted panel: it is a thin, luminous layer
+that refracts its backdrop, keeps its structure, and catches the light on one
+edge. The numbers below were read from primary sources and from calibrated
+implementations, then checked against measurements of our own renders
+(`tools/glass-pixels.mjs`).
+
+### References
+
+Apple:
+
+- [Adopting Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass)
+  — the floating layer, the tab bar's and toolbar's new shapes, the scroll edge
+  effect.
+- [Materials](https://developer.apple.com/design/human-interface-guidelines/materials)
+  and [Toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars)
+  — glass as a material over content, never a content background.
+- [Tab bars](https://developer.apple.com/design/human-interface-guidelines/tab-bars)
+  — the floating, inset capsule and its minimise behaviour on iPhone.
+- [`UITabBarController.MinimizeBehavior`](https://developer.apple.com/documentation/uikit/uitabbarcontroller/minimizebehavior)
+  — `automatic`, `never`, `onScrollDown`, `onScrollUp` (iOS 26).
+- [`UIScrollEdgeEffect`](https://developer.apple.com/documentation/uikit/uiscrolledgeeffect)
+  — the progressive blur/fade at a scroll view's edge.
+- WWDC25 [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/)
+  (session 219), [Get to know the new design system](https://developer.apple.com/videos/play/wwdc2025/356/)
+  (356) and [Build a SwiftUI app with the new design](https://developer.apple.com/videos/play/wwdc2025/323/)
+  (323): the session frames are the close-ups the material was compared with
+  (a capsule over text, a menu over a photograph, the dark toolbar over an
+  image, the light iPad sidebar).
+
+Calibrated implementations (licences in `NOTICE`; the images are linked, not
+vendored, since Apple's are Apple's):
+
+- [`sdegenaar/liquid_glass_widgets`](https://github.com/sdegenaar/liquid_glass_widgets)
+  (MIT) — the iOS 27 presets in `lib/theme/glass_theme_settings.dart`, the
+  native-vs-implementation stills `docs/assets/ios27_parity_light.png` and
+  `ios27_parity_dark.png`, the tab bar in `lib/widgets/surfaces/glass_tab_bar.dart`,
+  the minimise state machine in `lib/widgets/surfaces/shared/tab_bar_minimize_controller.dart`
+  and the graduated blur in `docs/PROGRESSIVE_BLUR.md`.
+- [`Kyant0/AndroidLiquidGlass`](https://github.com/Kyant0/AndroidLiquidGlass)
+  (Apache-2.0) — the floating capsule tabs' geometry and the lens/dispersion
+  core.
+- [`DnV1eX/LiquidGlassKit`](https://github.com/DnV1eX/LiquidGlassKit) (MIT) —
+  `LiquidLensView.swift`, the resting pill that lifts under a press.
+
+### The material
+
+| Number | iOS 27 light | iOS 27 dark | Ours |
+| --- | --- | --- | --- |
+| Glass colour | `#87F8F8F8` (53 % white) | `#1FFFFFFF` (12 % white) | the `glass-regular` token, same values |
+| Backdrop saturation | 2.1 | 1.4 | `SATURATION` / `SATURATION_DARK` |
+| Blur | small; detail survives | small | 8 pt (`BLUR`), the top of the 3–8 pt band |
+| Frost: opacity / clamp / weight | 0.73 / +0.40 / 2.0 | 0.85 / −0.45 / 0.5 | `FROST` / `FROST_DARK` |
+| Thickness, refractive index | 32 pt, 1.24 (paraxial) | same | 8 pt of rim shift (0.24 × 32) |
+| Light angle | +π/2 (from below) | −π/2 (from above) | `LIGHT` / `LIGHT_DARK` |
+| Rim: shade / light | 1 / 1 | 1 / 1.15 | `RIM` / `RIM_DARK` |
+| Body shade | 0 | 0.28 | `BODY_SHADE` |
+| Shadow | `#0A000000`, blur 10, y 7 | none | the bar's shadow layer |
+
+The rim light is a hairline plus two lobes on the light axis: a sharp core one
+point inside the edge and a soft tail about 8 pt into the body, scaled by
+`(1 − luminance)^0.3`; on black it adds about +50/255, easing to +27/255 over a
+near-white body (the measurement in `liquid_glass_widgets`'
+`liquid_glass_render.frag`). Ours follows that shape with one lobe pair and a
+soft sheen, and measures +0.32 luminance on the lit edge of the calibration
+capsule.
+
+The adaptive tint thickens only where the backdrop fights a label, and stops at
+70 %: it must never turn the glass into an opaque slab.
+
+### The structure
+
+Liquid Glass is a design language, not only a material. The pieces that carry it:
+
+| Piece | Number | Source |
+| --- | --- | --- |
+| Floating tab bar | 64 pt tall, radius 32, 20 pt side insets, 12 pt above the home indicator; 27.5 pt icons and 10 pt labels, 2 pt apart | `glass_tab_bar.dart`, UIKit's `UITabBar` |
+| Minimised bar | a 50 pt pill around the chosen tab; the whole bar lifts 6 pt as it shrinks | `glass_tab_bar.dart` (`minimizedBarHeight` 50) |
+| Minimise behaviour | 20 pt of downward travel minimises, 12 pt upward expands, content shorter than 40 pt never minimises, the top always expands; springs at damping 0.78, stiffness 340 | `tab_bar_minimize_controller.dart` |
+| Floating navigation controls | 40 pt circular back button, a capsule for the trailing action, 16 pt from the sides and 8 pt below the safe area; the title floats between them | the WWDC25 stills and the parity images |
+| Scroll edge | a graduated blur, 20 pt at the edge and sharp 110 pt in, with a short fade into the page's background; 0 at rest at the top, 1 after 26 pt of scroll | `PROGRESSIVE_BLUR.md` (max sigma 20, falloff 1.2), `UIScrollEdgeEffect` |
+| Concentric radii | the capsule's radius is half its height (32); nested shapes take the outer radius minus the gap | HIG *Layout* |
+
+### What our renders measure
+
+On the calibration page (a capsule over dense text and a blue edge, 3×):
+
+| Check | Threshold | Light | Dark |
+| --- | --- | --- | --- |
+| Structure correlation (through glass vs clear) | ≥ 0.25 / 0.35 | 0.53 | 0.50 |
+| Fill-only correlation, for contrast | below the shader's | 0.16 | 0.09 |
+| Material mean luminance | dark above the backdrop, 0.06–0.34 | — | 0.26 over 0.09 |
+| Rim displacement of the blue edge | ≥ 1.5 pt | 10.0 | 15.7 |
+| Lit edge − opposite edge | ≥ 0.05 | +0.06 (bottom) | +0.29 (top) |
+
+`tools/android-glass-check.mjs` measures the same properties on the emulator's
+frames, and adds the structure checks: the bar spans ≥ 60 % of the screen when
+expanded and ≤ 45 % after a downward scroll, and the 20 pt either side of the
+capsule show content rather than the bar.
+
+### What still differs from Apple
+
+- **The frost is an approximation.** iOS 27 runs a separate blur pass and reads
+  its cloud from interleaved rows; ours samples a disc of 9–17 taps in one pass,
+  so a very dense texture under the glass loses a little more structure than
+  Apple's and a very low-tap GPU (`low` quality) can band. The 3–8 pt blur band
+  keeps text recognisable, as Apple's does, but at the low end ours is a little
+  crisper.
+- **The lens is paraxial.** Apple's physical model refracts through a
+  hemispherical bevel; ours takes the bevel's slope at the rim (the paraxial
+  approximation the reference implementation uses too), so the magnification
+  inside the rim is slightly flatter at large radii.
+- **The minimise morph interpolates two silhouettes** (the bar's rounded rect
+  and the chosen tab's pill) and cross-fades the content, where UIKit morphs the
+  real views and their icons. The spring matches; the intermediate frames do
+  not carry the icons through the morph.
+- **The shadow is a box shadow**, not the layered, elevation-aware shadow of the
+  native material; dark mode draws none, as iOS 27 does.
+- **Content behind a web build is painted by NSH's own painter**, which leaves
+  gradients and rotations out of a shader's backdrop picture. Our demo therefore
+  uses solid blocks and text behind the glass; native builds capture the whole
+  window and show pictures and gradients too. This is a platform limitation, not
+  the material's.
+- **The scroll edge effect is one loop of taps over the strip**, not a separable
+  two-pass Gaussian; at 20 pt over 110 pt it is smooth on our test content but
+  can show a faint ring on an extremely high-contrast, fine pattern.
