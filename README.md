@@ -41,12 +41,12 @@ text and search fields, switches and the activity indicator.
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **0.3.5** — the tokens, the components settings screens need, the
-overlays and controls of the rest of iOS, and real Liquid Glass: `Glass`,
-`GlassButton` and `GlassGroup` draw Apple's iOS 26 material with a shader on
-every bar, sheet, alert and floating control, falling back to the material's
-fill and blur where there is no GPU. The material is verified on Android as
-well as on the web.
+Status: **0.4.0** — the tokens, the components settings screens need, the
+overlays and controls of the rest of iOS, and Liquid Glass as a design
+language: `Glass`, `GlassButton` and `GlassGroup` draw the material, `GlassTabBar`
+is the floating capsule that minimises as you scroll, `NavPage` floats its
+controls over a `ScrollEdge` gradient, and the material is tuned to iOS 27's
+calibrated numbers and measured on Android as well as on the web.
 
 ## Install
 
