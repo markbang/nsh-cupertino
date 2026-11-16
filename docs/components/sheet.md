@@ -38,6 +38,10 @@ Notes
   `Cancel` reports the leading one the same way.
 - Give the app's `detent` and follow `onDetentChange` when the app owns it; a
   drag that changes detents also reports it.
+- The panel is at most 640 pt wide (`metrics::SHEET_MAX_WIDTH`). On a window
+  wider than that it sits centred as a card with all four corners rounded and
+  16 pt above the bottom edge, as an iPad's form sheet does; on a phone it is
+  the full width of the screen.
 
 ## Accessibility
 
