@@ -1079,7 +1079,7 @@ function GlassPage() {
             header="Glass controls"
             footer="The interactive variant: a press squashes the capsule to 96,5 %, widens its specular rim and lenses harder, over 250 ms. Reduce Motion keeps the values and drops the springs."
           >
-            <View style={{ flexDirection: "row", gap: 12, padding: 16, backgroundColor: "#e5e7eb" }}>
+            <View class="bg-secondary-fill" style={{ flexDirection: "row", gap: 12, padding: 16 }}>
               <GlassButton icon="square.and.pencil" label="Compose" onPress={() => notice.set("Compose")} />
               <GlassButton icon="trash" label="Delete" onPress={() => notice.set("Delete")} />
             </View>
