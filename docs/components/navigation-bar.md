@@ -89,3 +89,15 @@ The compact title and hairline fade over the last 10 pt of the large title's
 52 pt; nothing animates on its own. Pushing a page uses iOS's
 `kTransitionDuration` (500 ms) spring, which NSH's navigation stack plays when the
 app uses one.
+
+## The floating bar
+
+With a `material`, `NavPage` draws iOS 26's floating group instead of a
+full-width band: a 40 pt circular glass back button 16 pt from the leading edge,
+the compact title in the middle, and the trailing action in a glass capsule 16 pt
+from the trailing edge, 8 pt below the safe area. The large title stays in the
+content and collapses into the group as it scrolls away; a `ScrollEdge` behind
+them dissolves what passes under (0 at rest, full after 26 pt of scroll). The
+page's content keeps its top inset (bar height plus safe area) and scrolls under
+all of it; content is also visible in the gaps either side of the trailng
+capsule.

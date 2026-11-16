@@ -111,3 +111,21 @@ material's own legibility rules assume it.
   gets the same outcome.
 - The material never moves text: `Reduce Motion` removes the squash and the
   springs, and the values are reached at once.
+
+## The structure it belongs to
+
+Liquid Glass is a design language, not only this surface. The pieces that carry
+it in this crate:
+
+- [`GlassTabBar`](tab-bar.md#glass-bar) — the floating capsule at the bottom of
+  the screen (64 pt tall, radius 32, 20 pt insets), which minimises to a pill
+  around the chosen tab as the page scrolls down and expands as it scrolls up.
+- `NavPage` with a `material` — a floating navigation group: a 40 pt back
+  circle, the title, and a capsule for the trailing action, over a scroll edge
+  effect instead of a full-width band.
+- [`ScrollEdge`](scroll-edge.md) — the graduated blur and fade at a page's edge
+  that lets content dissolve under those controls.
+
+The material itself is the same under all of them. `tools/glass-pixels.mjs`
+measures it on the calibration page; `docs/design-notes.md` lists the numbers
+and where they come from.

@@ -27,6 +27,7 @@ import {
   DatePicker,
   Glass,
   GlassButton,
+  GlassTabBar,
   List,
   ListTile,
   NavPage,
@@ -1059,66 +1060,132 @@ function Stripes(props: { height: number; light?: string; dark?: string; width?:
   );
 }
 
+// A photograph's worth of colour without an asset: three gradients with a
+// caption, so the bars have dense, bright content to refract.
+const PHOTOS = [
+  { color: "#f97316", title: "Sunset" },
+  { color: "#2563eb", title: "Night" },
+  { color: "#22c55e", title: "Field" },
+];
+
+// Solid colours, not gradients: the web renderer's backdrop picture leaves
+// gradients out (`paintTree`), so a gradient under glass would sample as the
+// page's background. The pictures the glass has to work over are blocks.
+const HERO = ["#2563eb", "#7c3aed", "#db2777", "#f59e0b"];
+
+const SCROLL = signal(0);
+const MATERIAL = signal("glass");
+const TAB = signal("inbox");
+const TAB_BEHAVIOR = signal("on-scroll-down");
+
 function GlassPage() {
   const sheet = signal(overlaySeed() === "glass");
   const actions = signal(false);
   const notice = signal(pressCount() + "");
+  const glass = MATERIAL() === "glass";
   return (
     <View style={{ flex: 1 }}>
-      <Page id="glass" material="regular">
+      <NavPage
+        title="Liquid Glass"
+        largeTitle="Liquid Glass"
+        back="Cupertino"
+        onBack={home}
+        trailing={glass ? "Done" : undefined}
+        onTrailing={home}
+        material={MATERIAL()}
+        onScroll={(event: { offset: number }) => SCROLL.set(event.offset)}
+      >
         <List scroll={false}>
+          {/* A bright hero band: the floating controls and the scroll edge
+              have something to refract the moment the page scrolls. */}
+          <View style={{ height: 232 }}>
+            <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, flexDirection: "row" }}>
+              <Each of={HERO} key={(color) => color}>
+                {(color) => <View style={{ flex: 1, backgroundColor: color() }} />}
+              </Each>
+            </View>
+            <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 20 }}>
+              <Text style={{ color: "#ffffff", fontSize: 30, fontWeight: 700, lineHeight: 36 }}>
+                Sculpted from light
+              </Text>
+              <Text style={{ color: "rgba(255,255,255,0.86)", fontSize: 15, lineHeight: 20, marginTop: 4 }}>
+                A material that bends, tints and catches the light of what lies beneath it.
+              </Text>
+            </View>
+          </View>
           <Section
-            header="Under the bar"
-            footer="The page scrolls under the glass bar: the material lenses and blurs the rows, and its rim follows them, not the page's background."
+            header="The material"
+            footer="Glass is a floating layer: the shader samples the page, refracts it at the rim and tints it 12 % white in dark (53 % in light). Material is the same surface without a shader, for comparison."
           >
-            <Stripes height={132} />
-            <ListTile title="Scroll the page" subtitle="The bar's glass follows what goes under it" accessory="none" separator />
-            <ListTile title="Lens" subtitle="The rim bends what lies just outside the shape" accessory="none" separator={false} />
+            <View style={{ padding: 16 }}>
+              <SegmentedControl
+                items={[
+                  { value: "glass", title: "Glass" },
+                  { value: "material", title: "Material" },
+                ]}
+                value={MATERIAL()}
+                label="Material"
+                onChange={(event: { value: string }) => MATERIAL.set(event.value)}
+              />
+            </View>
+            <ListTile
+              title="Under the bar"
+              subtitle="Scroll: the title collapses and the edge dissolves under the floating controls"
+              accessory="none"
+              separator
+            />
+            <ListTile
+              title="The tab bar"
+              subtitle="Scroll down to minimize it, up to bring it back"
+              accessory="none"
+              separator={false}
+            />
+          </Section>
+          <Section
+            header="Dense content"
+            footer="Text, pictures and a coloured band run under both bars: the glass has to keep them legible, and the scroll edge has to let them leave through a ramp rather than a cut."
+          >
+            <Each of={[1, 2, 3, 4, 5, 6, 7, 8]} key={(n) => n}>
+              {(n) => (
+                <ListTile
+                  title={`Message ${n()} — a line of body text`}
+                  subtitle="The quick brown fox jumps over the lazy dog. 0123456789"
+                  accessory="none"
+                  separator={n() !== 8}
+                />
+              )}
+            </Each>
+          </Section>
+          <Section header="Pictures" footer="Bright, saturated pictures: the material lifts them rather than hiding them.">
+            <View style={{ flexDirection: "row", gap: 12, padding: 16 }}>
+              <Each of={PHOTOS} key={(photo) => photo.title}>
+                {(photo) => (
+                  <View style={{ flex: 1, height: 132, borderRadius: 14, overflow: "hidden" }}>
+                    <View
+                      style={{
+                        flex: 1,
+                        backgroundColor: photo().color,
+                        justifyContent: "flex-end",
+                        padding: 10,
+                      }}
+                    >
+                      <Text style={{ color: "#ffffff", fontSize: 13, fontWeight: 600 }}>{photo().title}</Text>
+                    </View>
+                  </View>
+                )}
+              </Each>
+            </View>
+          </Section>
+          <Section header="A coloured band" footer="Eight-point stripes: a hard test for a blur and a lens.">
+            <Stripes height={120} />
           </Section>
           <Section
             header="Glass controls"
-            footer="The interactive variant: a press squashes the capsule to 96,5 %, widens its specular rim and lenses harder, over 250 ms. Reduce Motion keeps the values and drops the springs."
+            footer="The interactive variant: a press squashes the capsule to 96,5 %, widens its specular rim and lenses harder, over 250 ms."
           >
             <View class="bg-secondary-fill" style={{ flexDirection: "row", gap: 12, padding: 16 }}>
               <GlassButton icon="square.and.pencil" label="Compose" onPress={() => notice.set("Compose")} />
               <GlassButton icon="trash" label="Delete" onPress={() => notice.set("Delete")} />
-            </View>
-          </Section>
-          <Section
-            header="Variants"
-            footer="Regular for bars, thick under text, clear for media only, tinted for one action. High contrast makes the fill nearly opaque."
-          >
-            <View style={{ gap: 10 }}>
-              <Stripes height={120} />
-              <View style={{ position: "absolute", left: 12, top: 10, right: 12, flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1, height: 46 }}>
-                  <Glass shape="capsule" variant="regular" style={{ flex: 1 }}>
-                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                      <Text class="text-label" style={{ fontSize: 13, fontWeight: 600 }}>
-                        regular
-                      </Text>
-                    </View>
-                  </Glass>
-                </View>
-                <View style={{ flex: 1, height: 46 }}>
-                  <Glass shape="capsule" variant="clear" style={{ flex: 1 }}>
-                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                      <Text class="text-label" style={{ fontSize: 13, fontWeight: 600 }}>
-                        clear
-                      </Text>
-                    </View>
-                  </Glass>
-                </View>
-                <View style={{ flex: 1, height: 46 }}>
-                  <Glass shape="capsule" variant="thick" style={{ flex: 1 }}>
-                    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                      <Text class="text-label" style={{ fontSize: 13, fontWeight: 600 }}>
-                        thick
-                      </Text>
-                    </View>
-                  </Glass>
-                </View>
-              </View>
             </View>
           </Section>
           <Section header="Sheets" footer="A sheet is the floating layer too: thick glass at 14 pt, its content over it.">
@@ -1128,13 +1195,28 @@ function GlassPage() {
             </View>
             <ListTile title="Last press" subtitle={notice()} accessory="none" separator={false} />
           </Section>
-          <Section header="Filler" footer="Rows so the page scrolls under the bar.">
-            <Each of={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} key={(n) => n}>
-              {(n) => <ListTile title={`Row ${n()}`} subtitle="Under the bar" accessory="none" separator={n() !== 10} />}
+          <Section header="Filler" footer="Rows so the page scrolls under both bars.">
+            <Each of={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]} key={(n) => n}>
+              {(n) => <ListTile title={`Row ${n()}`} subtitle="Under the bars" accessory="none" separator={n() !== 12} />}
             </Each>
           </Section>
+          <View style={{ height: 148 }} />
         </List>
-      </Page>
+      </NavPage>
+      <GlassTabBar
+        items={[
+          { value: "inbox", title: "Inbox", icon: "envelope" },
+          { value: "flagged", title: "Flagged", icon: "bell", badge: "2" },
+          { value: "search", title: "Search", icon: "magnifyingglass" },
+          { value: "settings", title: "Settings", icon: "slider.horizontal.3" },
+        ]}
+        value={TAB()}
+        label="Liquid Glass tabs"
+        material={MATERIAL()}
+        behavior={TAB_BEHAVIOR()}
+        scrollOffset={SCROLL()}
+        onChange={(event: { value: string; index: number }) => TAB.set(event.value)}
+      />
       <Sheet
         open={sheet()}
         title="Liquid Glass"
@@ -1178,17 +1260,32 @@ const glassMode = signal("shader");
 function GlassCalibrationPage() {
   const mode = glassMode();
   return (
-    <View style={{ flex: 1, backgroundColor: "#f5f5f7" }}>
-      <View
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          width: 70,
-          bottom: 0,
-          backgroundColor: "#1d4ed8",
-        }}
-      />
+    <View class="bg-background" style={{ flex: 1 }}>
+      {/* The page's own backdrop, the way a message list is: dense text over
+          stripes, plus a hard blue field whose edge sits 10 pt inside the
+          capsule (a step edge a blur cannot move and a lens does). */}
+      <View style={{ position: "absolute", left: 0, right: 0, top: 0, height: 520, overflow: "hidden" }}>
+        <Stripes height={520} light="transparent" dark="transparent" width={8} />
+        <View
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: 70,
+            bottom: 0,
+            backgroundColor: "#1d4ed8",
+          }}
+        />
+        <View style={{ position: "absolute", left: 84, right: 12, top: 100, gap: 14 }}>
+          <Each of={[1, 2, 3, 4, 5]} key={(n) => n}>
+            {(n) => (
+              <Text class="text-label" style={{ fontSize: 15, lineHeight: 18, fontWeight: n() === 1 ? 600 : 400 }}>
+                {`Row ${n()} of dense content under the glass, 0123456789`}
+              </Text>
+            )}
+          </Each>
+        </View>
+      </View>
       <View style={{ position: "absolute", left: 60, top: 120, width: 180, height: 64 }}>
         <If when={mode === "material"}>
           <View class="bg-material-ultra-thin backdrop-blur-xl" style={{ flex: 1, borderRadius: 32 }} />

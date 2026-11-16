@@ -28,7 +28,7 @@ const DIR = arg("dir", join(root, "docs", "screenshots"));
 
 const SCHEMES = ["light", "dark"];
 /** The demonstration pages: rich enough that a blank frame is unmistakable. */
-const PAGES = ["", "scrolled-", "capsules-", "sheet-", "behind-"];
+const PAGES = ["", "mid-", "scrolled-", "tabmin-", "sheet-"];
 const MODES = ["none", "material", "shader"];
 
 const failures = [];
@@ -197,7 +197,7 @@ const tops = Object.fromEntries(SCHEMES.map((scheme) => [scheme, must(scheme) ??
 for (const scheme of SCHEMES) {
   const top = tops[scheme];
   if (!top) continue;
-  for (const [what, least] of [["scrolled", 0.02], ["capsules", 0.02], ["sheet", 0.05], ["behind", 0.02]]) {
+  for (const [what, least] of [["mid", 0.02], ["scrolled", 0.02], ["tabmin", 0.02], ["sheet", 0.05]]) {
     const other = must(`${what}-${scheme}`);
     if (!other) continue;
     const moved = difference(top, other);
@@ -281,6 +281,115 @@ for (const scheme of SCHEMES) {
     fail(`calibration-shader-${scheme}.png is calibration-material-${scheme}.png: the GPU shader drew nothing of its own`);
   } else if (lens - Math.max(field, page) < 40) {
     fail(`calibration-shader-${scheme}.png draws without the lens: the blue field reaches ${lens} px, as far as the fill (${field} px), not past the page's edge (${page} px)`);
+  }
+}
+
+// The floating bars: the expanded bar spans the screen (inset by 20 pt), the
+// minimized one is a pill around the chosen tab; content shows in the gaps.
+function bottomBand(image) {
+  return { y0: Math.round(image.height * 0.865), y1: Math.round(image.height * 0.955) };
+}
+
+/** How wide the bar's content reaches, as a fraction of the screen. */
+function spread(image) {
+  const { y0, y1 } = bottomBand(image);
+  const y = Math.round((y0 + y1) / 2);
+  const values = [];
+  for (let x = 0; x < image.width; x += 2) values.push(image.luminance(x, y));
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = sorted[Math.floor(sorted.length / 2)];
+  let first = -1;
+  let last = -1;
+  for (let i = 0; i < values.length; i++) {
+    if (Math.abs(values[i] - middle) > 0.04) {
+      if (first < 0) first = i;
+      last = i;
+    }
+  }
+  return first < 0 ? 0 : (last - first) * 2 / image.width;
+}
+
+for (const scheme of SCHEMES) {
+  const expanded = must(`scrolled-${scheme}`);
+  const minimized = must(`tabmin-${scheme}`);
+  if (!expanded || !minimized) continue;
+  const wide = spread(expanded);
+  const small = spread(minimized);
+  if (wide < 0.6) {
+    fail(`scrolled-${scheme}.png's tab bar spans ${(wide * 100).toFixed(0)} % of the screen: it is not the floating capsule`);
+  } else if (small > 0.45 || small > wide - 0.2) {
+    fail(`tabmin-${scheme}.png's tab bar still spans ${(small * 100).toFixed(0)} %: it did not minimize (expanded ${(wide * 100).toFixed(0)} %)`);
+  } else {
+    report(`${scheme}: the tab bar shrinks from ${(wide * 100).toFixed(0)} % to ${(small * 100).toFixed(0)} % when scrolled down, and expands when scrolled up`);
+  }
+  // Content around the capsule: the far left of the band is not the bar.
+  const { y0, y1 } = bottomBand(expanded);
+  const y = Math.round((y0 + y1) / 2);
+  let edge = 0;
+  for (let x = 1; x < 10; x++) edge += expanded.luminance(x, y);
+  edge /= 9;
+  const inside = expanded.luminance(Math.round(expanded.width / 2), y);
+  if (Math.abs(edge - inside) < 0.02) {
+    fail(`scrolled-${scheme}.png's tab bar reaches the screen edge (${edge.toFixed(2)} at the edge, ${inside.toFixed(2)} inside): it is not inset`);
+  } else {
+    report(`${scheme}: content shows in the 20 pt either side of the tab bar (${edge.toFixed(2)} against ${inside.toFixed(2)})`);
+  }
+}
+
+// The material, on the calibration page: dark glass is lighter than its
+// backdrop, and the rim refracts (the existing blue-field check above).
+for (const scheme of SCHEMES) {
+  const clear = must(`calibration-none-${scheme}`);
+  const glass = must(`calibration-shader-${scheme}`);
+  if (!clear || !glass) continue;
+  const page = blueEdge(clear);
+  if (page === null) continue;
+  const scale = page / 70;
+  const inside = (image) => {
+    let sum = 0;
+    let count = 0;
+    for (let y = Math.round(134 * scale); y < Math.round(172 * scale); y += 2) {
+      for (let x = Math.round(84 * scale); x < Math.round(216 * scale); x += 2) {
+        sum += image.luminance(x, y);
+        count += 1;
+      }
+    }
+    return sum / count;
+  };
+  const lit = inside(glass);
+  const behind = inside(clear);
+  if (scheme === "dark") {
+    if (!(lit > behind + 0.02)) {
+      fail(`calibration-shader-dark.png is not lighter than its backdrop (${lit.toFixed(3)} against ${behind.toFixed(3)}): a dark slab, not glass`);
+    } else if (lit > 0.36) {
+      fail(`calibration-shader-dark.png reads ${lit.toFixed(3)}: too opaque for the reference band (0.06–0.34)`);
+    } else {
+      report(`dark glass reads ${lit.toFixed(3)} over a ${behind.toFixed(3)} backdrop`);
+    }
+  } else if (!(lit >= behind - 0.04)) {
+    fail(`calibration-shader-light.png is darker than its backdrop (${lit.toFixed(3)} against ${behind.toFixed(3)})`);
+  } else {
+    report(`light glass reads ${lit.toFixed(3)} over a ${behind.toFixed(3)} backdrop`);
+  }
+  // The lit edge: iOS 27 lights the dark material from above, the light one
+  // from below.
+  const y = Math.round(152 * scale);
+  const column = Math.round(150 * scale);
+  const top = (() => {
+    let best = 0;
+    for (let row = Math.round(121 * scale); row < Math.round(126 * scale); row++) best = Math.max(best, glass.luminance(column, row));
+    return best;
+  })();
+  const bottom = (() => {
+    let best = 0;
+    for (let row = Math.round(178 * scale); row < Math.round(183 * scale); row++) best = Math.max(best, glass.luminance(column, row));
+    return best;
+  })();
+  const gain = scheme === "dark" ? top - bottom : bottom - top;
+  if (gain < 0.03) {
+    fail(`calibration-shader-${scheme}.png has no specular on its lit edge (${gain.toFixed(3)})`);
+  } else {
+    report(`${scheme}: the lit rim is ${gain.toFixed(3)} brighter than the opposite one (row ${y})`);
   }
 }
 

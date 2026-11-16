@@ -175,3 +175,78 @@ vertex 阶段的 block 一直未绑定，WebGL 以 `GL_INVALID_OPERATION` 拒绝
 - **侧滑返回**：iOS 上来自 `nsh/base` 的导航栈；Android 的返回手势交给平台（同样是 `nsh/base`），
   符合任务要求。
 - **平台输入框**：`TextField` 使用 NSH 的原生输入；在 iOS 上就是系统输入框与系统键盘，正是设计所需。
+
+## Liquid Glass 的实测数字
+
+iOS 26/27 的这种材质不是一块磨砂面板：它很薄、会发光，会折射背后的内容、保留背后的结构，并在一侧边缘接住光。下面的数字来自一手资料和经过校准的实现，再用我们自己渲染结果的实测（`tools/glass-pixels.mjs`）核对。
+
+### 资料
+
+Apple：
+
+- [Adopting Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass)：浮动层、标签栏与工具栏的新形状、滚动边缘效果。
+- [Materials](https://developer.apple.com/design/human-interface-guidelines/materials) 与 [Toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars)：玻璃是浮在内容之上的材质，永远不是内容背景。
+- [Tab bars](https://developer.apple.com/design/human-interface-guidelines/tab-bars)：浮动的内缩胶囊，以及 iPhone 上的最小化行为。
+- [`UITabBarController.MinimizeBehavior`](https://developer.apple.com/documentation/uikit/uitabbarcontroller/minimizebehavior)：`automatic`、`never`、`onScrollDown`、`onScrollUp`（iOS 26）。
+- [`UIScrollEdgeEffect`](https://developer.apple.com/documentation/uikit/uiscrolledgeeffect)：滚动视图边缘的渐进模糊与淡出。
+- WWDC25 [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/)（219）、[Get to know the new design system](https://developer.apple.com/videos/play/wwdc2025/356/)（356）、[Build a SwiftUI app with the new design](https://developer.apple.com/videos/play/wwdc2025/323/)（323）：这些场次里的特写就是材质对照的依据（文字上的胶囊、照片上的菜单、图片上的深色工具栏、浅色 iPad 侧边栏）。
+
+经过校准的实现（许可写在 `NOTICE`；Apple 的图片只给链接，不放进仓库）：
+
+- [`sdegenaar/liquid_glass_widgets`](https://github.com/sdegenaar/liquid_glass_widgets)（MIT）：`lib/theme/glass_theme_settings.dart` 的 iOS 27 预设、`docs/assets/ios27_parity_light.png` 与 `ios27_parity_dark.png` 的原生对照图、`lib/widgets/surfaces/glass_tab_bar.dart` 的标签栏、`lib/widgets/surfaces/shared/tab_bar_minimize_controller.dart` 的最小化状态机，以及 `docs/PROGRESSIVE_BLUR.md` 的渐进模糊。
+- [`Kyant0/AndroidLiquidGlass`](https://github.com/Kyant0/AndroidLiquidGlass)（Apache-2.0）：浮动胶囊标签的几何与透镜/色散核心。
+- [`DnV1eX/LiquidGlassKit`](https://github.com/DnV1eX/LiquidGlassKit)（MIT）：`LiquidLensView.swift`，按下时抬起的静止胶囊。
+
+### 材质
+
+| 数值 | iOS 27 浅色 | iOS 27 深色 | 本库 |
+| --- | --- | --- | --- |
+| 玻璃色 | `#87F8F8F8`（53 % 白） | `#1FFFFFFF`（12 % 白） | `glass-regular` token，同值 |
+| 背景饱和度 | 2.1 | 1.4 | `SATURATION` / `SATURATION_DARK` |
+| 模糊 | 很小，结构可见 | 很小 | 8 pt（`BLUR`），3–8 pt 区间的上限 |
+| 霜：不透明度 / 钳制 / 权重 | 0.73 / +0.40 / 2.0 | 0.85 / −0.45 / 0.5 | `FROST` / `FROST_DARK` |
+| 厚度、折射率 | 32 pt、1.24（近轴） | 同 | 边缘位移 8 pt（0.24 × 32） |
+| 光角 | +π/2（自下） | −π/2（自上） | `LIGHT` / `LIGHT_DARK` |
+| 边缘：暗线 / 高光 | 1 / 1 | 1 / 1.15 | `RIM` / `RIM_DARK` |
+| 主体压暗 | 0 | 0.28 | `BODY_SHADE` |
+| 阴影 | `#0A000000`，模糊 10，y 7 | 无 | 标签栏的阴影层 |
+
+边缘高光由一条细线加光轴两端的瓣组成：边缘内 1 pt 的锐利核心，加伸入主体约 8 pt 的柔和尾部，并按 `(1 − 亮度)^0.3` 缩放；在黑底上约 +50/255，接近白色的主体上约 +27/255（`liquid_glass_widgets` 的 `liquid_glass_render.frag` 中的测量）。本库用一对瓣加一层柔和光泽实现，在标定胶囊的受光边缘实测 +0.32 亮度。
+
+自适应色调只在背景会和文字打架的地方加厚，上限 70 %：玻璃绝不能变成不透明板。
+
+### 结构
+
+Liquid Glass 是一套设计语言，不只是材质。承载它的部件：
+
+| 部件 | 数字 | 来源 |
+| --- | --- | --- |
+| 浮动标签栏 | 高 64 pt、圆角 32、两侧内缩 20 pt、home indicator 之上 12 pt；图标 27.5 pt、标签 10 pt、间距 2 pt | `glass_tab_bar.dart`、UIKit 的 `UITabBar` |
+| 最小化 | 环绕所选标签的 50 pt 胶囊；整体缩小同时上移 6 pt | `glass_tab_bar.dart`（`minimizedBarHeight` 50） |
+| 最小化行为 | 向下累计 20 pt 收起，向上 12 pt 展开；内容不足 40 pt 时永不收起；回到顶部必展开；弹簧阻尼 0.78、刚度 340 | `tab_bar_minimize_controller.dart` |
+| 浮动导航控件 | 40 pt 圆形返回键、尾部操作的胶囊、距两侧 16 pt、安全区下 8 pt；标题浮在两者之间 | WWDC25 截图与原生对照图 |
+| 滚动边缘 | 渐进模糊：边缘 20 pt，到 110 pt 处变清晰，另有一小段淡入页面背景；顶部静止时为 0，滚动 26 pt 后为 1 | `PROGRESSIVE_BLUR.md`（max sigma 20、falloff 1.2）、`UIScrollEdgeEffect` |
+| 同心圆角 | 胶囊圆角是其高度的一半（32）；嵌套形状取外圆角减去间距 | HIG *Layout* |
+
+### 我们的渲染实测
+
+标定页（3×，文字与蓝色硬边之上的胶囊）：
+
+| 检查 | 阈值 | 浅色 | 深色 |
+| --- | --- | --- | --- |
+| 结构相关性（透过玻璃 vs 无玻璃） | ≥ 0.25 / 0.35 | 0.53 | 0.50 |
+| 仅填充的相关性（对照） | 低于着色器 | 0.16 | 0.09 |
+| 材质平均亮度 | 深色高于背景，0.06–0.34 | — | 0.26（背景 0.09） |
+| 蓝边在边缘处的位移 | ≥ 1.5 pt | 10.0 | 15.7 |
+| 受光边 − 对边 | ≥ 0.05 | +0.06（下） | +0.29（上） |
+
+`tools/android-glass-check.mjs` 在模拟器截图上测同样的性质，并加上结构检查：展开时标签栏占屏宽 ≥ 60 %，向下滚动后 ≤ 45 %；胶囊两侧 20 pt 显示的是内容而不是栏体。
+
+### 与 Apple 仍存在的差异
+
+- **霜是近似。** iOS 27 单独跑一遍模糊、从隔行像素读取云层；我们在一次采样里取 9–17 个点，所以非常密的纹理损失的结构比 Apple 略多，低采样档（`low`）可能出色带。3–8 pt 的模糊区间让文字像 Apple 一样仍然可辨，但我们偏清晰一些。
+- **透镜是近轴的。** Apple 的物理模型按半球斜边折射；我们只取边缘斜率（参考实现同样使用近轴近似），所以大半径处边缘内的放大略平。
+- **最小化是两条轮廓的插值**（栏的圆角矩形与所选标签的胶囊）加内容交叉淡入；UIKit 是真实视图与图标的形变。弹簧一致，但中间帧没有把图标带着变形。
+- **阴影是 box shadow**，不是原生材质那种带高度的分层阴影；深色不画阴影，与 iOS 27 相同。
+- **Web 构建里，玻璃背后的内容由 NSH 自己的绘制器生成**，它不把渐变和旋转画进着色器的背景图。因此演示页在玻璃后使用纯色块与文字；原生构建捕获整个窗口，图片与渐变都会出现。这是平台限制，不是材质的。
+- **滚动边缘效果是对整条区域的一次采样循环**，不是可分离的两遍高斯；20 pt 模糊铺在 110 pt 上，在我们的测试内容上很平滑，但对极细的高对比图案可能出现轻微环纹。

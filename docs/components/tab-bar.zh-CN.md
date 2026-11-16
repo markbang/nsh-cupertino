@@ -35,3 +35,33 @@
 ## 动效
 
 选中颜色在 150 ms 内过渡，无布局移动。减弱动态效果无需单独处理。
+
+## Glass bar
+
+`GlassTabBar` 是 iOS 26 的标签栏：浮在内容之上的内缩玻璃胶囊，而不是整宽的栏。
+
+```tsx
+<GlassTabBar
+  items={tabs}
+  value={tab()}
+  scrollOffset={offset()}
+  behavior="on-scroll-down"
+  onChange={(event) => tab.set(event.value)}
+/>
+```
+
+| 属性 | 类型 | 默认 | |
+| --- | --- | --- | --- |
+| `items` | `TabItem[]` | | 每个标签的值、标题、图标与徽标。 |
+| `value` / `defaultValue` | string | | 所选标签（受控）或初始值。 |
+| `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit 的 `MinimizeBehavior`：向下收起、向上展开。 |
+| `scrollOffset` | number | | 页面偏移，由页面的 `onScroll` 提供；不传则永不收起。 |
+| `minimized` | boolean | | 强制状态。 |
+| `material` | `"glass" \| "material"` | `"glass"` | 着色器，或只用模糊的填充（用于对照）。 |
+| `onChange` | `{ value, index }` | | 选择了另一个标签。 |
+
+形状与动效：高 64 pt、圆角 32、两侧内缩 20 pt、home indicator 之上 12 pt，图标 27.5 pt、标签 10 pt。
+所选标签有自己的胶囊。向下滚动 20 pt 收成环绕该标签的 50 pt 胶囊，向上 12 pt 展开，回到顶部必定展开，
+内容不足 40 pt 永不收起，弹簧阻尼 0.78、刚度 340。放在页面根视图里（它自己定位），并在内容底部留出空间。
+
+上面的整宽 `TabBar` 保留给需要贴着屏幕底部的页面。
