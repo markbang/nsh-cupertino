@@ -337,16 +337,20 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
         })
         .child(page)
         .child(indicator)
-        .child(
-            view()
-                .absolute()
-                .z_index(9)
-                .left_0()
-                .right_0()
-                .top_0()
-                .h(px(edge.spacing()))
-                .child(crate::scroll_edge::layer(&edge)),
-        )
+        .child(when(
+            move || floating,
+            move || {
+                view()
+                    .absolute()
+                    .z_index(9)
+                    .left_0()
+                    .right_0()
+                    .top_0()
+                    .h(px(edge.spacing()))
+                    .child(crate::scroll_edge::layer(&edge))
+                    .into_element()
+            },
+        ))
         .child(bar_view)
 }
 
