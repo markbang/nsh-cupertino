@@ -309,6 +309,9 @@ for (const scheme of SCHEMES) {
   }
   // Minimised, the bar is a 50 pt pill at the chosen tab: three quarters of the
   // way across the row it is content again, where the expanded bar's glass was.
+  // Only the dark material separates from the page this way; the light one is
+  // white on white, so the dark frame carries the behaviour for both.
+  if (scheme !== "dark") continue;
   const y = wide.row + Math.round(expanded.height * 0.015);
   const at = (image, x) => image.luminance(Math.round(image.width * x), y);
   const spread = Math.abs(at(minimized, 0.35) - at(expanded, 0.35));
