@@ -13,11 +13,13 @@ under it.
 
 ## NavPage
 
-`NavPage` is the page: the bar over a scrolling view. Its large title is the first
-thing in the scroll content, so it scrolls away under the bar; the compact title
-and the hairline fade in over its last 10 pt. The fade is driven by the scroll
-offset natively (`scrollValue` + an interpolation), so no frame of the scroll
-reaches your code.
+`NavPage` is the page: the bar as a layer over a scrolling view. The content runs
+to the top edge, padded by the bar's height and the safe area, so it scrolls
+under the bar rather than stopping at its edge: with a `material` the glass
+samples the rows there. Its large title is the first thing in the scroll content,
+so it scrolls away under the bar; the compact title and the hairline fade in over
+its last 10 pt. The fade is driven by the scroll offset natively (`scrollValue` +
+an interpolation), so no frame of the scroll reaches your code.
 
 | TSX | Rust | Type | Default | |
 | --- | --- | --- | --- | --- |
@@ -26,7 +28,7 @@ reaches your code.
 | `back` | `.back(..)` | `string` | none | The back button's label; without it there is no back button |
 | `trailing` | `.trailing(..)` | `string` | none | A tinted trailing action ("Done", "Edit") |
 | `background` | `.background(..)` | token name | `system-grouped-background` | The page's background |
-| `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | A material floats the bar over the content, which scrolls under its blur |
+| `material` | `.material(..)` | `"opaque"` \| `"regular"` \| `"thin"` \| `"ultra-thin"` \| `"thick"` \| `"chrome"` | `opaque` | The bar's surface: opaque, or a material that lenses and blurs the content scrolling under it |
 | `refreshing` | `.refreshing(..)` | `boolean` | `false` | A pull to refresh runs: the indicator stays below the bar |
 | `children` | `.child(..)` | JSX | — | The page's content |
 
@@ -42,10 +44,13 @@ Notes
   activity indicator below the bar.
 - The hairline is one device pixel at every scale, the same rule as
   [the lists](list.md#separators).
-- With a `material`, the content scrolls under the bar: the compact title takes
-  over 44 pt earlier, and the page starts below the bar.
+- The bar floats over the content on every platform, with or without a material:
+  the content's top padding is the bar plus the safe area, and it scrolls under
+  the bar from the first frame. The compact title takes over 44 pt into the
+  scroll.
 - Pressing the title scrolls the page back to the top, as iOS does.
-- Safe area: the page pads its own top inset; the content ends above the home
+- Safe area: the bar draws behind the status bar and pads its row by the inset;
+  the content is padded by the bar plus the inset, and ends above the home
   indicator.
 
 ## NavigationBar

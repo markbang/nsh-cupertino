@@ -90,8 +90,9 @@ pub struct NavPageProps {
     /// set).
     pub background: Prop<Option<SharedString>>,
     /// `"opaque"` (the default) or a material (`"regular"`, `"thin"`,
-    /// `"ultra-thin"`, `"thick"`, `"chrome"`). A material makes the bar float
-    /// over the content, which scrolls under it and shows through the blur.
+    /// `"ultra-thin"`, `"thick"`, `"chrome"`). The bar floats over the
+    /// content either way; a material makes it glass, so the rows show through
+    /// its lens and blur.
     pub material: Prop<Option<SharedString>>,
     /// A pull to refresh runs: the indicator below the bar stays out, turning.
     pub refreshing: Prop<Option<bool>>,
@@ -109,33 +110,36 @@ pub enum NavPageEvent {
 }
 
 /// A whole page: a navigation bar over a scrolling view whose large title
-/// scrolls away, the compact title and a hairline fading in as it goes.
+/// scrolls away over the bar's last 10 pt, the compact title and a hairline
+/// fading in as it goes.
+///
+/// The bar is a layer over the scroll on every platform: the content runs to the
+/// top edge, padded by the bar's height and the safe area, and scrolls under it
+/// rather than stopping at its edge. With a material the glass samples what is
+/// under it; without one the bar's fill covers it.
 ///
 /// The collapse runs on the scroll offset natively: no frame of the scroll
 /// reaches Rust. Pressing the title scrolls back to the top, as iOS does.
 #[component]
 pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement {
     let offset = animated_value(0.0);
-    let floating_bar = props
-        .material
-        .get_untracked()
-        .as_deref()
-        .is_some_and(|name| name != "opaque");
+    // The bar floats over the content on every platform, so the page pads its
+    // own top by the bar and the safe area, and everything above that padding
+    // scrolls under the bar (HIG, materials.md, liquid-glass.md): the glass
+    // samples the rows rather than the page's background.
+    let bar_height = metrics::NAV_HEIGHT + nsh_core::element::safe_area().top.0;
     // The large title's block, and the last 10 pt of it over which the compact
-    // title and the hairline take over. A floating bar sits over the content,
-    // so its title is under the bar 44 pt earlier.
+    // title and the hairline take over. The offset is the content's own: the
+    // title's block starts at its top, so it is under the bar after 44 pt.
     let over = metrics::LARGE_TITLE_HEIGHT;
-    let (start, end) = if floating_bar {
-        (metrics::NAV_HEIGHT, metrics::NAV_HEIGHT + 10.0)
-    } else {
-        (over - 10.0, over)
-    };
-    let fade = offset.interpolate(&[start, end], &[0.0, 1.0]);
+    let fade = offset.interpolate(
+        &[metrics::NAV_HEIGHT, metrics::NAV_HEIGHT + 10.0],
+        &[0.0, 1.0],
+    );
     let background = props.background;
     let scroll_ref = element_ref();
     let to_top = scroll_ref;
     let trailing = props.trailing;
-    let floating = floating_bar;
     let large = props.large_title;
     let bar_view = bar(
         props.title,
@@ -147,7 +151,10 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
             to_top.scroll_to(point(px(0.0), px(0.0)), true)
         })),
         props.material.get_untracked(),
-    );
+    )
+    // The bar spans the status bar too: its fill and glass draw to the top
+    // edge, its row under the safe area.
+    .pt_safe_area();
     let show = animated_value(0.0);
     let refreshing = props.refreshing;
     let shown = show;
@@ -158,55 +165,41 @@ pub fn NavPage(props: NavPageProps, cx: Scope<NavPageEvent>) -> impl IntoElement
             shown.spring(0.0, crate::overlay::spring(0.9, 260.0));
         }
     });
-    let indicator = pull_indicator(&offset, &show, None).top(px(if floating {
-        metrics::NAV_HEIGHT
-    } else {
-        0.0
-    }));
-    let page = view()
-        .relative()
+    let indicator = pull_indicator(&offset, &show, None).top(px(bar_height));
+    let page = scroll()
         .flex_1()
+        .bounces(true)
+        .scroll_value(&offset)
+        .element_ref(&scroll_ref)
+        .on_scroll_end(move |at: &Point<Points>| {
+            if at.y.0 <= -100.0 && !refreshing.get_untracked().unwrap_or(false) {
+                nsh_core::element::haptic(Haptic::Impact(HapticImpact::Light));
+                cx.emit(NavPageEvent::Refresh);
+            }
+        })
         .child(
-            scroll()
-                .flex_1()
-                .bounces(true)
-                .scroll_value(&offset)
-                .element_ref(&scroll_ref)
-                .on_scroll_end(move |at: &Point<Points>| {
-                    if at.y.0 <= -100.0 && !refreshing.get_untracked().unwrap_or(false) {
-                        nsh_core::element::haptic(Haptic::Impact(HapticImpact::Light));
-                        cx.emit(NavPageEvent::Refresh);
-                    }
-                })
-                .child(
-                    view()
-                        .w_full()
-                        // A floating bar sits over the content: the page starts below it.
-                        .when(floating, |v| v.pt(px(metrics::NAV_HEIGHT)))
-                        .gap(px(metrics::SECTION_TOP))
-                        .pb_safe_area_plus(px(24.0))
-                        .child(view().when(large.get_untracked().is_some(), |v| {
-                            v.px(px(metrics::NAV_EDGE))
-                                .h(px(over))
-                                .justify_end()
-                                .child(large_title_text(&large))
-                        }))
-                        .child(props.children),
-                ),
-        )
-        .child(indicator);
+            view()
+                .w_full()
+                .pt_safe_area_plus(px(metrics::NAV_HEIGHT))
+                .gap(px(metrics::SECTION_TOP))
+                .pb_safe_area_plus(px(24.0))
+                .child(view().when(large.get_untracked().is_some(), |v| {
+                    v.px(px(metrics::NAV_EDGE))
+                        .h(px(over))
+                        .justify_end()
+                        .child(large_title_text(&large))
+                }))
+                .child(props.children),
+        );
     view()
         .flex_1()
-        .pt_safe_area()
         .bg(move || match background.get().as_deref() {
             Some(name) => tokens::system(name),
             None => tokens::system_grouped_background(),
         })
-        .when(!floating, |v| v.child(bar_view.clone()))
         .child(page)
-        .when(floating, |v| {
-            v.child(view().absolute().left_0().right_0().top_0().child(bar_view))
-        })
+        .child(indicator)
+        .child(view().absolute().left_0().right_0().top_0().child(bar_view))
 }
 
 /// How a bar's compact title and hairline come in.
