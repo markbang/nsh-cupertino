@@ -33,9 +33,10 @@ text and search fields, switches and the activity indicator.
   looks for the separators in the rendered lists.
 - **Verified on Android.** The material draws on a real Android device too: a CI
   emulator (API 34, SwiftShader) captures the glass pages in light and dark, the
-  page scrolled so its striped band is under the bar, the capsules and the sheet,
-  and measures the lens on the calibration page
+  capsules and the sheet, and measures the lens on the calibration page
   ([the frames](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)).
+  What that run also showed, and this release does not fix: a bar gets no content
+  behind it on Android yet ([#16](https://github.com/markbang/nsh-cupertino/issues/16)).
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
