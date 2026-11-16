@@ -127,7 +127,9 @@ capture() {
   launch
   wait_for "Under the bar"
   shot "$scheme"
-  scroll_by 360
+  # 470 px puts the striped band behind the bar: it is 132 pt tall and starts
+  # 200 pt into the page, and the bar is 44 pt.
+  scroll_by 470
   shot "scrolled-$scheme"
   launch
   wait_for "Under the bar"
@@ -139,16 +141,8 @@ capture() {
   # until the surface does.
   seed "cupertino.page=glass" "cupertino.overlay=glass"
   launch
-  sleep 3
+  sleep 4
   shot "sheet-$scheme"
-
-  # What the sheet's window does to the page behind it, on the demo's own sheet
-  # page (a medium detent): `android-sheet-page-*.png` is a diagnosis, not a
-  # still of the material, so it stays out of the published set.
-  seed "cupertino.page=sheet" "cupertino.overlay=sheet"
-  launch
-  sleep 3
-  adb exec-out screencap -p > "$OUT/android-sheet-page-$scheme.png"
 
   local mode
   for mode in none material shader; do
