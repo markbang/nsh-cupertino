@@ -503,7 +503,7 @@ impl GlassSpec {
     /// How much of the material shows: 0 hides it (a bar at rest over the top
     /// of its content), 1 is the full material. The scroll edge drives it.
     pub fn reveal(mut self, value: &AnimatedNode) -> Self {
-        self.reveal = Some(value.clone());
+        self.reveal = Some(*value);
         self
     }
 
@@ -518,7 +518,7 @@ impl GlassSpec {
     /// [`crate::GlassTabBar`]: `progress` runs 0 (the bar) to 1 (a pill of
     /// about 50 pt around the tab at `anchor`).
     pub fn minimized(mut self, progress: &AnimatedNode, anchor: f32) -> Self {
-        self.morph = Some(progress.clone());
+        self.morph = Some(*progress);
         self.anchor = anchor.clamp(0.0, 1.0);
         self
     }

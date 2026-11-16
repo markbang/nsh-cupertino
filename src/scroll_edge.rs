@@ -176,7 +176,7 @@ impl ScrollEdgeSpec {
 
     /// 0 hides the effect (content at rest at the top), 1 is the full ramp.
     pub fn reveal(mut self, reveal: &AnimatedNode) -> Self {
-        self.reveal = Some(reveal.clone());
+        self.reveal = Some(*reveal);
         self
     }
 
@@ -196,7 +196,7 @@ pub fn layer(spec: &ScrollEdgeSpec) -> impl IntoElement {
     let lift = spec.lift;
     let veil = spec.veil;
     let background = spec.background;
-    let reveal = spec.reveal.clone();
+    let reveal = spec.reveal;
     let material_only = spec.material_only;
     let hash = spec.clone();
     when(
@@ -236,7 +236,7 @@ pub fn layer(spec: &ScrollEdgeSpec) -> impl IntoElement {
 fn fallback(spec: &ScrollEdgeSpec) -> View {
     let bottom = spec.edge == Edge::Bottom;
     let height = spec.height;
-    let reveal = spec.reveal.clone();
+    let reveal = spec.reveal;
     let mut strip = view()
         .absolute()
         .left_0()

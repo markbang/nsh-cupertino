@@ -325,7 +325,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let accumulator = stored(0.0_f32);
     let baseline = stored(f32::MIN);
     let state = minimized;
-    let animator = progress.clone();
+    let animator = progress;
     effect(move || {
         let wanted = match forced.get() {
             Some(value) => value,
