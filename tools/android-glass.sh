@@ -128,9 +128,9 @@ capture() {
   wait_for "Under the bar"
   shot "$scheme"
   # The striped band is 132 pt tall and starts 200 pt into the page: a drag of
-  # 560 px carries its top behind the 44 pt bar (a finger loses part of the
-  # drag to the touch slop and the large title's collapse, so it is not 1:1).
-  scroll_by 560
+  # 650 px carries its top behind the 44 pt bar. A finger is not 1:1 with the
+  # page — the touch slop and the large title's collapse take about a quarter.
+  scroll_by 650
   shot "scrolled-$scheme"
   launch
   wait_for "Under the bar"
