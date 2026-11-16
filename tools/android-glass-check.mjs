@@ -296,7 +296,9 @@ function barEdge(image) {
 }
 
 for (const scheme of SCHEMES) {
-  const expanded = must(`scrolled-${scheme}`);
+  // The bar is expanded mid-scroll (a downward scroll minimises it by design),
+  // and minimised after scrolling on: the two states the behaviour has.
+  const expanded = must(`mid-${scheme}`);
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized) continue;
   const wide = barEdge(expanded);
@@ -311,17 +313,22 @@ for (const scheme of SCHEMES) {
   // way across the row it is content again, where the expanded bar's glass was.
   // Only the dark material separates from the page this way; the light one is
   // white on white, so the dark frame carries the behaviour for both.
-  if (scheme !== "dark") continue;
-  const y = wide.row + Math.round(expanded.height * 0.015);
-  const at = (image, x) => image.luminance(Math.round(image.width * x), y);
-  const spread = Math.abs(at(minimized, 0.35) - at(expanded, 0.35));
-  const beside = Math.abs(at(minimized, 0.35) - at(minimized, 0.6));
-  if (spread < 0.05) {
-    fail(`tabmin-${scheme}.png still shows the bar's glass at x = 0.35 of the screen (${at(minimized, 0.35).toFixed(2)} against ${at(expanded, 0.35).toFixed(2)}): it did not minimize`);
-  } else if (beside > 0.06) {
-    fail(`tabmin-${scheme}.png is neither the bar nor the page at x = 0.35 (${at(minimized, 0.35).toFixed(2)} against ${at(minimized, 0.6).toFixed(2)})`);
+  // The bar's upper rim is a horizontal edge across the whole width when it is
+  // expanded, and absent in the middle of the screen when it is a pill at the
+  // chosen tab. Edges, not colours: the glass and the row behind it can share a
+  // luminance.
+  const x = Math.round(expanded.width * 0.5);
+  const y = wide.row;
+  const edge = (image) =>
+    Math.abs(image.luminance(x, y - 3) - image.luminance(x, y + 3));
+  const rim = edge(expanded);
+  const gone = edge(minimized);
+  if (rim < 0.03) {
+    fail(`${scheme}: no rim at the middle of the expanded bar (${rim.toFixed(3)})`);
+  } else if (gone > 0.02) {
+    fail(`tabmin-${scheme}.png still has the bar's rim at its middle (${gone.toFixed(3)} against ${rim.toFixed(3)}): it did not minimize`);
   } else {
-    report(`${scheme}: minimised, the bar is gone from x = 0.35 (${at(expanded, 0.35).toFixed(2)} → ${at(minimized, 0.35).toFixed(2)}, the page's ${at(minimized, 0.6).toFixed(2)})`);
+    report(`${scheme}: minimised, the bar's rim is gone from the middle of the screen (${rim.toFixed(2)} → ${gone.toFixed(2)})`);
   }
 }
 
