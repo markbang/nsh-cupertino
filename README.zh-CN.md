@@ -22,10 +22,10 @@
 - **原生行为。** 组件建立在 `nsh/base` 的行为之上（按压、焦点、键盘、角色），自己只负责外观，
   所以 VoiceOver、TalkBack、Tab、空格/回车与 Android 返回手势都照常工作。
 - **每个页面都有截图。** 每次 PR 都会用 Web 构建给演示应用的每个页面拍浅色与深色截图，浮层在两种外观下打开；另有像素测试检查列表分隔线。
-- **在 Android 上验证过。** 材质在真实 Android 设备上同样绘制：CI 模拟器（API 34、SwiftShader）拍摄浅色与深色的玻璃页面、胶囊与 sheet，并在校准页上测量透镜效果（[这些画面](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)）。这次运行同时暴露出、本版尚未修的问题：Android 上栏的后面还没有内容经过（[#16](https://github.com/markbang/nsh-cupertino/issues/16)）。
+- **在 Android 上验证过。** 材质在真实 Android 设备上同样绘制：CI 模拟器（API 34、SwiftShader）拍摄浅色与深色的玻璃页面、胶囊与 sheet，并在校准页上测量透镜效果（[这些画面](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)）。栏的玻璃后面有页面本身：`NavPage` 在所有平台上都把栏盖在滚动内容之上，材质取到的就是页面自己（[#16](https://github.com/markbang/nsh-cupertino/issues/16)）。
 - **一台设备像素。** 所有细分隔线在任何显示倍率下都不低于一台设备像素。
 
-状态：**0.3.4**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及真正的液态玻璃：
+状态：**0.3.5**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及真正的液态玻璃：
 `Glass`、`GlassButton` 与 `GlassGroup` 用 shader 绘制 Apple 的 iOS 26 材质，用于所有栏、sheet、
 弹窗与浮动控件；没有 GPU 时退回材质自身的填充与模糊。材质在 Web 与 Android 上都有验证。
 
