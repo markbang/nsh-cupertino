@@ -102,10 +102,20 @@ wait_for() {
   sleep 3
 }
 
+# A frame, taken again while it holds nothing: a window shows white (or black)
+# until its first surface draws, and a sheet's dialog takes seconds on a
+# software GPU. `$2` is the shade count a drawn frame has — a page has hundreds,
+# the calibration page a few by design, so only the pages ask.
 shot() {
-  step "capture android-glass-$1.png"
-  adb exec-out screencap -p > "$OUT/android-glass-$1.png"
-  [ -s "$OUT/android-glass-$1.png" ] || { echo "screencap wrote nothing" >&2; exit 1; }
+  local name=$1 least=${2:-0} file=$OUT/android-glass-$1.png attempt
+  step "capture android-glass-$name.png"
+  for attempt in 1 2 3 4 5 6 7 8; do
+    adb exec-out screencap -p > "$file"
+    [ -s "$file" ] || { echo "screencap wrote nothing" >&2; exit 1; }
+    node "$here/tools/android-frame.mjs" "$file" --min-shades "$least" >/dev/null && break
+    step "the frame holds almost nothing yet; taking it again"
+    sleep 1
+  done
   # What the app logged since it started: a crash, or the shader's warning.
   adb logcat -d -s nsh:V AndroidRuntime:E >> "$LOGCAT" 2>/dev/null || true
 }
@@ -142,8 +152,8 @@ capture() {
   # until the surface does.
   seed "cupertino.page=glass" "cupertino.overlay=glass"
   launch
-  sleep 4
-  shot "sheet-$scheme"
+  sleep 1
+  shot "sheet-$scheme" 100
 
   local mode
   for mode in none material shader; do
