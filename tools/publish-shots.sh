@@ -11,7 +11,8 @@ set -euo pipefail
 dir=${1:?usage: tools/publish-shots.sh <directory of PNGs>}
 root=$(git rev-parse --show-toplevel)
 shopt -s nullglob
-files=("$dir"/*.png)
+# Absolute: the publish runs in a worktree of its own and copies from here.
+files=("$(cd "$dir" && pwd)"/*.png)
 if [ ${#files[@]} -eq 0 ]; then
   echo "no PNGs in $dir" >&2
   exit 1
