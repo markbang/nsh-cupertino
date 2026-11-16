@@ -296,7 +296,9 @@ function barEdge(image) {
 }
 
 for (const scheme of SCHEMES) {
-  const expanded = must(`scrolled-${scheme}`);
+  // The bar is expanded mid-scroll (a downward scroll minimises it by design),
+  // and minimised after scrolling on: the two states the behaviour has.
+  const expanded = must(`mid-${scheme}`);
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized) continue;
   const wide = barEdge(expanded);

@@ -154,7 +154,7 @@ capture() {
   scroll_by 500
   sleep 1
   shot "tabmin-$scheme"
-  scroll_up_by 120
+  scroll_up_by 320
   sleep 1
   shot "scrolled-$scheme"
 
