@@ -399,6 +399,10 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let anchor_node = anchor_value.animated_node();
     let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
+        // A bar over a page of 14 pt rows needs a frosted backdrop: at the
+        // material's 5 pt the strokes stay legible.
+        .blur(crate::tokens::glass::BAR_BLUR)
+        .quality(crate::glass::GlassQuality::High)
         .minimized(&morph, anchor())
         .anchor(&anchor_node)
         .material_only(!glass);
@@ -540,6 +544,42 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .items_center()
         .justify_center()
         .bind_opacity(&minimized_opacity)
+        // The pill is a picture of the chosen tab: a page-coloured disc with a
+        // hairline and the iOS 27 shadow, so it reads as a surface on white
+        // rows without its icon.
+        .child(
+            view()
+                .absolute()
+                .inset_0()
+                .rounded_full()
+                .border(tokens::hairline())
+                .border_color(move || {
+                    if nsh_core::element::dark() {
+                        rgba(0xffff_ff1a)
+                    } else {
+                        rgba(0x3c3c_4314)
+                    }
+                })
+                .bg(move || {
+                    let page = tokens::system_background();
+                    Hsla {
+                        a: if nsh_core::element::dark() {
+                            0.86
+                        } else {
+                            0.92
+                        },
+                        ..page
+                    }
+                })
+                .shadow(vec![BoxShadow {
+                    offset_x: px(0.0),
+                    offset_y: px(5.0),
+                    blur: px(12.0),
+                    spread: px(0.0),
+                    color: rgba(0x0000_001f).into(),
+                    inset: false,
+                }]),
+        )
         .child(pill);
 
     let shadow = view()

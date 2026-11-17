@@ -176,6 +176,20 @@ capture() {
   sleep 1
   shot "sheet-$scheme" 100
 
+  # A white page of 14 pt rows: no strokes through the bar, a pill with a
+  # shape, and an edge that reaches the page's colour.
+  seed "cupertino.page=glass-rows"
+  launch
+  wait_for "All inboxes"
+  shot "rows-top-$scheme"
+  scroll_by 70
+  shot "rows-edge-$scheme"
+  scroll_by 350
+  shot "rows-scrolled-$scheme"
+  scroll_by 500
+  sleep 2
+  shot "rows-tabmin-$scheme"
+
   local mode
   for mode in none material shader; do
     seed "cupertino.page=glass-calibration" "cupertino.glass=$mode"

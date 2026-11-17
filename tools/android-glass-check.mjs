@@ -424,6 +424,101 @@ for (const scheme of SCHEMES) {
   }
 }
 
+// A page of 14 pt rows: the bar keeps no legible strokes, the pill has a
+// shape, and the scroll edge reaches the page's colour.
+{
+  const scaleOf = (image) => image.width / 411;
+  const median = (values) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  const pageAt = (image) => {
+    const scale = scaleOf(image);
+    const values = [];
+    for (let x = Math.round(40 * scale); x < image.width - Math.round(40 * scale); x += 3) {
+      values.push(image.luminance(x, Math.round(120 * scale)));
+    }
+    return median(values);
+  };
+  for (const scheme of SCHEMES) {
+    const image = must(`rows-scrolled-${scheme}`);
+    if (!image) continue;
+    const scale = scaleOf(image);
+    // Pixel 6: a 24 pt gesture inset, the bar 12 pt above it, 64 pt tall.
+    const top = image.height - Math.round((24 + 12 + 64) * scale);
+    const deviations = [];
+    for (let x = 28; x < 380; x += 2) {
+      const column = [];
+      for (let y = 28; y < 44; y += 1) {
+        column.push(image.luminance(Math.round(x * scale), Math.round(top + y * scale)));
+      }
+      const mean = column.reduce((s, v) => s + v, 0) / column.length;
+      deviations.push(Math.sqrt(column.reduce((s, v) => s + (v - mean) ** 2, 0) / column.length));
+    }
+    const spread = median(deviations);
+    if (spread >= 0.06) {
+      fail(`rows-scrolled-${scheme}.png: the bar's middle still shows strokes (deviation ${spread.toFixed(3)})`);
+    } else {
+      report(`${scheme}: no legible strokes through the bar (deviation ${spread.toFixed(3)})`);
+    }
+  }
+  for (const scheme of SCHEMES) {
+    const image = must(`rows-edge-${scheme}`);
+    if (!image) continue;
+    const scale = scaleOf(image);
+    const page = pageAt(image);
+    const values = [];
+    for (let y = 2; y < 14; y += 1) {
+      for (let x = Math.round(60 * scale); x < Math.round(280 * scale); x += 3) {
+        values.push(image.luminance(x, Math.round(y * scale)));
+      }
+    }
+    const mean = values.reduce((s, v) => s + v, 0) / values.length;
+    const sd = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length);
+    if (Math.abs(mean - page) > 0.04 || sd > 0.03) {
+      fail(`rows-edge-${scheme}.png: the edge reads ${mean.toFixed(2)} against the page's ${page.toFixed(2)} (deviation ${sd.toFixed(3)})`);
+    } else {
+      report(`${scheme}: the scroll edge reaches the page colour (${mean.toFixed(2)} against ${page.toFixed(2)})`);
+    }
+  }
+  for (const scheme of SCHEMES) {
+    const image = must(`rows-tabmin-${scheme}`);
+    if (!image) continue;
+    const scale = scaleOf(image);
+    let sumX = 0;
+    let sumY = 0;
+    let count = 0;
+    for (let y = Math.round(image.height * 0.88); y < image.height; y += 2) {
+      for (let x = Math.round(10 * scale); x < Math.round(120 * scale); x += 2) {
+        const [r, g, b] = image.pixel(x, y);
+        if (b > 200 && g > 110 && b - r > 80 && g - r > 60) {
+          sumX += x;
+          sumY += y;
+          count += 1;
+        }
+      }
+    }
+    if (count < 40) {
+      fail(`rows-tabmin-${scheme}.png has no pill icon to measure`);
+      continue;
+    }
+    const cx = sumX / count;
+    const cy = sumY / count;
+    const page = pageAt(image);
+    const ring = [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]].map(
+      ([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)),
+    );
+    const edge = Math.min(...ring);
+    if (scheme === "light" && edge > page - 0.05) {
+      fail(`rows-tabmin-light.png: the pill has no rim or shadow on white (${edge.toFixed(2)} against ${page.toFixed(2)})`);
+    } else if (scheme === "dark" && edge < page + 0.05) {
+      fail(`rows-tabmin-dark.png: the pill is not a surface (${edge.toFixed(2)} against ${page.toFixed(2)})`);
+    } else {
+      report(`${scheme}: the pill reads as a surface on the rows (${edge.toFixed(2)} against the page's ${page.toFixed(2)})`);
+    }
+  }
+}
+
 const written = readdirSync(DIR).filter((name) => name.startsWith("android-glass-"));
 if (!written.length) fail(`${DIR} holds no android-glass-*.png`);
 

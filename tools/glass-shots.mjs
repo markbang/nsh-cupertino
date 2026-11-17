@@ -57,6 +57,15 @@ const SHOTS = [
   // with (0.4.1).
   { name: "glass-tabmin-settings-light", page: "glass", scheme: "light", tap: [326, 786], scroll: 900, steps: 9 },
   { name: "glass-tabmin-settings-dark", page: "glass", scheme: "dark", tap: [326, 786], scroll: 900, steps: 9 },
+  // A white page of 14 pt rows: the surface the bars actually float over.
+  { name: "glass-rows-top-light", page: "glass-rows", scheme: "light" },
+  { name: "glass-rows-top-dark", page: "glass-rows", scheme: "dark" },
+  { name: "glass-rows-edge-light", page: "glass-rows", scheme: "light", scroll: 60 },
+  { name: "glass-rows-edge-dark", page: "glass-rows", scheme: "dark", scroll: 60 },
+  { name: "glass-rows-scrolled-light", page: "glass-rows", scheme: "light", scroll: 420, up: 60 },
+  { name: "glass-rows-scrolled-dark", page: "glass-rows", scheme: "dark", scroll: 420, up: 60 },
+  { name: "glass-rows-tabmin-light", page: "glass-rows", scheme: "light", scroll: 900, steps: 9 },
+  { name: "glass-rows-tabmin-dark", page: "glass-rows", scheme: "dark", scroll: 900, steps: 9 },
   { name: "glass-material-light", page: "glass", scheme: "light", scroll: 640, up: 70, material: "material" },
   { name: "glass-material-dark", page: "glass", scheme: "dark", scroll: 640, up: 70, material: "material" },
   { name: "glass-sheet-light", page: "glass", scheme: "light", overlay: "glass" },

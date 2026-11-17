@@ -67,7 +67,11 @@ struct Uniforms {
   morph: f32,
   anchor: f32,
   min_radius: f32,
+  margin: f32,
+  shadow: f32,
+  light_lift: f32,
   pad: f32,
+  pad2: f32,
 }
 
 const TAU: f32 = 6.283185307;
@@ -129,7 +133,7 @@ fn smax(a: f32, b: f32, k: f32) -> f32 {
 // a single-shape surface knows no other.
 fn settle(shape: vec4f) -> vec4f {
   if (shape.z <= 0.0 || shape.w <= 0.0) {
-    return vec4f(0.0, 0.0, nsh.size * 0.5);
+    return vec4f(0.0, 0.0, nsh.size * 0.5 - vec2f(uniforms.margin));
   }
   let c = vec2f(shape.x + shape.z * 0.5, shape.y + shape.w * 0.5) - nsh.size * 0.5;
   return vec4f(c.x, c.y, shape.z * 0.5, shape.w * 0.5);
@@ -197,11 +201,11 @@ fn apply_saturation(color: vec3f, amount: f32) -> vec3f {
 // white texels (the frost's `blurWeight`): it is what makes dark glass read as
 // lit rather than smoked.
 fn sample(p: vec2f, jitter: f32) -> vec3f {
-  let count = max(min(uniforms.taps, 17.0), 1.0);
+  let count = max(min(uniforms.taps, 33.0), 1.0);
   var sum = vec3f(0.0);
   var ghost = vec3f(0.0);
   var weight = 0.0;
-  for (var i = 0; i < 17; i = i + 1) {
+  for (var i = 0; i < 33; i = i + 1) {
     if (f32(i) >= count) {
       break;
     }
@@ -236,7 +240,15 @@ fn shade(uv: vec2f) -> vec4f {
   let sdf = sd_silhouette(p);
   let coverage = clamp(0.5 - sdf, 0.0, 1.0) * clamp(uniforms.reveal, 0.0, 1.0);
   if (coverage <= 0.0) {
-    return vec4f(0.0);
+    // The drop shadow lives in the margin around the shape: the shape lowered
+    // by 6 pt, blurred over 9. Above and to the sides of the glass, the page
+    // keeps what the next sibling draws; only this soft dark edge is added.
+    if (uniforms.shadow <= 0.0) {
+      return vec4f(0.0);
+    }
+    let below = sd_silhouette(p - vec2f(0.0, 6.0));
+    let soft = clamp(0.5 - below / 9.0, 0.0, 1.0) * uniforms.shadow;
+    return vec4f(vec3f(0.0), soft);
   }
 
   // The height field: a bevel of `bevel` points at the rim, flat inside.
@@ -277,6 +289,10 @@ fn shade(uv: vec2f) -> vec4f {
   rgb = mix(rgb, uniforms.tint.rgb, alpha);
 
   rgb = apply_saturation(rgb, uniforms.saturation);
+  // iOS 27's light glass over a white page of dark rows reads almost white;
+  // our 24 pt cloud still carries a little of the strokes, so the light
+  // material lifts a further 5 % toward white.
+  rgb = mix(rgb, vec3f(1.0), uniforms.light_lift);
   luminance = dot(rgb, LUMA);
 
   // The light, a direction the app may turn with `tilt` (iOS 27 lights the
@@ -306,10 +322,13 @@ fn shade(uv: vec2f) -> vec4f {
   rgb = rgb * (1.0 - uniforms.inner * pow(opposite, 2.0) * rim);
 
   // The hairline: the backdrop at its own position, darkened; strongest across
-  // the light axis and fading at its ends.
+  // the light axis and fading at its ends. On a white page the fill cannot
+  // separate the glass from the page — this line and the soft band inside it
+  // are what make the shape a surface rather than a smudge.
   let line = smoothstep(1.1, 0.0, inside);
   let ends = 0.55 + 0.45 * (lit - opposite);
-  rgb = rgb - vec3f(1.0) * line * uniforms.rim_shade * 0.055 * clamp(ends, 0.0, 1.0);
+  rgb = rgb - vec3f(1.0) * line * uniforms.rim_shade * 0.10 * clamp(ends, 0.0, 1.0);
+  rgb = rgb - vec3f(1.0) * smoothstep(6.0, 0.0, inside) * uniforms.rim_shade * 0.04;
 
   // The very edge catches the light: a bright hairline all round, stronger
   // on the side the light comes from.
@@ -347,8 +366,8 @@ pub enum GlassQuality {
 impl GlassQuality {
     fn taps(self) -> f32 {
         match self {
-            GlassQuality::High => 17.0,
-            GlassQuality::Balanced => 9.0,
+            GlassQuality::High => 33.0,
+            GlassQuality::Balanced => 17.0,
             GlassQuality::Low => 1.0,
         }
     }
@@ -399,6 +418,9 @@ pub struct GlassSpec {
     morph: Option<AnimatedNode>,
     anchor: f32,
     anchor_node: Option<AnimatedNode>,
+    blur: Option<f32>,
+    margin: f32,
+    shadow: f32,
     material_only: bool,
 }
 
@@ -424,6 +446,9 @@ impl GlassSpec {
             morph: None,
             anchor: 0.5,
             anchor_node: None,
+            blur: None,
+            margin: 0.0,
+            shadow: 0.0,
             material_only: false,
         }
     }
@@ -493,6 +518,9 @@ impl GlassSpec {
 
     /// The height of the lens and the blur radius, by variant.
     fn thickness_and_blur(&self) -> (f32, f32) {
+        if let Some(blur) = self.blur {
+            return (numbers::THICKNESS, blur);
+        }
         match self.variant {
             GlassVariant::Clear => (numbers::THICKNESS * 0.6, numbers::BLUR * 0.55),
             GlassVariant::Thick => (numbers::THICKNESS, numbers::BLUR * 1.35),
@@ -522,6 +550,23 @@ impl GlassSpec {
     pub fn minimized(mut self, progress: &AnimatedNode, anchor: f32) -> Self {
         self.morph = Some(*progress);
         self.anchor = anchor.clamp(0.0, 1.0);
+        self
+    }
+
+    /// Room for the drop shadow around the shape, in points: the layer's box
+    /// grows by it and the shader draws the shadow in the part outside the
+    /// shape. `0` draws none.
+    pub fn shadow(mut self, margin: f32, strength: f32) -> Self {
+        self.margin = margin.max(0.0);
+        self.shadow = strength;
+        self
+    }
+
+    /// The blur radius, in points, over the variant's own: a bar keeps a
+    /// frosted 18 pt so text behind it cannot be read, where a small control
+    /// stays crisp at 5.
+    pub fn blur(mut self, blur: f32) -> Self {
+        self.blur = Some(blur);
         self
     }
 
@@ -786,7 +831,10 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("reveal", 1.0_f32)
         .uniform("morph", 0.0_f32)
         .uniform("anchor", spec.anchor)
-        .uniform("min_radius", numbers::MIN_RADIUS);
+        .uniform("min_radius", numbers::MIN_RADIUS)
+        .uniform("margin", spec.margin)
+        .uniform("shadow", move || if dark() { 0.0_f32 } else { spec.shadow })
+        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.05 });
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }

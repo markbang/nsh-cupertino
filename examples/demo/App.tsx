@@ -82,7 +82,7 @@ const overlaySeed = signal("");
 const presses = new Count();
 const pressCount = signal(0);
 
-const PAGE_IDS = ["gallery", "glass-calibration", ...PAGES.map((entry) => entry.id)];
+const PAGE_IDS = ["gallery", "glass-calibration", "glass-rows", ...PAGES.map((entry) => entry.id)];
 
 function titleOf(id: string): string {
   return PAGES.find((entry) => entry.id === id)?.title ?? "Cupertino";
@@ -1298,6 +1298,79 @@ function GlassCalibrationPage() {
   );
 }
 
+
+// A page of the kind the bars actually float over: a white page, 14 pt rows of
+// dark text, and a subject line. The pixel checks read it to prove that the
+// bar's backdrop cannot be read through and that the minimised pill still has
+// a shape on white.
+const ROWS = Array.from({ length: 18 }, (_, i) => ({
+  sender: ["Daniel Okafor", "Jonas Weber", "王芳", "Priya Raman", "This Week in Rust", "GitHub", "China Merchants Bank", "Fastmail"][i % 8],
+  subject: ["Photos from the weekend", "Q4 roadmap draft", "周五聚餐改到七点", "Offsite in March: Lisbon", "This Week in Rust 571", "[northwind/atlas] Review requested", "信用卡电子账单（11月）", "Your receipt from Fastmail"][i % 8],
+  snippet:
+    i % 8 === 7
+      ? "Your receipt from Fastmail Standard plan, 12 months: $60.00 Tax: $0.00 Total: $60.00 Paid with Visa ending 4242 on 3 Nov 2026."
+      : "Finally sorted the photos from Saturday. The one at the lighthouse came out great. I'll send the full album link tonight.",
+  time: ["5:54 AM", "4:56 AM", "4:02 AM", "2:32 AM", "1:32 AM", "Yesterday", "Yesterday", "Sun"][i % 8],
+}));
+
+function GlassRowsPage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <NavPage
+        title="All inboxes"
+        largeTitle="All inboxes"
+        back="Mailboxes"
+        onBack={home}
+        trailing="Select"
+        onTrailing={home}
+        material={MATERIAL()}
+        onScroll={(event: { offset: number }) => SCROLL.set(event.offset)}
+      >
+        <List scroll={false}>
+          <Each of={ROWS} key={(row) => `${row.sender}-${row.subject}`}>
+            {(row) => (
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderBottomWidth: 0.33,
+                  borderBottomColor: "#c6c6c8",
+                  gap: 2,
+                }}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text class="text-label" style={{ fontSize: 15, fontWeight: 700 }}>{row().sender}</Text>
+                  <Text class="text-secondary-label" style={{ fontSize: 12 }}>{row().time}</Text>
+                </View>
+                <Text class="text-label" style={{ fontSize: 14, fontWeight: 500 }}>{row().subject}</Text>
+                <Text class="text-secondary-label" style={{ fontSize: 14, lineHeight: 18 }} numberOfLines={2}>
+                  {row().snippet}
+                </Text>
+              </View>
+            )}
+          </Each>
+          <View style={{ height: 148 }} />
+        </List>
+      </NavPage>
+      <GlassTabBar
+        items={[
+          { value: "mail", title: "Mail", icon: "envelope" },
+          { value: "notifications", title: "Notifications", icon: "bell", badge: "17" },
+          { value: "search", title: "Search", icon: "magnifyingglass" },
+          { value: "mailboxes", title: "Mailboxes", icon: "folder" },
+          { value: "settings", title: "Settings", icon: "slider.horizontal.3" },
+        ]}
+        value={TAB()}
+        label="Inbox tabs"
+        material={MATERIAL()}
+        behavior={TAB_BEHAVIOR()}
+        scrollOffset={SCROLL()}
+        onChange={(event: { value: string; index: number }) => TAB.set(event.value)}
+      />
+    </View>
+  );
+}
+
 function CurrentPage() {
   const id = page();
   if (id === "gallery") return <Gallery />;
@@ -1312,6 +1385,7 @@ function CurrentPage() {
   if (id === "materials") return <MaterialsPage />;
   if (id === "glass") return <GlassPage />;
   if (id === "glass-calibration") return <GlassCalibrationPage />;
+  if (id === "glass-rows") return <GlassRowsPage />;
   if (id === "sheet") return <SheetPage />;
   if (id === "actionsheet") return <ActionSheetPage />;
   if (id === "alert") return <AlertPage />;
