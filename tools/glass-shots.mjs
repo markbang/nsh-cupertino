@@ -26,6 +26,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { patchRuntimeSource } from "./patch-runtime.mjs";
+import { readPng } from "./png.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -286,9 +287,28 @@ async function shoot(page, base, shot) {
     }
     await new Promise((resolve) => setTimeout(resolve, 900));
   }
-  const { data } = await page.call("Page.captureScreenshot", { format: "png" });
+  // A first paint can be the empty page (a white or black frame with no
+  // content): take the still again until it holds more than a handful of
+  // colours.
   const file = join(OUT, `${shot.name}.png`);
-  writeFileSync(file, Buffer.from(data, "base64"));
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const { data } = await page.call("Page.captureScreenshot", { format: "png" });
+    writeFileSync(file, Buffer.from(data, "base64"));
+    try {
+      const image = readPng(file);
+      const seen = new Set();
+      for (let y = 0; y < image.height; y += 12) {
+        for (let x = 0; x < image.width; x += 12) {
+          const [r, g, b] = image.pixel(x, y);
+          seen.add(((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4));
+        }
+      }
+      if (seen.size > 30) break;
+    } catch {
+      // An incomplete PNG: take it again.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
   return file;
 }
 
