@@ -64,8 +64,9 @@ fn shade(uv: vec2f) -> vec4f {
   // 0 at the edge the effect hangs from, 1 at the far side of the strip.
   let t = clamp(select(uv.y, 1.0 - uv.y, uniforms.bottom > 0.5), 0.0, 1.0);
   let ramp = pow(1.0 - t, uniforms.falloff) * reveal;
-  // The blur grows at the edge and hardens as the content scrolls under.
-  let radius = uniforms.blur * (0.25 + 0.75 * (1.0 - t)) * reveal;
+  // The blur stays at a bar's 18 pt across the whole ramp, and reaches 40 pt
+  // at the edge: 14 pt rows under 5 pt of blur are still legible rows.
+  let radius = mix(uniforms.blur, uniforms.blur * 0.45, t) * (0.55 + 0.45 * reveal);
   let p = uv * size - size * 0.5;
   let jitter = fract(sin(dot(floor(p), vec2f(12.9898, 78.233))) * 43758.5453) * 0.5;
   let count = max(min(uniforms.taps, 17.0), 1.0);
@@ -84,14 +85,16 @@ fn shade(uv: vec2f) -> vec4f {
   } else {
     sum = backdrop_at(p).rgb;
   }
-  // A breath of the material's lift in the dark appearance: the ramp reads as
-  // glass, not as a smudge.
   sum = sum + vec3f(uniforms.lift * uniforms.dark * ramp);
-  // The content also fades into the page's own background at the edge: a
-  // blur alone leaves text sharp enough to read through the controls.
-  let veil = pow(1.0 - t, 1.3) * uniforms.veil * reveal;
+  // The content dissolves *into the page's own colour*: at the edge the strip
+  // is the page, and it reaches it before the band ends (the quadratic falls to
+  // zero with a flat tangent, so there is no seam at the bottom).
+  // Full at the edge, still most of the way at half the band, and to zero with
+  // a flat tangent at the end: no seam where the effect stops.
+  let fade = 1.0 - smoothstep(0.5, 1.0, t);
+  let veil = fade * uniforms.veil * reveal;
   sum = mix(sum, uniforms.bg.rgb, clamp(veil, 0.0, 1.0));
-  let alpha = clamp(ramp * uniforms.strength + veil, 0.0, 1.0);
+  let alpha = clamp(fade * uniforms.strength * reveal, 0.0, 1.0);
   return vec4f(clamp(sum, vec3f(0.0), vec3f(1.0)), alpha);
 }
 "#;
@@ -188,6 +191,79 @@ impl ScrollEdgeSpec {
 
 /// The effect's layer: a strip of `height` at its edge, over the content.
 pub fn layer(spec: &ScrollEdgeSpec) -> impl IntoElement {
+    let veil = veil(spec);
+    let blur = blur_layer(spec);
+    view()
+        .absolute()
+        .inset_0()
+        .h(px(spec.height))
+        .child(blur)
+        .child(veil)
+}
+
+/// The page's own colour over the strip: opaque across the bar, gone with a
+/// flat tangent below it, so no stroke survives in the band and nothing ends on
+/// a seam. This is drawn rather than computed in the shader because the
+/// composite has to be exact on a white page, where a few levels read.
+fn veil(spec: &ScrollEdgeSpec) -> impl IntoElement {
+    let page = spec.background;
+    let reveal = spec.reveal;
+    let band = (spec.height - 44.0).max(0.0);
+    let fade = spec.height - band;
+    let opaque = Hsla { a: 0.96, ..page };
+    let clear = Hsla { a: 0.0, ..page };
+    // Top: opaque over the bar, then opaque → clear downward. Bottom: the
+    // other way round.
+    let (first, second) = match spec.edge {
+        Edge::Top => (
+            view()
+                .absolute()
+                .left_0()
+                .right_0()
+                .top_0()
+                .h(px(band))
+                .bg(move || opaque),
+            view()
+                .absolute()
+                .left_0()
+                .right_0()
+                .top(px(band))
+                .h(px(fade))
+                .bg_linear(deg(180.0))
+                .gradient_from(move || opaque)
+                .gradient_to(move || clear),
+        ),
+        Edge::Bottom => (
+            view()
+                .absolute()
+                .left_0()
+                .right_0()
+                .bottom_0()
+                .h(px(band))
+                .bg(move || opaque),
+            view()
+                .absolute()
+                .left_0()
+                .right_0()
+                .bottom(px(band))
+                .h(px(fade))
+                .bg_linear(deg(0.0))
+                .gradient_from(move || opaque)
+                .gradient_to(move || clear),
+        ),
+    };
+    let first = match reveal {
+        Some(node) => first.bind_opacity(&node),
+        None => first,
+    };
+    let second = match reveal {
+        Some(node) => second.bind_opacity(&node),
+        None => second,
+    };
+    view().absolute().inset_0().child(first).child(second)
+}
+
+fn blur_layer(spec: &ScrollEdgeSpec) -> impl IntoElement {
     let bottom = spec.edge == Edge::Bottom;
     let height = spec.height;
     let blur = spec.blur;
@@ -270,7 +346,7 @@ pub struct ScrollEdgeProps {
     pub height: Prop<Option<f32>>,
     /// 0 hides it, 1 shows it fully (driven by the scroll offset).
     pub reveal: Prop<Option<f32>>,
-    /// The blur at the strong edge, in points (24 unless set).
+    /// The blur at the strong edge, in points (40 unless set).
     pub blur: Prop<Option<f32>>,
 }
 
@@ -287,7 +363,7 @@ pub fn ScrollEdge(props: ScrollEdgeProps) -> impl IntoElement {
         _ => Edge::Top,
     };
     let height = props.height.get_untracked().unwrap_or(80.0);
-    let blur = props.blur.get_untracked().unwrap_or(20.0);
+    let blur = props.blur.get_untracked().unwrap_or(40.0);
     let reveal = props.reveal;
     let shown = animated_value(1.0);
     let shown_read = shown;

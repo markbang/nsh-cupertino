@@ -285,3 +285,118 @@ console.log("the material refracts, keeps its backdrop's structure and catches t
     }
   }
 }
+
+// The bars over a page of 14 pt rows (the surface they float over), and the
+// scroll edge over the same page:
+//  (1) no legible strokes through the bar: the column-to-column deviation
+//      inside it stays small;
+//  (2) the minimised pill has a shape on white: a rim and a shadow, not just
+//      its icon;
+//  (3) the scroll edge reaches the page's colour with no strokes left in it.
+{
+  const shot = (name) => {
+    try {
+      return readPng(join(DIR, `${name}.png`));
+    } catch {
+      return null;
+    }
+  };
+  const median = (values) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  /** The page's own colour: the row background at 120 pt, mostly paper. */
+  const pageColour = (image) => median(profile(image, 120, 40, 370, 3));
+  /** The bar's rows: the page is 390 × 844, the bar 64 pt tall, 12+14 above
+   * the bottom on the web. */
+  const barTop = 754;
+
+  for (const scheme of ["light", "dark"]) {
+    const image = shot(`glass-rows-scrolled-${scheme}`);
+    if (!image) continue;
+    const deviations = [];
+    for (let x = 28; x < 363; x += 2) {
+      const column = [];
+      for (let y = barTop + 28; y < barTop + 44; y += 0.5) {
+        column.push(image.luminance(Math.round(x * SCALE), Math.round(y * SCALE)));
+      }
+      const mean = column.reduce((s, v) => s + v, 0) / column.length;
+      deviations.push(Math.sqrt(column.reduce((s, v) => s + (v - mean) ** 2, 0) / column.length));
+    }
+    const middle = median(deviations);
+    check(
+      `no legible strokes through the ${scheme} bar`,
+      middle < 0.05,
+      `median column deviation ${middle.toFixed(3)} (< 0.05; the page's own rows measure more)`,
+    );
+  }
+
+  for (const scheme of ["light", "dark"]) {
+    const image = shot(`glass-rows-tabmin-${scheme}`);
+    if (!image) continue;
+    let sumX = 0;
+    let sumY = 0;
+    let count = 0;
+    for (let y = Math.round(840 * SCALE * 0.0) + Math.round(844 * 0.9) * SCALE; y < 844 * SCALE; y += 2) {
+      for (let x = Math.round(20 * SCALE); x < Math.round(110 * SCALE); x += 2) {
+        const [r, g, b] = image.pixel(x, y);
+        if (b > 200 && g > 110 && b - r > 80 && g - r > 60) {
+          sumX += x;
+          sumY += y;
+          count += 1;
+        }
+      }
+    }
+    if (count < 40) {
+      check(`the ${scheme} pill has an icon to find its shape by`, false, `${count} blue pixels`);
+      continue;
+    }
+    const cx = sumX / count / SCALE;
+    const cy = sumY / count / SCALE;
+    const page = pageColour(image);
+    const ring = [];
+    for (const [dx, dy] of [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]]) {
+      ring.push(image.luminance(Math.round((cx + dx) * SCALE), Math.round((cy + dy) * SCALE)));
+    }
+    const inner = [[0, -10], [0, 10], [10, 0], [-10, 0]].map(([dx, dy]) =>
+      image.luminance(Math.round((cx + dx) * SCALE), Math.round((cy + dy) * SCALE)),
+    );
+    const edge = Math.min(...ring);
+    const middle = inner.reduce((s, v) => s + v, 0) / inner.length;
+    if (scheme === "light") {
+      check(
+        "the pill has a rim and a shadow on white",
+        edge <= page - 0.05,
+        `the rim reads ${edge.toFixed(2)} against the page's ${page.toFixed(2)} (≤ page − 0.05); its fill ${middle.toFixed(2)}`,
+      );
+    } else {
+      check(
+        "the pill is a surface in the dark",
+        middle >= page + 0.08,
+        `its fill reads ${middle.toFixed(2)} against the page's ${page.toFixed(2)}`,
+      );
+    }
+  }
+
+  for (const scheme of ["light", "dark"]) {
+    const image = shot(`glass-rows-edge-${scheme}`);
+    if (!image) continue;
+    const page = pageColour(image);
+    const band = [];
+    for (let y = 2; y < 14; y += 1) {
+      for (let x = 60; x < 280; x += 2) band.push(image.luminance(Math.round(x * SCALE), Math.round(y * SCALE)));
+    }
+    const mean = band.reduce((s, v) => s + v, 0) / band.length;
+    const sd = Math.sqrt(band.reduce((s, v) => s + (v - mean) ** 2, 0) / band.length);
+    check(
+      `the scroll edge reaches the page colour (${scheme})`,
+      Math.abs(mean - page) <= 0.03,
+      `the band reads ${mean.toFixed(3)} against the page's ${page.toFixed(3)}`,
+    );
+    check(
+      `no strokes survive the scroll edge (${scheme})`,
+      sd < 0.02,
+      `the band's deviation is ${sd.toFixed(3)} (< 0.02)`,
+    );
+  }
+}

@@ -730,8 +730,11 @@ pub mod glass {
     /// The magnification of the picture under the sheet (0.8 %).
     pub const LENS: f32 = 0.008;
     /// The blur radius of the material, in points: small, so the detail under
-    /// the bar survives (the scroll edge effect carries the dissolve).
+    /// a control survives (the scroll edge effect carries the dissolve).
     pub const BLUR: f32 = 5.0;
+    /// The blur of a bar: a page of 14 pt rows under 5 pt of blur is a page of
+    /// legible rows, so a floating bar frosts at 18.
+    pub const BAR_BLUR: f32 = 24.0;
     /// The strength of the specular rim.
     pub const SPECULAR: f32 = 0.7;
     /// The width of the specular rim, as the exponent of the bevel's falloff
@@ -742,7 +745,7 @@ pub mod glass {
     /// The inner shadow opposite the light.
     pub const INNER: f32 = 0.22;
     /// The chromatic separation of the rim, in points (one pixel at @3x).
-    pub const CHROMA: f32 = 0.12;
+    pub const CHROMA: f32 = 0.0;
     /// The direction the light comes from, in degrees: iOS 27 lights its light
     /// material from below and its dark one from above.
     pub const LIGHT: f32 = 90.0;
@@ -753,7 +756,7 @@ pub mod glass {
     /// See [`SATURATION`].
     pub const SATURATION_DARK: f32 = 1.4;
     /// The frost: opacity, clamp and weight (iOS 27 light: 0.73, 0.40, 2.0).
-    pub const FROST: [f32; 3] = [0.73, 0.40, 2.0];
+    pub const FROST: [f32; 3] = [0.6, 0.40, 2.5];
     /// The frost of the dark appearance (0.85, −0.45, 0.5).
     pub const FROST_DARK: [f32; 3] = [0.9, -0.45, 0.5];
     /// The hairline's darkening, and the rim light's strength.

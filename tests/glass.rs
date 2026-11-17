@@ -44,6 +44,9 @@ fn the_glass_shader_compiles_with_the_uniforms_the_components_set() {
         "morph",
         "anchor",
         "min_radius",
+        "margin",
+        "shadow",
+        "light_lift",
     ] {
         assert!(
             declared.contains(&name),

@@ -25,7 +25,7 @@
 - **在 Android 上验证过。** 材质在真实 Android 设备上同样绘制：CI 模拟器（API 34、SwiftShader）拍摄浅色与深色的玻璃页面、胶囊与 sheet，并在校准页上测量透镜效果（[这些画面](https://github.com/markbang/nsh-cupertino/tree/screenshots/main)）。栏的玻璃后面有页面本身：`NavPage` 在所有平台上都把栏盖在滚动内容之上，材质取到的就是页面自己（[#16](https://github.com/markbang/nsh-cupertino/issues/16)）。
 - **一台设备像素。** 所有细分隔线在任何显示倍率下都不低于一台设备像素。
 
-状态：**0.4.1**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及作为设计语言的
+状态：**0.4.2**——包含 token、设置类页面所需的组件、iOS 其余浮层与控件，以及作为设计语言的
 Liquid Glass：`Glass`、`GlassButton`、`GlassGroup` 绘制材质，`GlassTabBar` 是会随滚动收起的
 浮动胶囊，`NavPage` 把控件浮在 `ScrollEdge` 渐变之上；材质按 iOS 27 校准过的数字调整，并在
 Web 与 Android 上都有实测。

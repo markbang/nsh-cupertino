@@ -4,6 +4,26 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-11-17
+
+### Fixed
+
+- **Text no longer reads through the floating bar or the minimised pill.** A
+  bar keeps a frosted 24 pt backdrop (and 33 taps, not 17) instead of the
+  material's 5 pt, so a page of 14 pt rows under it is a soft haze with no
+  legible strokes.
+- **Light glass is a surface on a white page.** The light material lifts 5 %
+  further toward white and carries a stronger hairline and a soft inner band, so
+  the capsule and the minimised pill read as shapes over white rows rather than
+  a smudge; the pill is a page-coloured disc at 92 % with a hairline and the
+  iOS 27 shadow, visible without its icon.
+- **The scroll edge dissolves into the page's colour.** An opaque band in the
+  page's own colour covers the controls, a `smoothstep` fade reaches clear with a
+  flat tangent below the bar, and the blur stays at 18–40 pt across the ramp, so
+  no strokes survive and the band ends without a seam.
+- **No chromatic fringe.** The rim's chromatic separation is off: on white it
+  read as a blue-violet edge on the selected tab's capsule.
+
 ## [0.4.1] - 2026-11-16
 
 ### Fixed
