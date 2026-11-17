@@ -291,7 +291,7 @@ fn shade(uv: vec2f) -> vec4f {
   rgb = apply_saturation(rgb, uniforms.saturation);
   // iOS 27's light glass over a white page of dark rows reads almost white;
   // our 24 pt cloud still carries a little of the strokes, so the light
-  // material lifts a further 5 % toward white.
+  // material lifts a further 10 % toward white.
   rgb = mix(rgb, vec3f(1.0), uniforms.light_lift);
   luminance = dot(rgb, LUMA);
 
@@ -834,7 +834,7 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("min_radius", numbers::MIN_RADIUS)
         .uniform("margin", spec.margin)
         .uniform("shadow", move || if dark() { 0.0_f32 } else { spec.shadow })
-        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.05 });
+        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 });
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
