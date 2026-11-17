@@ -4,6 +4,25 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-11-16
+
+### Fixed
+
+- `GlassTabBar`'s minimised pill follows the chosen tab. Its position and the
+  glass silhouette's anchor were read once at mount, and its icon was the tab
+  chosen then, so a bar built with Inbox chosen showed Inbox's pill at Inbox's
+  slot after Settings was chosen. Both now read the live selection, and the pill
+  slides to the new slot with a spring.
+- The minimised pill no longer takes touches: it is a picture, so tapping the
+  chosen tab reaches the tab underneath (and its scroll-to-first-page gesture).
+
+### Added
+
+- `tools/glass-pixels.mjs` and `tools/android-glass-check.mjs` fail when the
+  pill's icon is not at the chosen tab's slot or does not move with the
+  selection; the demo and the Android driver tap Settings after mount and scroll
+  for the frames.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added

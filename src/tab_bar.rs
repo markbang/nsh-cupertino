@@ -378,9 +378,29 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let material = props.material.get_untracked();
     let glass = material.as_deref() != Some("material");
     let anchor = move || (selected.get() as f32 + 0.5) / count as f32;
+    // The pill's place follows the chosen tab: a spring slides it there when the
+    // selection changes while the bar is minimised. The glass silhouette and
+    // the pill's own box read the same value, so they can never disagree.
+    let anchor_value = animated_value(anchor());
+    let followed = stored(anchor());
+    let slider = anchor_value;
+    effect(move || {
+        let wanted = anchor();
+        if (followed.get() - wanted).abs() < 1e-4 {
+            return;
+        }
+        followed.replace(wanted);
+        if reduce_motion() {
+            slider.set(wanted);
+        } else {
+            slider.spring(wanted, crate::overlay::spring(0.82, 460.0));
+        }
+    });
+    let anchor_node = anchor_value.animated_node();
     let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
         .minimized(&morph, anchor())
+        .anchor(&anchor_node)
         .material_only(!glass);
 
     let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
@@ -484,32 +504,43 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         );
     }
 
-    let chosen = values
-        .get(selected.get_untracked().min(values.len().saturating_sub(1)))
-        .cloned();
     let expanded_opacity = progress.interpolate(&[0.0, 1.0], &[1.0, 0.0]);
     let minimized_opacity = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
     let lift = progress.interpolate(&[0.0, 1.0], &[0.0, 6.0]);
-    let place = move || percentage(anchor());
-    let mut minimized_view = view()
+    // One icon per tab, each shown only while that tab is chosen: the pill is a
+    // picture of the live selection, not of the one the bar was built with.
+    let mut pill = view().absolute().inset_0().items_center().justify_center();
+    for (index, item) in values.iter().enumerate() {
+        let icon_name = item.icon.clone();
+        pill = pill.child(when(
+            move || selected.get() == index,
+            move || {
+                view()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        icon(
+                            icon_name.as_deref().unwrap_or("circle.lefthalf.filled"),
+                            24.0,
+                        )
+                        .text_color(tokens::system_blue()),
+                    )
+                    .into_element()
+            },
+        ));
+    }
+    let minimized_view = view()
         .absolute()
+        .pointer_events(PointerEvents::None)
         .h(px(HEIGHT))
         .bottom_0()
-        .left(place())
+        .left(move || percentage(anchor()))
         .translate_x(px(-25.0))
         .w(px(50.0))
         .items_center()
         .justify_center()
-        .bind_opacity(&minimized_opacity);
-    if let Some(item) = &chosen {
-        minimized_view = minimized_view.label(item.title.to_string()).child(
-            icon(
-                item.icon.as_deref().unwrap_or("circle.lefthalf.filled"),
-                24.0,
-            )
-            .text_color(tokens::system_blue()),
-        );
-    }
+        .bind_opacity(&minimized_opacity)
+        .child(pill);
 
     let shadow = view()
         .absolute()

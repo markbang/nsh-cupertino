@@ -78,3 +78,8 @@ itself) and leave room at the bottom of the content.
 
 The edge-to-edge `TabBar` above stays for pages that want a bar flush with the
 screen's bottom.
+
+The minimised pill is a picture of the chosen tab: its icon and its position
+follow the live selection (it springs to the new slot when the tab changes while
+minimised), and it takes no touches, so tapping the chosen tab still reaches the
+tab underneath.
