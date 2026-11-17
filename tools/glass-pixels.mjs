@@ -213,3 +213,75 @@ if (failures.length) {
   process.exit(1);
 }
 console.log("the material refracts, keeps its backdrop's structure and catches the light");
+
+// The minimised pill follows the chosen tab. Two stills of the same page, one
+// with Inbox chosen and one with Settings chosen after mount: the pill's icon
+// must sit at each tab's slot, and be that tab's icon.
+{
+  const shots = {};
+  for (const name of ["glass-tabmin", "glass-tabmin-settings"]) {
+    try {
+      shots[name] = readPng(join(DIR, `${name}-dark.png`));
+    } catch (error) {
+      console.log(`skip ${name}: ${error.message}`);
+    }
+  }
+  if (shots["glass-tabmin"] && shots["glass-tabmin-settings"]) {
+    /** The chosen tab's blue icon: its centroid and its box, in points. */
+    const inkAt = (image) => {
+      let sumX = 0;
+      let sumY = 0;
+      let count = 0;
+      // The bar's band only: below it is the home indicator, above it the page.
+      const from = Math.round(image.height * 0.9);
+      for (let y = from; y < Math.round(image.height * 0.99); y += 2) {
+        for (let x = Math.round(40 * SCALE); x < image.width - Math.round(40 * SCALE); x += 2) {
+          const [r, g, b] = image.pixel(x, y);
+          // systemBlue (#0A84FF), not the page's own blues (a tile, the
+          // stripes): the icon is the only saturated blue with g this high.
+          if (b > 200 && g > 110 && b - r > 80 && g - r > 60) {
+            sumX += x;
+            sumY += y;
+            count += 1;
+          }
+        }
+      }
+      return count > 20 ? { x: sumX / count / SCALE, y: sumY / count / SCALE, count } : null;
+    };
+    const first = inkAt(shots["glass-tabmin"]);
+    const second = inkAt(shots["glass-tabmin-settings"]);
+    if (!first || !second) {
+      check("the minimised pill shows its icon", false, `no blue icon found (${JSON.stringify(first)} / ${JSON.stringify(second)})`);
+    } else {
+      // Four 87.5 pt cells in a 350 pt bar 20 pt in from the edge.
+      const slot = (index) => 20 + (index + 0.5) * 87.5;
+      check(
+        "the pill sits at the chosen tab's slot",
+        Math.abs(first.x - slot(0)) < 24 && Math.abs(second.x - slot(3)) < 24,
+        `Inbox at ${first.x.toFixed(1)} pt (slot ${slot(0)}), Settings at ${second.x.toFixed(1)} pt (slot ${slot(3)})`,
+      );
+      check(
+        "the pill moves when the chosen tab changes",
+        second.x - first.x > 200,
+        `the pill moved from ${first.x.toFixed(1)} pt to ${second.x.toFixed(1)} pt`,
+      );
+      const crop = (image, at) => {
+        const values = [];
+        for (let y = -12; y <= 12; y += 2) {
+          for (let x = -12; x <= 12; x += 2) {
+            values.push(image.luminance(Math.round((at.x + x) * SCALE), Math.round((at.y + y) * SCALE)));
+          }
+        }
+        return values;
+      };
+      const a = crop(shots["glass-tabmin"], first);
+      const b = crop(shots["glass-tabmin-settings"], second);
+      const diff = a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0) / a.length;
+      check(
+        "the pill draws the chosen tab's icon",
+        diff > 0.02,
+        `the two icons differ by ${diff.toFixed(3)}`,
+      );
+    }
+  }
+}

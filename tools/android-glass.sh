@@ -158,6 +158,17 @@ capture() {
   sleep 1
   shot "scrolled-$scheme"
 
+  # The chosen tab changes after mount, then the page scrolls: the minimised
+  # pill must be Settings' at Settings' slot (0.4.1). The Settings tab sits at
+  # the fourth of four cells, 20 pt in from the edges.
+  launch
+  wait_for "Liquid Glass"
+  adb shell input tap 906 2221 >/dev/null
+  sleep 1
+  scroll_by 900
+  sleep 2
+  shot "tabmin-settings-$scheme"
+
   # The glass sheet, seeded open at launch — the seed a screenshot test uses.
   # Its window takes seconds to draw on a software GPU.
   seed "cupertino.page=glass" "cupertino.overlay=glass"

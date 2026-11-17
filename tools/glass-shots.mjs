@@ -52,6 +52,11 @@ const SHOTS = [
   { name: "glass-scrolled-dark", page: "glass", scheme: "dark", scroll: 640, up: 70 },
   { name: "glass-tabmin-light", page: "glass", scheme: "light", scroll: 900, steps: 9 },
   { name: "glass-tabmin-dark", page: "glass", scheme: "dark", scroll: 900, steps: 9 },
+  // The chosen tab changes after mount, then the page scrolls: the minimised
+  // pill has to be Settings' at Settings' slot, not the Inbox one it was built
+  // with (0.4.1).
+  { name: "glass-tabmin-settings-light", page: "glass", scheme: "light", tap: [326, 786], scroll: 900, steps: 9 },
+  { name: "glass-tabmin-settings-dark", page: "glass", scheme: "dark", tap: [326, 786], scroll: 900, steps: 9 },
   { name: "glass-material-light", page: "glass", scheme: "light", scroll: 640, up: 70, material: "material" },
   { name: "glass-material-dark", page: "glass", scheme: "dark", scroll: 640, up: 70, material: "material" },
   { name: "glass-sheet-light", page: "glass", scheme: "light", overlay: "glass" },
@@ -233,6 +238,13 @@ async function shoot(page, base, shot) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   await new Promise((resolve) => setTimeout(resolve, 1200));
+  if (shot.tap) {
+    // A finger on the tab bar: the chosen tab changes before the scroll.
+    const [x, y] = shot.tap;
+    await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+    await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
   if (shot.scroll) {
     // A wheel over the page: the rows go under the bar and the material redraws.
     // Several small steps, so the minimize state machine sees a scroll rather

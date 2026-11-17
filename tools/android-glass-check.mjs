@@ -389,6 +389,41 @@ for (const scheme of SCHEMES) {
   }
 }
 
+// The minimised pill follows the chosen tab: after a tap on Settings the pill's
+// icon is in the fourth cell, not the first.
+for (const scheme of SCHEMES) {
+  const first = must(`tabmin-${scheme}`);
+  const fourth = must(`tabmin-settings-${scheme}`);
+  if (!first || !fourth) continue;
+  const pillAt = (image) => {
+    let sumX = 0;
+    let count = 0;
+    const from = Math.round(image.height * 0.86);
+    for (let y = from; y < Math.round(image.height * 0.985); y++) {
+      for (let x = Math.round(image.width * 0.05); x < Math.round(image.width * 0.95); x++) {
+        const [r, g, b] = image.pixel(x, y);
+        if (b > 200 && g > 110 && b - r > 80 && g - r > 60) {
+          sumX += x;
+          count += 1;
+        }
+      }
+    }
+    const scale = image.width / 411;
+    return count > 80 ? sumX / count / scale : null;
+  };
+  const a = pillAt(first);
+  const b = pillAt(fourth);
+  if (a === null || b === null) {
+    fail(`the minimised pill has no icon in tabmin-${scheme}.png (${a} / ${b})`);
+  } else if (Math.abs(a - 67) > 24 || Math.abs(b - 345) > 24) {
+    fail(`${scheme}: the pill sits at ${a.toFixed(0)} pt with Inbox chosen and ${b.toFixed(0)} pt with Settings chosen (slots 67 and 345)`);
+  } else if (b - a < 200) {
+    fail(`${scheme}: the pill did not move with the selection (${a.toFixed(0)} → ${b.toFixed(0)} pt)`);
+  } else {
+    report(`${scheme}: the pill follows the chosen tab (Inbox ${a.toFixed(0)} pt, Settings ${b.toFixed(0)} pt)`);
+  }
+}
+
 const written = readdirSync(DIR).filter((name) => name.startsWith("android-glass-"));
 if (!written.length) fail(`${DIR} holds no android-glass-*.png`);
 

@@ -41,7 +41,7 @@ text and search fields, switches and the activity indicator.
 - **One device pixel.** Every hairline is at least one device pixel at every
   display scale, so rows keep their separators at 1x as well as @3x.
 
-Status: **0.4.0** — the tokens, the components settings screens need, the
+Status: **0.4.1** — the tokens, the components settings screens need, the
 overlays and controls of the rest of iOS, and Liquid Glass as a design
 language: `Glass`, `GlassButton` and `GlassGroup` draw the material, `GlassTabBar`
 is the floating capsule that minimises as you scroll, `NavPage` floats its

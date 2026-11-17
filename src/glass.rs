@@ -398,6 +398,7 @@ pub struct GlassSpec {
     reveal: Option<AnimatedNode>,
     morph: Option<AnimatedNode>,
     anchor: f32,
+    anchor_node: Option<AnimatedNode>,
     material_only: bool,
 }
 
@@ -422,6 +423,7 @@ impl GlassSpec {
             reveal: None,
             morph: None,
             anchor: 0.5,
+            anchor_node: None,
             material_only: false,
         }
     }
@@ -520,6 +522,14 @@ impl GlassSpec {
     pub fn minimized(mut self, progress: &AnimatedNode, anchor: f32) -> Self {
         self.morph = Some(*progress);
         self.anchor = anchor.clamp(0.0, 1.0);
+        self
+    }
+
+    /// Where the minimised pill sits, as a fraction of the bar's width, as an
+    /// animated value: it slides when the chosen tab changes while the bar is
+    /// minimised.
+    pub fn anchor(mut self, anchor: &AnimatedNode) -> Self {
+        self.anchor_node = Some(*anchor);
         self
     }
 
@@ -782,6 +792,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     }
     if let Some(morph) = &spec.morph {
         glass = glass.uniform("morph", morph);
+    }
+    if let Some(anchor) = &spec.anchor_node {
+        glass = glass.uniform("anchor", anchor);
     }
     if let Some(progress) = &spec.merge {
         glass = glass.uniform("progress", progress);
