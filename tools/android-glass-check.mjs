@@ -509,12 +509,15 @@ for (const scheme of SCHEMES) {
       ([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)),
     );
     const edge = Math.min(...ring);
+    const fill = [[0, -10], [0, 10], [10, 0], [-10, 0]]
+      .map(([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)))
+      .reduce((s, v) => s + v, 0) / 4;
     if (scheme === "light" && edge > page - 0.05) {
       fail(`rows-tabmin-light.png: the pill has no rim or shadow on white (${edge.toFixed(2)} against ${page.toFixed(2)})`);
-    } else if (scheme === "dark" && edge < page + 0.05) {
-      fail(`rows-tabmin-dark.png: the pill is not a surface (${edge.toFixed(2)} against ${page.toFixed(2)})`);
+    } else if (scheme === "dark" && fill < page + 0.08) {
+      fail(`rows-tabmin-dark.png: the pill is not a surface (${fill.toFixed(2)} against ${page.toFixed(2)})`);
     } else {
-      report(`${scheme}: the pill reads as a surface on the rows (${edge.toFixed(2)} against the page's ${page.toFixed(2)})`);
+      report(`${scheme}: the pill reads as a surface on the rows (${scheme === "dark" ? fill : edge} against the page's ${page.toFixed(2)})`);
     }
   }
 }
