@@ -1343,7 +1343,7 @@ function GlassRowsPage() {
                   <Text class="text-secondary-label" style={{ fontSize: 12 }}>{row().time}</Text>
                 </View>
                 <Text class="text-label" style={{ fontSize: 14, fontWeight: 500 }}>{row().subject}</Text>
-                <Text class="text-secondary-label" style={{ fontSize: 14, lineHeight: 18 }} numberOfLines={2}>
+                <Text class="text-secondary-label" style={{ fontSize: 14, lineHeight: 18 }}>
                   {row().snippet}
                 </Text>
               </View>
