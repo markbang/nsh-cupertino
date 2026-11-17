@@ -185,6 +185,8 @@ capture() {
   scroll_by 70
   shot "rows-edge-$scheme"
   scroll_by 350
+  scroll_up_by 120
+  sleep 1
   shot "rows-scrolled-$scheme"
   scroll_by 500
   sleep 2
