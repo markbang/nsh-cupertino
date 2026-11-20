@@ -364,8 +364,8 @@ function RowsPage() {
         <List scroll={false}>
           <Section header="Settings rows" footer="A footnote under the group explains its rows.">
             <ListTile title="Appearance" subtitle="System" leading="palette" accessory="chevron" separator />
-            <ListTile title="Notifications" leading="bell" accessory="none" separator>
-              <Text class="text-secondary-label truncate" style={{ fontSize: 13, maxWidth: 72 }}>Mentions and replies</Text>
+            <ListTile title="Notifications" leading="bell" accessory="none" align="top" separator>
+              <Text class="text-secondary-label truncate" style={{ fontSize: 15, maxWidth: 102, marginTop: 12 }}>Mentions and replies</Text>
               <Switch checked={notify()} onChange={(event: { value: boolean }) => notify.set(event.value)} />
             </ListTile>
             <ListTile title="Theme" leading="sun.max" accessory="none" separator>

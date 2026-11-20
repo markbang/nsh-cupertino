@@ -134,7 +134,7 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
 pub struct ListTileProps {
     /// The row's title, 17 pt.
     pub title: Prop<Option<SharedString>>,
-    /// A line under the title, 12 pt in the secondary label color.
+    /// A line under the title, 13 pt in the secondary label color.
     pub subtitle: Prop<Option<SharedString>>,
     /// An icon leading the title, by name ([`crate::icon::NAMES`]).
     pub leading: Prop<Option<SharedString>>,
@@ -142,8 +142,14 @@ pub struct ListTileProps {
     /// an `accent` row draws it in `system-blue`).
     pub leading_color: Prop<Option<SharedString>>,
     /// The accessory at the trailing edge: `"chevron"`, `"checkmark"` or
-    /// `"none"`. Left out, a row that can be pressed shows a chevron.
+    /// `"none"`, which leaves no gap. Left out, a row that can be pressed
+    /// shows a chevron.
     pub accessory: Prop<Option<SharedString>>,
+    /// `top` lays the row out for a switch with a detail beside it (iOS's
+    /// Notifications row): 60 pt tall, the title and the trailing controls
+    /// start 8 pt from the top, and a leading tile stays centred. Unset, the
+    /// row centres its content.
+    pub align: Prop<Option<SharedString>>,
     /// A checkmark shows while this holds (a selection list), and it is the
     /// row's state for screen readers.
     pub checked: Prop<Option<bool>>,
@@ -189,6 +195,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
     };
     let has_leading = props.leading.get_untracked().is_some();
     let has_subtitle = props.subtitle.get_untracked().is_some();
+    let top_aligned = props.align.get_untracked().as_deref() == Some("top");
     let leading = props.leading;
     let leading_color = props.leading_color;
     let title = props.title;
@@ -237,11 +244,15 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                         .w_full()
                         .flex_row()
                         .items_center()
-                        .min_h(px(if has_subtitle {
+                        .when(top_aligned, |v| v.items_start())
+                        .min_h(px(if top_aligned {
+                            metrics::ROW_HEIGHT_TOP
+                        } else if has_subtitle {
                             metrics::ROW_HEIGHT_SUBTITLE
                         } else {
                             metrics::ROW_HEIGHT
                         }))
+                        .when(top_aligned, |v| v.py(px(metrics::ROW_TOP_INSET)))
                         .pl(px(metrics::ROW_EDGE))
                         .pr(px(metrics::ROW_TRAILING))
                         .gap(px(metrics::LEADING_GAP))
@@ -250,6 +261,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                 view()
                                     .size(px(metrics::LEADING_SIZE))
                                     .rounded(px(radius::TILE.0))
+                                    .when(top_aligned, |v| v.self_center())
                                     .items_center()
                                     .justify_center()
                                     .bg(move || {
@@ -318,7 +330,10 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                     },
                                 )),
                         )
-                        .child(accessory_view(&accessory, &checked))
+                        .child(when(
+                            move || accessory.get().as_deref() != Some("none"),
+                            move || accessory_view(accessory, checked),
+                        ))
                         .child(props.children),
                 ),
         )
@@ -335,12 +350,12 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
 }
 
 fn accessory_view(
-    accessory: &Prop<Option<SharedString>>,
-    checked: &Prop<Option<bool>>,
+    accessory: Prop<Option<SharedString>>,
+    checked: Prop<Option<bool>>,
 ) -> impl IntoElement {
-    let tick = *accessory;
-    let tick_checked = *checked;
-    let chevron = *accessory;
+    let tick = accessory;
+    let tick_checked = checked;
+    let chevron = accessory;
     view()
         .flex_row()
         .items_center()

@@ -651,7 +651,7 @@ export const API: Record<string, ApiGroup[]> = {
           "rust": "`.subtitle(..)`",
           "type": "`string`",
           "default": "none",
-          "note": "A line under the title, 12 pt secondary label, 3 pt below it"
+          "note": "A line under the title, 13 pt secondary label, 3 pt below it"
         },
         {
           "tsx": "`leading`",
@@ -673,6 +673,13 @@ export const API: Record<string, ApiGroup[]> = {
           "type": "`\"chevron\"` | `\"checkmark\"` | `\"none\"`",
           "default": "chevron",
           "note": "At the trailing edge"
+        },
+        {
+          "tsx": "`align`",
+          "rust": "`.align(..)`",
+          "type": "`\"top\"`",
+          "default": "centred",
+          "note": "`top`: 60 pt, title and trailing controls 8 pt from the top, the tile stays centred (a switch with a detail beside it)"
         },
         {
           "tsx": "`checked`",

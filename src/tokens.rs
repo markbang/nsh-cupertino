@@ -426,8 +426,8 @@ pub mod type_default {
     pub const CAPTION1: TextStyle = super::style(12.0, 16.0, 400, 0.0);
     /// 11 / 13, regular.
     pub const CAPTION2: TextStyle = super::style(11.0, 13.0, 400, 0.07);
-    /// 12 / 16, regular: a list row's subtitle (`CupertinoListTile`, 12 pt).
-    pub const SUBTITLE: TextStyle = super::style(12.0, 16.0, 400, -0.08);
+    /// 13 / 18, regular: a list row's subtitle (Cohub Mobile's `text-caption`).
+    pub const SUBTITLE: TextStyle = super::style(13.0, 18.0, 400, -0.08);
 }
 
 // --- The platform's type face ----------------------------------------------
@@ -508,7 +508,7 @@ pub struct TypeScale {
     pub caption1: TextStyle,
     /// 11 / 13.
     pub caption2: TextStyle,
-    /// 12 / 16, a list row's subtitle.
+    /// 13 / 18, a list row's subtitle.
     pub subtitle: TextStyle,
 }
 
@@ -633,6 +633,12 @@ pub mod metrics {
     /// A list row's smallest height, with a subtitle: the iOS reference's
     /// two-line row, 57.5 pt.
     pub const ROW_HEIGHT_SUBTITLE: f32 = 57.0;
+    /// A top-aligned row's height (`ListTile`'s `align="top"`): 60 pt in the
+    /// iOS reference's Notifications row.
+    pub const ROW_HEIGHT_TOP: f32 = 60.0;
+    /// A top-aligned row's inset above and below its content: 8 pt, where
+    /// the title and the switch start.
+    pub const ROW_TOP_INSET: f32 = 8.0;
     /// A row's leading and trailing inset from the card's edge (16 pt).
     pub const ROW_EDGE: f32 = 16.0;
     /// A row's trailing inset.

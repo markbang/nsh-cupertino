@@ -6,7 +6,7 @@ iOS 的分组内嵌列表：行在一整块 20 pt 圆角表面上，页面边距
 能打开的行走右箭头，已选中的行显示勾选。
 
 数值取自 iOS 参考图的像素（Cohub Mobile 的设置行）：16 pt 边距、距边缘 32 pt 的 13 pt 分组标题、
-header/footer 色的 13 pt 脚注、52 pt 行（带副标题 57 pt）、17 pt 标题、12 pt 副标题、16 pt 行内边距，
+header/footer 色的 13 pt 脚注、52 pt 行（带副标题 57 pt）、17 pt 标题、13 pt 副标题、16 pt 行内边距，
 以及 30 pt 前置图标块，因此文字与分隔线都从卡片边缘 58 pt 处开始。
 
 | | |
@@ -36,15 +36,16 @@ header/footer 色的 13 pt 脚注、52 pt 行（带副标题 57 pt）、17 pt �
 
 ## ListTile
 
-一行：高 52 pt（带副标题 57 pt），左右内边距 16 pt，标题 17 pt，副标题 12 pt。前置图标放在 30 pt 的 `system-gray5` 图块上（`destructive` 时为红块、白色图标）。
+一行：高 52 pt（带副标题 57 pt），左右内边距 16 pt，标题 17 pt，副标题 13 pt。前置图标放在 30 pt 的 `system-gray5` 图块上（`destructive` 时为红块、白色图标）。
 
 | TSX | Rust | 类型 | 默认值 | |
 | --- | --- | --- | --- | --- |
 | `title` | `.title(..)` | `string` | 无 | 标题，17 pt |
-| `subtitle` | `.subtitle(..)` | `string` | 无 | 标题下的一行，12 pt secondary label，间距 3 pt |
+| `subtitle` | `.subtitle(..)` | `string` | 无 | 标题下的一行，13 pt secondary label，间距 3 pt |
 | `leading` | `.leading(..)` | 图标名 | 无 | 30 pt 图块里 18 pt 线条图标 |
 | `leadingColor` | `.leading_color(..)` | token 名 | `secondary-label` | 图标颜色（`accent` 行为 `system-blue`） |
 | `accessory` | `.accessory(..)` | `"chevron"` \| `"checkmark"` \| `"none"` | chevron | 右侧附件 |
+| `align` | `.align(..)` | `"top"` | 居中 | `top`：高 60 pt，标题与右侧控件距顶 8 pt，前置图块保持居中（右侧是带详情的开关） |
 | `checked` | `.checked(..)` | `boolean` | `false` | 显示勾选，并设置行的读屏状态 |
 | `destructive` | `.destructive(..)` | `boolean` | `false` | 红色标题；带前置图标时为红色图块、白色图标 |
 | `accent` | `.accent(..)` | `boolean` | `false` | 蓝色标题与图标，用于"添加项"这类操作 |

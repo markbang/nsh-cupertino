@@ -9,7 +9,7 @@ opens something and a checkmark for a chosen one.
 The values are the iOS reference's, measured from its pixels (Cohub Mobile's
 settings rows): 16 pt margins, a 13 pt group header 32 pt from the edge, a 13 pt
 footer in the header/footer color, 52 pt rows (57 with a subtitle), a 17 pt
-title, a 12 pt subtitle, 16 pt row insets and a 30 pt leading tile, so the text
+title, a 13 pt subtitle, 16 pt row insets and a 30 pt leading tile, so the text
 and the separator start 58 pt from the card's edge.
 
 | | |
@@ -41,16 +41,17 @@ A group of rows on one surface, with an optional header above and footer below.
 ## ListTile
 
 A row: 52 pt tall (57 with a subtitle), 16 pt insets, title at 17 pt, subtitle
-at 12 pt. A leading icon sits on a 30 pt tile in `system-gray5` (red with a white
+at 13 pt. A leading icon sits on a 30 pt tile in `system-gray5` (red with a white
 icon when `destructive`).
 
 | TSX | Rust | Type | Default | |
 | --- | --- | --- | --- | --- |
 | `title` | `.title(..)` | `string` | none | The row's title, 17 pt |
-| `subtitle` | `.subtitle(..)` | `string` | none | A line under the title, 12 pt secondary label, 3 pt below it |
+| `subtitle` | `.subtitle(..)` | `string` | none | A line under the title, 13 pt secondary label, 3 pt below it |
 | `leading` | `.leading(..)` | icon name | none | A 30 pt tile with an 18 pt line icon |
 | `leadingColor` | `.leading_color(..)` | token name | `secondary-label` | The icon's color (`system-blue` for an `accent` row) |
 | `accessory` | `.accessory(..)` | `"chevron"` \| `"checkmark"` \| `"none"` | chevron | At the trailing edge |
+| `align` | `.align(..)` | `"top"` | centred | `top`: 60 pt, title and trailing controls 8 pt from the top, the tile stays centred (a switch with a detail beside it) |
 | `checked` | `.checked(..)` | `boolean` | `false` | Shows a checkmark and sets the row's state |
 | `destructive` | `.destructive(..)` | `boolean` | `false` | Red title; with a leading icon, a red tile with a white icon |
 | `accent` | `.accent(..)` | `boolean` | `false` | Blue title and icon: an action such as "Add item" |

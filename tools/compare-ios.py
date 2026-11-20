@@ -275,13 +275,13 @@ SEEN = {
     "rows": {
         "light": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
-            ((50, 372, 690, 484), "Notifications: ref title high, detail and switch low, row 60 pt; ours centred, 52 pt"),
-            ((74, 370, 690, 378), "separator: ref a 0.33 pt hairline, #f3f3f3 peak; ours one full pixel, #c7c7c9"),
+            ((130, 388, 300, 421), "Notifications title: cap top 4 px high, baseline matches (font ascent: FreeSans here, the reference face)"),
+            ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
         ],
         "dark": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
-            ((50, 372, 690, 484), "Notifications: ref title high, detail and switch low, row 60 pt; ours centred, 52 pt"),
-            ((74, 370, 690, 378), "separator: ref a 0.33 pt hairline; ours one full pixel"),
+            ((130, 388, 300, 421), "Notifications title: cap top 4 px high, baseline matches (font ascent: FreeSans here, the reference face)"),
+            ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
         ],
     },
 }
