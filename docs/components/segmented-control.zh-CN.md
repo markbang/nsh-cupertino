@@ -22,7 +22,7 @@
 
 说明
 
-- 轨道高 32 pt，放在 50 pt 的触控区域内，与 iOS 一致；滑块为 `secondarySystemBackground` 加柔和阴影。
+- 轨道是高 32 pt 的胶囊，放在 50 pt 的触控区域内，与 iOS 一致；滑块为 `secondarySystemBackground` 加柔和阴影。
 - 滑块宽度与位置按实测轨道计算，适合任意宽度和 2–5 个分段。
 - 选中项为半粗、label 色；其余为常规、次要色。
 

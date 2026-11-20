@@ -25,9 +25,11 @@ import {
   Button,
   ContextMenu,
   DatePicker,
+  FilterChip,
   Glass,
   GlassButton,
   GlassTabBar,
+  Icon,
   List,
   ListTile,
   NavPage,
@@ -39,6 +41,7 @@ import {
   SegmentedControl,
   Sheet,
   Slider,
+  StatusPill,
   SwipeRow,
   Switch,
   TabBar,
@@ -50,6 +53,7 @@ import { Count, DemoTile } from "cupertino-demo/native";
 const PAGES: { id: string; title: string; blurb: string; icon: string; tint: string }[] = [
   { id: "navigation", title: "Navigation bar", blurb: "Large title, back, trailing action", icon: "arrow.up.right", tint: "system-blue" },
   { id: "lists", title: "Lists", blurb: "Sections, rows, accessories", icon: "list.bullet", tint: "system-orange" },
+  { id: "controls", title: "UI Catalog", blurb: "Buttons, segments, chips, switches, search", icon: "slider.horizontal.3", tint: "system-blue" },
   { id: "buttons", title: "Buttons", blurb: "Filled, tinted, plain, destructive", icon: "sparkles", tint: "system-purple" },
   { id: "textfields", title: "Text fields", blurb: "Cupertino box, clear, secure", icon: "square.grid.2x2", tint: "system-teal" },
   { id: "search", title: "Search field", blurb: "Magnifier, clear, cancel", icon: "magnifyingglass", tint: "system-indigo" },
@@ -77,6 +81,7 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
 const page = signal("gallery");
 const history = signal<string[]>([]);
 const contrast = signal("normal");
+const preset = signal<string | null>(null);
 const appearance = signal("system");
 const overlaySeed = signal("");
 const presses = new Count();
@@ -236,6 +241,106 @@ function ListsPage() {
         </Section>
       </List>
     </Page>
+  );
+}
+
+// The catalog's controls in the order of Cohub Mobile's `catalog-controls`
+// snapshot, under the cohub preset (`cupertino.preset`) it is compared with.
+// The spacing is the snapshot's, in points from the top of the frame.
+const HEADING = { fontSize: 13, fontWeight: "600" as const, lineHeight: 16 };
+
+function ControlsPage() {
+  const notify = signal(true);
+  const scope = signal("all");
+  const sort = signal("recent");
+  const chip = signal("recent");
+  const query = signal("");
+  return (
+    // The page's background is the Rust page's, so the cohub preset paints it; the
+    // title sits in the frame's status bar and bar space, 59 + 44 pt from the top.
+    <NavPage title="UI Catalog">
+      <View style={{ height: 15, paddingHorizontal: 16 }}>
+        <View style={{ position: "absolute", left: 16, top: 2, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }} class="bg-secondary-system-grouped-background">
+          <Icon name="chevron.left" size={20} tint="label" />
+        </View>
+        <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
+          <Text class="text-label" style={{ fontSize: 17, fontWeight: "600" }}>UI Catalog</Text>
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: 16 }}>
+        <Text class="text-secondary-label" style={{ ...HEADING, marginTop: 22 }}>Buttons</Text>
+        <View style={{ marginTop: 16, gap: 12 }}>
+          <Button title="Primary" icon="plus" />
+          <Button title="Secondary" variant="secondary" />
+          <Button title="Ghost" variant="plain" />
+          <Button title="Danger" variant="danger" />
+          <Button title="Loading" loading />
+        </View>
+        <View style={{ marginTop: 12, height: 44, flexDirection: "row", gap: 8 }}>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="square.and.arrow.up" size={22} tint="label" />
+          </View>
+          <View class="bg-secondary-system-grouped-background" style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="doc.on.doc" size={22} tint="label" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="line.3.horizontal.decrease" size={22} tint="system-blue" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="plus" size={22} tint="system-blue" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="trash" size={22} tint="system-red" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="archivebox" size={22} tint="system-gray" />
+          </View>
+        </View>
+        <Text class="text-secondary-label" style={{ ...HEADING, marginTop: 16 }}>Selection</Text>
+        {/* A segmented control is a 50 pt target around its 32 pt track: the rows are 32 pt tall. */}
+        <View style={{ marginTop: 14, height: 32 }}>
+          <SegmentedControl
+            items={[
+              { value: "all", title: "All" },
+              { value: "mine", title: "Mine" },
+              { value: "shared", title: "Shared" },
+            ]}
+            value={scope()}
+            onChange={(event: { value: string }) => scope.set(event.value)}
+          />
+        </View>
+        <View style={{ marginTop: 11, height: 32 }}>
+          <SegmentedControl
+            items={[
+              { value: "recent", title: "All" },
+              { value: "mine", title: "Mine" },
+            ]}
+            value={sort()}
+            onChange={(event: { value: string }) => sort.set(event.value)}
+          />
+        </View>
+        <View style={{ marginTop: 20, flexDirection: "row", gap: 4 }}>
+          <FilterChip label="Recent" suffix="3" selected={chip() === "recent"} onPress={() => chip.set("recent")} />
+          <FilterChip label="Pinned" selected={chip() === "pinned"} onPress={() => chip.set("pinned")} />
+          <FilterChip label="Archived" selected={chip() === "archived"} onPress={() => chip.set("archived")} />
+        </View>
+        <View style={{ marginTop: 18, flexDirection: "row", gap: 16 }}>
+          <Switch checked={notify()} label="On" onChange={(event: { value: boolean }) => notify.set(event.value)} />
+          <Switch checked={false} label="Off" />
+          <Switch checked disabled label="Disabled" />
+        </View>
+        <View style={{ marginTop: 12 }}>
+          <SearchField value={query()} placeholder="Search" label="Search" onChange={(event: { value: string }) => query.set(event.value)} />
+        </View>
+        <View style={{ marginTop: 12, flexDirection: "row", gap: 6 }}>
+          <StatusPill label="Neutral" />
+          <StatusPill label="Running" tone="success" />
+          <StatusPill label="Paused" tone="warning" />
+          <StatusPill label="Failed" tone="danger" />
+          <StatusPill label="Queued" tone="info" />
+        </View>
+      </View>
+    </NavPage>
   );
 }
 
@@ -1376,6 +1481,7 @@ function CurrentPage() {
   if (id === "gallery") return <Gallery />;
   if (id === "navigation") return <NavigationPage />;
   if (id === "lists") return <ListsPage />;
+  if (id === "controls") return <ControlsPage />;
   if (id === "buttons") return <ButtonsPage />;
   if (id === "textfields") return <TextFieldsPage />;
   if (id === "search") return <SearchPage />;
@@ -1408,12 +1514,14 @@ function App() {
   void (async () => {
     const seedPage = await Storage.getItem("cupertino.page");
     const seedContrast = await Storage.getItem("cupertino.contrast");
+    const seedPreset = await Storage.getItem("cupertino.preset");
     const seedAppearance = await Storage.getItem("cupertino.appearance");
     const seedOverlay = await Storage.getItem("cupertino.overlay");
     const seedGlass = await Storage.getItem("cupertino.glass");
     if (seedGlass) glassMode.set(seedGlass);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     if (seedContrast === "high" || seedContrast === "normal") contrast.set(seedContrast);
+    if (seedPreset === "cohub") preset.set("cohub");
     if (seedAppearance === "light" || seedAppearance === "dark" || seedAppearance === "system") {
       appearance.set(seedAppearance);
       setColorScheme(seedAppearance);
@@ -1422,7 +1530,7 @@ function App() {
   })();
 
   return (
-    <Theme contrast={contrast()}>
+    <Theme contrast={contrast()} preset={preset()}>
       <Each of={[page()]} key={(id) => id}>
         {(_id) => <CurrentPage />}
       </Each>

@@ -6,7 +6,7 @@
 //! `cargo run --bin gen-theme` writes them, and a test checks the committed
 //! files.
 
-use crate::tokens::{ALIASES, ROLES, materials, type_default};
+use crate::tokens::{ALIASES, ROLES, materials, metrics, radius, type_default};
 
 /// `#rrggbbaa`, as a JSON string.
 fn hex(argb: u32) -> String {
@@ -41,44 +41,51 @@ const STEPS: [(&str, crate::tokens::TextStyle); 11] = [
     ("caption2", type_default::CAPTION2),
 ];
 
-/// The lengths and plain numbers of the theme, as CSS writes them.
-const NUMBERS: [(&str, &str); 35] = [
-    ("space-1", "4px"),
-    ("space-2", "8px"),
-    ("space-3", "12px"),
-    ("space-4", "16px"),
-    ("space-5", "20px"),
-    ("space-6", "24px"),
-    ("space-11", "44px"),
-    ("row-height", "44px"),
-    ("nav-height", "44px"),
-    ("large-title-height", "52px"),
-    ("nav-edge", "16px"),
-    ("row-edge", "20px"),
-    ("row-trailing", "14px"),
-    ("section-edge", "16px"),
-    ("leading-size", "28px"),
-    ("leading-gap", "16px"),
-    ("switch-width", "51px"),
-    ("switch-height", "31px"),
-    ("switch-thumb", "27px"),
-    ("search-height", "36px"),
-    ("radius-row", "10px"),
-    ("radius-sheet", "14px"),
-    ("radius-button", "12px"),
-    ("radius-search", "9px"),
-    ("radius-switch", "15.5px"),
-    ("motion-push-damping", "0.86"),
-    ("motion-push-stiffness", "300"),
-    ("motion-sheet-damping", "0.8"),
-    ("motion-sheet-stiffness", "400"),
-    ("motion-press-opacity", "0.4"),
-    ("motion-press-scale", "0.97"),
-    ("motion-quick", "150"),
-    ("motion-base", "300"),
-    ("motion-push-duration", "500"),
-    ("motion-thumb", "200"),
-];
+/// The lengths and plain numbers of the theme, as CSS writes them: each read
+/// from the token that names it, so the file and the components cannot differ.
+fn numbers() -> Vec<(&'static str, String)> {
+    use crate::tokens::{motion, radius, space};
+    let px = |value: f32| format!("{value}px");
+    let plain = |value: f32| format!("{value}");
+    vec![
+        ("space-1", px(space::HALF.0)),
+        ("space-2", px(space::ONE.0)),
+        ("space-3", px(space::ONE_HALF.0)),
+        ("space-4", px(space::TWO.0)),
+        ("space-5", px(space::TWO_HALF.0)),
+        ("space-6", px(space::THREE.0)),
+        ("space-11", px(space::TARGET.0)),
+        ("row-height", px(metrics::ROW_HEIGHT)),
+        ("nav-height", px(metrics::NAV_HEIGHT)),
+        ("large-title-height", px(metrics::LARGE_TITLE_HEIGHT)),
+        ("nav-edge", px(metrics::NAV_EDGE)),
+        ("row-edge", px(metrics::ROW_EDGE)),
+        ("row-trailing", px(metrics::ROW_TRAILING)),
+        ("section-edge", px(metrics::SECTION_EDGE)),
+        ("leading-size", px(metrics::LEADING_SIZE)),
+        ("leading-gap", px(metrics::LEADING_GAP)),
+        ("switch-width", px(metrics::SWITCH_WIDTH)),
+        ("switch-height", px(metrics::SWITCH_HEIGHT)),
+        ("switch-thumb", px(metrics::SWITCH_THUMB)),
+        ("switch-thumb-width", px(metrics::SWITCH_THUMB_WIDTH)),
+        ("search-height", px(metrics::SEARCH_HEIGHT)),
+        ("radius-row", px(radius::ROW.0)),
+        ("radius-sheet", px(radius::SHEET.0)),
+        ("radius-button", px(radius::BUTTON.0)),
+        ("radius-search", px(radius::SEARCH.0)),
+        ("radius-switch", px(radius::SWITCH.0)),
+        ("motion-push-damping", plain(motion::PUSH_DAMPING)),
+        ("motion-push-stiffness", plain(motion::PUSH_STIFFNESS)),
+        ("motion-sheet-damping", plain(motion::SHEET_DAMPING)),
+        ("motion-sheet-stiffness", plain(motion::SHEET_STIFFNESS)),
+        ("motion-press-opacity", plain(motion::PRESS_OPACITY)),
+        ("motion-press-scale", plain(motion::PRESS_SCALE)),
+        ("motion-quick", plain(motion::QUICK_MS)),
+        ("motion-base", plain(motion::BASE_MS)),
+        ("motion-push-duration", plain(motion::PUSH_MS)),
+        ("motion-thumb", plain(motion::THUMB_MS)),
+    ]
+}
 
 /// The theme file (`nsh.json` `"theme"`): every semantic color role, the
 /// shadcn aliases NSH's own classes and `nsh/base` use, the type scale, the
@@ -86,7 +93,7 @@ const NUMBERS: [(&str, &str); 35] = [
 /// time by [`crate::Theme`]: the format has no contrast axis.
 pub fn theme_json() -> String {
     let mut theme: Vec<(String, String)> = vec![
-        ("radius".into(), "\"10px\"".into()),
+        ("radius".into(), format!("\"{}px\"", radius::ROW.0)),
         ("hairline".into(), "\"0.33px\"".into()),
     ];
     for (name, step) in STEPS {
@@ -96,7 +103,7 @@ pub fn theme_json() -> String {
             format!("\"{}px\"", step.line_height.0),
         ));
     }
-    for (name, value) in NUMBERS {
+    for (name, value) in numbers() {
         theme.push((name.to_owned(), format!("\"{value}\"")));
     }
 
@@ -169,10 +176,10 @@ pub fn tailwind_json() -> String {
                 "radius".into(),
                 object(
                     &[
-                        ("row".to_owned(), "10".to_owned()),
-                        ("sheet".to_owned(), "14".to_owned()),
-                        ("button".to_owned(), "12".to_owned()),
-                        ("search".to_owned(), "9".to_owned()),
+                        ("row".to_owned(), radius::ROW.0.to_string()),
+                        ("sheet".to_owned(), radius::SHEET.0.to_string()),
+                        ("button".to_owned(), radius::BUTTON.0.to_string()),
+                        ("search".to_owned(), radius::SEARCH.0.to_string()),
                     ],
                     6,
                     4,

@@ -29,6 +29,8 @@ pub const NAMES: &[&str] = &[
     "paperplane",
     "tray",
     "archivebox",
+    "square.and.arrow.up",
+    "doc.on.doc",
     "trash",
     "flag",
     "flag.fill",
@@ -127,6 +129,12 @@ fn markup(name: &str) -> Option<&'static str> {
         }
         "archivebox" => {
             r#"<rect x="3" y="4.2" width="18" height="4.6" rx="1.4"/><path d="M4.6 8.8v9a2 2 0 0 0 2 2h10.8a2 2 0 0 0 2-2v-9"/><path d="M9.6 12.8h4.8"/>"#
+        }
+        "square.and.arrow.up" => {
+            r#"<path d="M12 15V3.8"/><path d="m7.6 8 4.4-4.4L16.4 8"/><path d="M8 10.5H6.2a2 2 0 0 0-2 2v7.3a2 2 0 0 0 2 2h11.6a2 2 0 0 0 2-2v-7.3a2 2 0 0 0-2-2H16"/>"#
+        }
+        "doc.on.doc" => {
+            r#"<rect x="8" y="8" width="12.4" height="12.4" rx="2.4"/><path d="M16 8V5.6a2.4 2.4 0 0 0-2.4-2.4H5.6a2.4 2.4 0 0 0-2.4 2.4v8a2.4 2.4 0 0 0 2.4 2.4H8"/>"#
         }
         "trash" => {
             r#"<path d="M4.5 6.8h15"/><path d="M9 6.8V4.4h6v2.4"/><path d="m6.4 6.8.9 12.4a2 2 0 0 0 2 1.9h5.4a2 2 0 0 0 2-1.9l.9-12.4"/><path d="M10.4 10.8v6M13.6 10.8v6"/>"#

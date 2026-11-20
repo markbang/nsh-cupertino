@@ -1,4 +1,4 @@
-//! [`Switch`]: iOS's on / off switch, 51 × 31 pt.
+//! [`Switch`]: iOS's on / off switch, 63 × 28 pt.
 
 use nsh_core::{element::BoxShadow, prelude::*};
 
@@ -23,9 +23,9 @@ pub enum SwitchEvent {
     Change(bool),
 }
 
-/// An iOS switch: a 51 × 31 pt pill, `systemGreen` when on and
-/// `secondaryFill` when off, with a 27 pt white thumb that slides 20 pt over
-/// 200 ms.
+/// An iOS switch: a 63 × 28 pt capsule, `switch-on` when on and `switch-off`
+/// when off (`systemGreen` and `secondaryFill` by default), with a 37 × 24 pt
+/// white thumb that slides 22 pt over 200 ms.
 ///
 /// Its role is a switch, its state is read, and Space or Return presses it.
 #[component]
@@ -50,8 +50,8 @@ pub fn Switch(props: SwitchProps, cx: Scope<SwitchEvent>) -> impl IntoElement {
                 .transition_colors()
                 .duration(motion::THUMB_MS)
                 .bg(move || {
-                    let off = tokens::secondary_fill();
-                    let on = tokens::system_green();
+                    let off = tokens::system("switch-off");
+                    let on = tokens::system("switch-on");
                     if dimmed.get().unwrap_or(false) {
                         return if checked_track.get() {
                             on.opacity(0.5)
@@ -63,7 +63,8 @@ pub fn Switch(props: SwitchProps, cx: Scope<SwitchEvent>) -> impl IntoElement {
                 })
         })
         .thumb_style(move |s| {
-            s.size(px(metrics::SWITCH_THUMB))
+            s.w(px(metrics::SWITCH_THUMB_WIDTH))
+                .h(px(metrics::SWITCH_THUMB))
                 .rounded_full()
                 .bg(white())
                 // `_kSwitchBoxShadows`: a soft one and a tight one.
@@ -88,7 +89,9 @@ pub fn Switch(props: SwitchProps, cx: Scope<SwitchEvent>) -> impl IntoElement {
                 .transition_transform()
                 .duration(motion::THUMB_MS)
                 .checked(move |s| {
-                    s.translate_x(px(metrics::SWITCH_WIDTH - metrics::SWITCH_THUMB - 4.0))
+                    s.translate_x(px(metrics::SWITCH_WIDTH
+                        - metrics::SWITCH_THUMB_WIDTH
+                        - 4.0))
                 })
         })
         .on_change(move |checked: &bool| {

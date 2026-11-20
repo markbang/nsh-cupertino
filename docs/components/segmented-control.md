@@ -23,7 +23,7 @@ Events: `onChange(value, index)`.
 
 Notes
 
-- The track is 32 pt tall inside a 50 pt target, as iOS draws it; the thumb is
+- The track is a 32 pt capsule inside a 50 pt target, as iOS draws it; the thumb is
   `secondarySystemBackground` with a soft shadow.
 - The thumb's width and position follow the measured track, so it fits any
   width and any number of segments from two to five.

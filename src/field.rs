@@ -224,9 +224,9 @@ pub enum SearchFieldEvent {
     Cancel,
 }
 
-/// iOS's search field: 36 pt tall, 9 pt corners, a magnifier before the text
-/// and a clear button, on the `fill` color as a search bar has it — or, with
-/// `glass`, on Liquid Glass for a bar that floats over the page.
+/// iOS's search field: 44 pt tall, a capsule, a magnifier before the text and a
+/// clear button, on the `fill` color as a search bar has it — or, with `glass`,
+/// on Liquid Glass for a bar that floats over the page.
 #[component]
 pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl IntoElement {
     let focused = signal(false);
@@ -247,10 +247,10 @@ pub fn SearchField(props: SearchFieldProps, cx: Scope<SearchFieldEvent>) -> impl
             .flex_1()
             .flex_row()
             .items_center()
-            .gap(px(5.5))
+            .gap(px(8.0))
             .h(px(metrics::SEARCH_HEIGHT))
-            .px(px(5.5))
-            .child(icon_stroke("magnifyingglass", 20.0, 2.2).text_color(tokens::secondary_label))
+            .px(px(16.0))
+            .child(icon_stroke("magnifyingglass", 18.0, 2.2).text_color(tokens::label))
             .child(
                 input()
                     .element_ref(&focus_ref)

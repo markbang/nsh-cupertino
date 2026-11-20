@@ -23,7 +23,9 @@ iOS 的四种按钮外观，以及 iOS 的按压状态：整颗按钮在 120 ms 
 
 外观
 
-- **filled**：`systemBlue` 背景、白色文字、12 pt 圆角、44 pt 高。
+- **filled**：`systemBlue` 背景（即着色）、白色文字。
+- **secondary**：`systemGray5` 背景、label 文字。
+- **danger**：`systemRed` 背景、白色文字。
 - **tinted**：浅色下 18 %、深色下 26 % 的着色，蓝色文字。
 - **plain**：只有蓝色文字。
 - **destructive**：红色文字（iOS 的危险操作样式），形状同 plain。
@@ -32,14 +34,14 @@ iOS 的四种按钮外观，以及 iOS 的按压状态：整颗按钮在 120 ms 
 
 | 尺寸 | 高度 | 文字 | 内边距 | 圆角 | 目标 |
 | --- | --- | --- | --- | --- | --- |
-| large | 44 pt | 17 半粗 | 20 × 16 | 12 pt | 44 pt |
+| large | 52 pt | 17 半粗 | 20 × 8 | 胶囊（26 pt） | 44 pt |
 | medium | 32 pt | 15 半粗 | 15 × 10 | 胶囊（40 pt） | 44 pt |
 | small | 28 pt | 15 半粗 | 12 × 6 | 胶囊（40 pt） | 44 pt |
 
 说明
 
-- 视觉高度与 `CupertinoButton` 一致；medium 与 small 只扩大命中区域到 44 pt，不放大外观，
-  符合 Human Interface Guidelines。
+- large 按钮高 52 pt，与 Cohub Mobile 的主按钮一致；medium 与 small 保持 `CupertinoButton` 的高度，
+  只扩大命中区域到 44 pt，不放大外观，符合 Human Interface Guidelines。
 - 禁用按钮不报告按压，读屏会读出"变灰"；文字使用 tertiary label 色，实心按钮的着色降到 40 %。
 - 图标按文字大小的 1.2 倍绘制，与 `CupertinoButton` 一致。
 

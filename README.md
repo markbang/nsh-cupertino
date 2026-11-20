@@ -139,10 +139,12 @@ pub fn Settings() -> impl IntoElement {
 | [`List`](docs/components/list.md) | A scrolling page of grouped sections, `systemGroupedBackground` |
 | [`Section`](docs/components/list.md) | A group of rows on one 10 pt surface, with header and footer |
 | [`ListTile`](docs/components/list.md) | A 44 pt row: title, subtitle, leading icon, chevron or checkmark |
-| [`Button`](docs/components/button.md) | Filled, tinted, plain and destructive, three sizes, iOS press opacity |
+| [`Button`](docs/components/button.md) | Filled, secondary, danger, tinted, plain and destructive; a loading state; three sizes |
 | [`TextField`](docs/components/text-field.md) | A rounded grouped field: clear, secure, leading icon, keyboards |
-| [`SearchField`](docs/components/search-field.md) | iOS's search field: 36 pt, magnifier, clear, Cancel |
-| [`Switch`](docs/components/switch.md) | 51 × 31, green when on, 200 ms thumb |
+| [`SearchField`](docs/components/search-field.md) | iOS's search field: a 44 pt capsule, magnifier, clear, Cancel |
+| [`Switch`](docs/components/switch.md) | 63 × 28, green when on, a 37 × 24 thumb, 200 ms |
+| [`FilterChip`](docs/components/filter-chip.md) | A capsule a list filters by: a label, a count, the tint when chosen |
+| [`StatusPill`](docs/components/status-pill.md) | A dot and a label on a soft tone: neutral, success, warning, danger, info |
 | [`ActivityIndicator`](docs/components/activity-indicator.md) | Eight blades fading in turn, drawn natively |
 | [`ScrollView`](docs/components/scroll-view.md) | Bouncing scroll with the platform's indicator and keyboard behavior |
 | [`Sheet`](docs/components/sheet.md) | A bottom panel with medium and large detents and a grabber |
@@ -151,7 +153,7 @@ pub fn Settings() -> impl IntoElement {
 | [`ContextMenu`](docs/components/context-menu.md) | A long-press / right-click menu with a lifted preview |
 | [`Picker`](docs/components/picker.md) | A snapping wheel that fades its edges |
 | [`DatePicker`](docs/components/date-picker.md) | A calendar, a compact trigger and a month/day/year wheel |
-| [`SegmentedControl`](docs/components/segmented-control.md) | A 32 pt track with a sliding thumb, 2–5 segments |
+| [`SegmentedControl`](docs/components/segmented-control.md) | A 32 pt capsule track with a sliding thumb, 2–5 segments |
 | [`Slider`](docs/components/slider.md) | A 28 pt thumb on a tinted rail, with tick marks |
 | [`TabBar`](docs/components/tab-bar.md) | A 49 pt bar of icons, labels and badges |
 | [`SwipeRow`](docs/components/swipe-actions.md) | Leading and trailing actions behind a row |

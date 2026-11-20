@@ -91,6 +91,9 @@ pub struct ThemeProps {
     /// `"high"` for the increased-contrast colors, `"normal"` (the default)
     /// for the standard ones. Follow the user's setting.
     pub contrast: Prop<Option<SharedString>>,
+    /// A colour preset over the system roles (`"cohub"`, see
+    /// [`crate::tokens::preset`]); none keeps the system colours.
+    pub preset: Prop<Option<SharedString>>,
     /// The app's content.
     pub children: Prop<Children>,
 }
@@ -109,10 +112,15 @@ pub fn Theme(props: ThemeProps) -> impl IntoElement {
     effect(move || {
         let dark = nsh_core::element::dark();
         let merged = merged(&base);
-        let tokens = match props.contrast.get().as_deref() {
+        let mut tokens = match props.contrast.get().as_deref() {
             Some("high") => high_contrast_tokens(&merged, dark),
             _ => merged,
         };
+        if let Some(roles) = props.preset.get().as_deref().and_then(tokens::preset) {
+            for role in roles {
+                tokens.set_color(role.name, role.adaptive());
+            }
+        }
         set_tokens(tokens);
     });
     // The platform's own faces, inherited by every text inside: the app's too.

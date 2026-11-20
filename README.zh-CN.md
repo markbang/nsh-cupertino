@@ -121,10 +121,12 @@ pub fn Settings() -> impl IntoElement {
 | [`List`](docs/components/list.zh-CN.md) | 分组列表页，`systemGroupedBackground` 背景 |
 | [`Section`](docs/components/list.zh-CN.md) | 一块 10 pt 圆角的行分组，带 header 与 footer |
 | [`ListTile`](docs/components/list.zh-CN.md) | 44 pt 行：标题、副标题、前置图标、右箭头或勾选 |
-| [`Button`](docs/components/button.zh-CN.md) | 实心、浅色、纯文字与危险样式，三档尺寸，iOS 按压透明度 |
+| [`Button`](docs/components/button.zh-CN.md) | 实心、次要、危险、浅色、纯文字与危险样式，加载状态，三档尺寸 |
 | [`TextField`](docs/components/text-field.zh-CN.md) | 圆角分组输入框：清除、密码、前置图标、键盘类型 |
-| [`SearchField`](docs/components/search-field.zh-CN.md) | iOS 搜索框：36 pt、放大镜、清除、取消 |
-| [`Switch`](docs/components/switch.zh-CN.md) | 51 × 31，开启为绿色，滑块 200 ms |
+| [`SearchField`](docs/components/search-field.zh-CN.md) | iOS 搜索框：44 pt 胶囊、放大镜、清除、取消 |
+| [`Switch`](docs/components/switch.zh-CN.md) | 63 × 28，开启为绿色，37 × 24 滑块，200 ms |
+| [`FilterChip`](docs/components/filter-chip.zh-CN.md) | 列表筛选用的胶囊：标签、计数，选中时着色 |
+| [`StatusPill`](docs/components/status-pill.zh-CN.md) | 圆点加标签，浅色底：中性、成功、警告、危险、信息 |
 | [`ActivityIndicator`](docs/components/activity-indicator.zh-CN.md) | 八片叶片依次淡出，原生绘制 |
 | [`ScrollView`](docs/components/scroll-view.zh-CN.md) | 带回弹的滚动视图，平台滚动条与键盘行为 |
 | [`Sheet`](docs/components/sheet.zh-CN.md) | 底部面板，中/大两档与把手 |
@@ -133,7 +135,7 @@ pub fn Settings() -> impl IntoElement {
 | [`ContextMenu`](docs/components/context-menu.zh-CN.md) | 长按/右键菜单，带抬起预览 |
 | [`Picker`](docs/components/picker.zh-CN.md) | 吸附滚轮，边缘淡出 |
 | [`DatePicker`](docs/components/date-picker.zh-CN.md) | 日历、紧凑触发器与月/日/年滚轮 |
-| [`SegmentedControl`](docs/components/segmented-control.zh-CN.md) | 32 pt 轨道、滑动滑块，2–5 段 |
+| [`SegmentedControl`](docs/components/segmented-control.zh-CN.md) | 32 pt 胶囊轨道、滑动滑块，2–5 段 |
 | [`Slider`](docs/components/slider.zh-CN.md) | 28 pt 滑块、着色轨道与刻度 |
 | [`TabBar`](docs/components/tab-bar.zh-CN.md) | 49 pt 标签栏，图标、文字与徽标 |
 | [`SwipeRow`](docs/components/swipe-actions.zh-CN.md) | 行后的左右滑动操作 |
