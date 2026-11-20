@@ -1,0 +1,625 @@
+{
+  "rule": "Per screen and theme: the newest report (by date) that lists the screen in that theme. Per motion: the newest report that lists it. iOS only.",
+  "reports": "reports.json, copied verbatim from https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/reports.json",
+  "totals": {
+    "files": 87,
+    "bytes": 8270638
+  },
+  "files": [
+    {
+      "file": "motion/motion-attach.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-attach.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "daf829c20a8dbb5f8aee5fa060a1fc7c824bcb20309e3d2b11b30d5d5b719521",
+      "bytes": 106948
+    },
+    {
+      "file": "motion/motion-chat.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-chat.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "57b03e3cf95cee851a9cdf6710bdb99a294291af1bdb63c83e720d6b0c5ed44a",
+      "bytes": 296400
+    },
+    {
+      "file": "motion/motion-confirm.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-confirm.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "4d9f0edb6a5fd47642c2396fa4bbddcd0c293b6de66b7ca5703cf504e09acd88",
+      "bytes": 46270
+    },
+    {
+      "file": "motion/motion-controls.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-controls.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "1ef1828bf60415bd5ae8a3d9c41ed686c4040c241e4b91e7b0d39fbb4a59ba64",
+      "bytes": 1747593
+    },
+    {
+      "file": "motion/motion-filter.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-filter.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "7a323f1da9707d94afb1850b41a44072ef794a7a7523536194530af855fa2f72",
+      "bytes": 384956
+    },
+    {
+      "file": "motion/motion-image.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-image.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "9fa957af55667454353ae0ab69c54f92d727c84f13d02f88c39085ac30bd3286",
+      "bytes": 72471
+    },
+    {
+      "file": "motion/motion-list.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-list.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "c8cc7d103c62023bd17d56a43b86c953c3f5de594fbb8924ce1e91613cc03292",
+      "bytes": 75560
+    },
+    {
+      "file": "motion/motion-menu.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-menu.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "c2ae26b7a382db84544426a4bfcb272afc34b65a1dc3c7d5c6ea0ca73507ea1d",
+      "bytes": 212711
+    },
+    {
+      "file": "motion/motion-model.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-model.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "fd8025d9715173931adf0dfef6e9aa5679a3a64e270c5572bf0a81f4c2472303",
+      "bytes": 453738
+    },
+    {
+      "file": "motion/motion-press.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-press.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "3cac52f50917b3d2f69d0ae1313f37fb92ee34d83711f6179f33d7d618b98d39",
+      "bytes": 124227
+    },
+    {
+      "file": "motion/motion-push.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-push.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "8c4f642ee386621e818afdebc6427892c8eed1abf7be6c5eaa762bdcc1ea9236",
+      "bytes": 150224
+    },
+    {
+      "file": "motion/motion-scroll-activity.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-scroll-activity.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "a43abc3bf72ef09c4a5de8a6b19aaa0db79f59fc713afe4217d31c5077846b86",
+      "bytes": 129018
+    },
+    {
+      "file": "motion/motion-scroll-chats.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-scroll-chats.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "96adf0176a3fe421e3b91dae94db3859e2c17bd26869d85a6d25543da377874d",
+      "bytes": 354916
+    },
+    {
+      "file": "motion/motion-scroll-settings.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-scroll-settings.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "3e9aaec072dd72cd23c11d0e9aa1fec470ed3c73f8dfa3868a6e782ff243df8f",
+      "bytes": 137289
+    },
+    {
+      "file": "motion/motion-scroll-spaces.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-scroll-spaces.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "a4596b0eae041c98f3b34357227c5a28bc49718887ff730d75a78114c16fc827",
+      "bytes": 155478
+    },
+    {
+      "file": "motion/motion-search.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-search.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "599f450cb03c4038e49af612d9c7aafbf59abe23b7b0e9249d33aaba6ee6940c",
+      "bytes": 193566
+    },
+    {
+      "file": "motion/motion-select.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-select.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "b90a452f5c43b5435b5029d7a23653d6aa41437e432457ad24934e3c2644404c",
+      "bytes": 173078
+    },
+    {
+      "file": "motion/motion-sheet.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-sheet.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "61993a2ec412c010f9776c964ef7831cf136bfb587d86e597175fefe2f2c29b5",
+      "bytes": 49500
+    },
+    {
+      "file": "motion/motion-space.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-space.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "121d39c42ac8c97ba14e041e08a45f37c37cf011e61edb185296a9ad1f2462c0",
+      "bytes": 240411
+    },
+    {
+      "file": "motion/motion-tabs.mp4",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/motion/motion-tabs.mp4",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "df38b5858fdae6aa7cf14443723a70d59b595e2da20cdbd7ec2f4b6384226e0c",
+      "bytes": 494860
+    },
+    {
+      "file": "shots/about.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/about.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "eac7638c0043f967e473f329785759ffe3e8c65073177660fb98d631d732dfe7",
+      "bytes": 36404
+    },
+    {
+      "file": "shots/about.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/about.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "bd9c2d2fa784310ed2637d760984dce69dae74475241b77dd86007de40a4a06b",
+      "bytes": 37116
+    },
+    {
+      "file": "shots/activity-scrolled.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/activity-scrolled.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "cc28c3968131b7667f823724e2d9d0a3ca122571f68f7da58783431fb2533b37",
+      "bytes": 33244
+    },
+    {
+      "file": "shots/activity-scrolled.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/activity-scrolled.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "8d88f67e3ffa46308e34134f33eb28882e8b7a0e55ae899db0d958ad11851cda",
+      "bytes": 35930
+    },
+    {
+      "file": "shots/activity.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/activity.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "35742482468fea3c8013b06cf9714a32bc4415c38b83a7e613d1ed1db78845f3",
+      "bytes": 32488
+    },
+    {
+      "file": "shots/activity.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/activity.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "e6cb275c26e1f785220a507edacee061400d122f5c2a06faee4f8d8b9eebdf5d",
+      "bytes": 34550
+    },
+    {
+      "file": "shots/appearance.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/appearance.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "0db11b37fc00df619091100fb6c6ad965d8f741c072dab6bf70c729fd8db8f31",
+      "bytes": 36844
+    },
+    {
+      "file": "shots/appearance.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/appearance.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "5a55592799ff0faa7bde82d79354a8b7dd00debad971ef41d55c002c84a8be31",
+      "bytes": 37342
+    },
+    {
+      "file": "shots/bot-list.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/bot-list.dark.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "b3ddf961a3c4779b76f2af7ff1933246f6483ce97c4630d878f77176754a9498",
+      "bytes": 45576
+    },
+    {
+      "file": "shots/bot-list.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/bot-list.light.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "b5e9ab0290deeeb170dce268f0ab1c8087065e4ef8868e34cb9789862caca139",
+      "bytes": 44242
+    },
+    {
+      "file": "shots/catalog-confirm.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-confirm.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "35604ee09ff9060574e00167142d108c132c2417efe110187fe891f780ee6ced",
+      "bytes": 14322
+    },
+    {
+      "file": "shots/catalog-confirm.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-confirm.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "6aa25a6953f433e94890bb5c780089266ff4c5ff3299aad8c2d716b8c04a055c",
+      "bytes": 16492
+    },
+    {
+      "file": "shots/catalog-controls.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-controls.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "5f1883ea829285db02fad73f579221db7d567787e7e5fef7e846f1efb34802d1",
+      "bytes": 31400
+    },
+    {
+      "file": "shots/catalog-controls.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-controls.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "0ba88522ed8bccc735e467df76994ca570e0461179b8e7a0f5ed3bec3d90a353",
+      "bytes": 31410
+    },
+    {
+      "file": "shots/catalog-list.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/shots/catalog-list.light.ios.webp",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "3f676ba4834797c656b53ae425c34ce3185d704f5304257faa231412ceab1f75",
+      "bytes": 30346
+    },
+    {
+      "file": "shots/catalog-menu.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/catalog-menu.dark.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "9351abfb4bdb23f9a2779fa2e933ac953aebea3d27242d0932cbaf4171b0ddb0",
+      "bytes": 21686
+    },
+    {
+      "file": "shots/catalog-menu.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/catalog-menu.light.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "8fa214053300c44aa0bd8e90b141ff8270ff71cce5bf3a84101ec96ede0997d2",
+      "bytes": 23242
+    },
+    {
+      "file": "shots/catalog-page.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-page.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "c266b3715f91a8c482195494c7a209bfaaffe32aabc57a86225547c983b4e2c7",
+      "bytes": 12922
+    },
+    {
+      "file": "shots/catalog-page.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-page.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "9451f50b1dc0eceb4df96a9844b9ab455a98d28cd834a4b9ed3b19a42a053e38",
+      "bytes": 13690
+    },
+    {
+      "file": "shots/catalog-rows.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-rows.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "02b5cb0d9085270681c699117dc48edb00443165a2b91e5e28fbcb0ad9d13637",
+      "bytes": 33502
+    },
+    {
+      "file": "shots/catalog-rows.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-rows.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "729f94509f84a166cbb3746ce92fc204f248a8252c25360238199c3377fe9d35",
+      "bytes": 34842
+    },
+    {
+      "file": "shots/catalog-sheet.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-sheet.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "ec199a70472443935e971bce43372303e3b2483333e4ff6e000f71b6a33e2843",
+      "bytes": 14762
+    },
+    {
+      "file": "shots/catalog-sheet.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-sheet.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "fee17cb90dd2e8d458d50ae5df90f57286b1cc936e330e1991090bf241ad3e56",
+      "bytes": 16518
+    },
+    {
+      "file": "shots/catalog-states.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-states.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "307522dda440680bfa426d1bd0fabff71559cbab86ed19a239b8207d96340d57",
+      "bytes": 24992
+    },
+    {
+      "file": "shots/catalog-states.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-states.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "a57a04e0ebff0325bd970d560e6127302506b0109dd3594d68df6df73966694c",
+      "bytes": 23668
+    },
+    {
+      "file": "shots/catalog-type.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-type.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "b15c7eb9c1d077f7ae97f8d173e6a2cdf247a5eca056b6ac7d29370263e1e28b",
+      "bytes": 48864
+    },
+    {
+      "file": "shots/catalog-type.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/catalog-type.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "cf9af49767ed04271e3767f00e914fb6293f5b568c176a44e5634884169fd961",
+      "bytes": 50056
+    },
+    {
+      "file": "shots/chat-bot-js.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/chat-bot-js.dark.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "cb4b9173c1431e2440f5a7d7944dccd213ded5f3f2a1ca4fc4d95db1d1a676da",
+      "bytes": 55818
+    },
+    {
+      "file": "shots/chat-bot-js.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/chat-bot-js.light.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "6e2634f6462802e3b869f673ec985eee0a3c4e863ca3c8fbfea5cc89d32282f3",
+      "bytes": 57848
+    },
+    {
+      "file": "shots/chat-bot.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/chat-bot.dark.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "978599c01af2ce74343f0e17b56f1d227a8177c137a4b36424e3f23f96297365",
+      "bytes": 55780
+    },
+    {
+      "file": "shots/chat-bot.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/chat-bot.light.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "e5701f39904871aa6ad2e301078aa713871d90e724ea811c2911fac8559fb3ce",
+      "bytes": 56952
+    },
+    {
+      "file": "shots/chat-conversation.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/chat-conversation.dark.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "3af1525beafdcd321790cf4e3dbfb9ed32039a523400cbef0ca322fbd6fe22c2",
+      "bytes": 54046
+    },
+    {
+      "file": "shots/chat-conversation.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/shots/chat-conversation.light.ios.webp",
+      "report": "20261111-060139-ab77605",
+      "sha256": "bc68661bc448154b00f9663b8c2784d22808570c8a453213abf2428ca72043c5",
+      "bytes": 55098
+    },
+    {
+      "file": "shots/chat-long.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-long.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "4b674d3b4a4c12001ecf096617789795f8741536f3b526a05a91142239d30010",
+      "bytes": 61016
+    },
+    {
+      "file": "shots/chat-long.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-long.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "2648f67857b734c88c1f1421a35eadad2fa37406f6cc71cacf642ff1f6921a1b",
+      "bytes": 62536
+    },
+    {
+      "file": "shots/chat-native.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-native.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "e7bcbc091ea3cd0e835062c7c712ead05e3bdc288727ae0f0189aaf41ab2131d",
+      "bytes": 54038
+    },
+    {
+      "file": "shots/chat-native.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-native.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "340d1323ce26ec39155804d53601ff76c6d58a00851db16c5e3dc0c3ebec8ca5",
+      "bytes": 55050
+    },
+    {
+      "file": "shots/chat-real-model.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-real-model.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "f804b79267974d685e3dd0de180b51e1ef0b444a87dadd63b0663cfa4d24688a",
+      "bytes": 42096
+    },
+    {
+      "file": "shots/chat-real-model.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-real-model.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "f4ffa83528911b7826b0b29d9ba676e725bf316ce86abdb982cfb40be58d5f3c",
+      "bytes": 43738
+    },
+    {
+      "file": "shots/chat-real.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-real.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "c43c054728cd4caecbc69a27bdd790d96a2582e3f2da6e18c2da3ba258ab730d",
+      "bytes": 39256
+    },
+    {
+      "file": "shots/chat-real.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-real.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "789aa2d3ddf62ae934ec75fd0de3e7bbc1174eae929f491a081849d09ed16f59",
+      "bytes": 40374
+    },
+    {
+      "file": "shots/chat-states.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-states.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "5fb1683094281c063fe37b8c9d7aa381dec1a6f8e7b0ec1979654b78e25e21aa",
+      "bytes": 33742
+    },
+    {
+      "file": "shots/chat-states.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-states.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "eb52e76638410902a331f7ddc0573e31b8e7b46d1f95ad440c166328ed128bc2",
+      "bytes": 34928
+    },
+    {
+      "file": "shots/chat-tools.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-tools.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "2f99a9e61a47c1638010469907f9fd487f160d65dfca173e18d93194f3d188fd",
+      "bytes": 43640
+    },
+    {
+      "file": "shots/chat-tools.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chat-tools.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "86566bc7cc0d6b69cb293a16f24f3db9ddce7267695ab821e739cce75208fa28",
+      "bytes": 44638
+    },
+    {
+      "file": "shots/chats-filter.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/chats-filter.dark.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "6b7f14964e7c971fab83122ec3122d386dc12581fd4cc6a3b9665cef75ce28f5",
+      "bytes": 61366
+    },
+    {
+      "file": "shots/chats-filter.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/chats-filter.light.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "7be6627a75c22ab0c5852cec3d1da7b4e24ebfbec495298bbcd8d805f9918931",
+      "bytes": 60584
+    },
+    {
+      "file": "shots/chats-scrolled.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chats-scrolled.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "fee56245f7dc023dd3b0d593edb9ea1bf0967bffcedcc5767a7995e5b3887963",
+      "bytes": 55474
+    },
+    {
+      "file": "shots/chats-scrolled.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chats-scrolled.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "4fef1583de678c4c37fe040c2a92a03b63f13a042c3e576e180680b41750f283",
+      "bytes": 53004
+    },
+    {
+      "file": "shots/chats-snap.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chats-snap.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "25a163f2ef7d32921425f3c4bbe9860a5826d3bfd2342dab87ee7f518890fb0b",
+      "bytes": 62198
+    },
+    {
+      "file": "shots/chats-snap.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chats-snap.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "6dd9009aa24bb7eeeb2d102918f99537f5466b6ad1ea1ef9feb657d93e3dfacc",
+      "bytes": 60140
+    },
+    {
+      "file": "shots/chats.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/chats.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "e0ba6f4b5a9738f0ebfd7ccf5933c07c5408ce4e5b97c9424f285c0ad89fe72a",
+      "bytes": 61712
+    },
+    {
+      "file": "shots/chats.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/shots/chats.light.ios.webp",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "49ba1381acee9e2dd2f765f41eba2c1dc301afc6c6b57a187fcf8fcd91864a6f",
+      "bytes": 60240
+    },
+    {
+      "file": "shots/composer-attach.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/composer-attach.dark.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "1d89bd494e124463bc1147e5f9c6f2c0d7f301d8dcc0adcdb89b0b671d1e9643",
+      "bytes": 43462
+    },
+    {
+      "file": "shots/composer-attach.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/composer-attach.light.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "e187df8f181524bd4c192f9c76cba5a6ffa7e1d244136c6990ba0855b64606c0",
+      "bytes": 44910
+    },
+    {
+      "file": "shots/composer-model.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/composer-model.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "dd5f96b7051129137775686a59437eeaae537b4e70e40b754a7f84564f2de1e9",
+      "bytes": 51866
+    },
+    {
+      "file": "shots/composer-model.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/composer-model.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "4aa8db00de70e830f50a6d0232a3ad93b275592a0e0ff9834cf2891aec611008",
+      "bytes": 52620
+    },
+    {
+      "file": "shots/settings-scrolled.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/settings-scrolled.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "e4dc76f66cfb2686f2179ff4c472d86ab19aa870c881a832794be4574c7c7e29",
+      "bytes": 26724
+    },
+    {
+      "file": "shots/settings-scrolled.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/settings-scrolled.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "1a41cadca0ac2109d0de564dffb65eb31cf364f0f794518de0d6bb780da1ca96",
+      "bytes": 28052
+    },
+    {
+      "file": "shots/settings-select.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/settings-select.dark.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "e31acf849c5a7d52039cb17356a0ec13c35856d64f2d1d72a7fc178b672fff0e",
+      "bytes": 35928
+    },
+    {
+      "file": "shots/settings-select.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/shots/settings-select.light.ios.webp",
+      "report": "20261109-011040-6811391",
+      "sha256": "88c25b6b58aeb98644d3d98e330a9d867172b989691926c2199b2f192787ee54",
+      "bytes": 37522
+    },
+    {
+      "file": "shots/settings.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/settings.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "e47976bc584c93331c26fa71dc0a91917bd6caf504f3d4b72f8442521ba908e6",
+      "bytes": 34470
+    },
+    {
+      "file": "shots/settings.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/settings.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "6086affb4e17e067519ce9631debcf802aa9c65ee6c9d66e236c3f4bd16695db",
+      "bytes": 35748
+    },
+    {
+      "file": "shots/spaces-scrolled.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/spaces-scrolled.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "fffa6939c35f71950c9eddedfeb79fa534f74ceaf7c3fa89f0d2d3bf394da3ba",
+      "bytes": 23418
+    },
+    {
+      "file": "shots/spaces-scrolled.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/spaces-scrolled.light.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "e5bfa93214338bbf1a70001edb887ea9374709f366ed3a9526f20ab324009de7",
+      "bytes": 22328
+    },
+    {
+      "file": "shots/spaces.dark.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/shots/spaces.dark.ios.webp",
+      "report": "20261108-122856-7b781f1",
+      "sha256": "200ad8eb04d59d3f45381baebcf9755a2983d69911bbf0af14ad1158000445f8",
+      "bytes": 26788
+    },
+    {
+      "file": "shots/spaces.light.ios.webp",
+      "source": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/shots/spaces.light.ios.webp",
+      "report": "20261111-091743-4ac97ff",
+      "sha256": "8bfc64ec8d1659134d340f75aa9b1089fa89d0faa0c01fcf2dc78c294cdb2ce1",
+      "bytes": 25826
+    }
+  ],
+  "absent": [
+    {
+      "file": "shots/catalog-list.dark.ios.webp",
+      "reason": "no report has this screen and theme"
+    }
+  ]
+}

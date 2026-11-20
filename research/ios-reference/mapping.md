@@ -1,0 +1,165 @@
+# Component mapping: Cohub Mobile → nsh-cupertino
+
+Source of truth: `markbang/cohub-mobile` at e28bcb4 (code values beat pixel values). Library: `markbang/nsh-cupertino` at a5f4a96. No component code was changed. Chinese: [mapping.zh-CN.md](mapping.zh-CN.md).
+
+Status: **match** (same value or behaviour), **partial** (same job, different values or features), **missing** (no equivalent in the library), **unchecked** (named but not compared in detail).
+
+Paths: `cohub:` is relative to `src/` in cohub-mobile unless it starts with `modules/`. `nsh:` is relative to `src/` in nsh-cupertino.
+
+## 1. Foundations
+
+| cohub-mobile (file) | nsh-cupertino (file) | Status | Key values and source | Gap |
+|---|---|---|---|---|
+| Palette, accent (`design/tokens.ts`) | `tokens.rs` accent (`tokens.rs:101`) | partial | cohub accent light `#bf3f00` (`tokens.ts:115`), dark `#ff8a3d` (`tokens.ts:173`). nsh `#007aff` | Brand orange vs system blue. Reference pixels read `#c03f00`, within ±3 of the code value. |
+| Page background (`design/tokens.ts`) | `tokens.rs:72` | partial | cohub light `#f6f3ee` (`tokens.ts:79`), dark `#121214` (`tokens.ts:143`). nsh light `#f2f2f7`, dark `#000000` | Cohub uses warm neutrals; nsh uses system greys. |
+| Radius scale (`design/tokens.ts:245`) | `tokens.rs:503-515` | partial | cohub xs 8, sm 14, md 20, lg 28. nsh ROW 10, SHEET 14, BUTTON 12, SEARCH 9, SWITCH 15.5 | nsh has no 20/28 tier, so cards and sheets can't match. |
+| Shadows (`design/tokens.ts:254-256`) | `tokens.rs` (not found) | unchecked | float `0 6px 20px rgba(0,0,0,.14)`, glass `0 8px 36px rgba(0,0,0,.1)` | No nsh shadow token seen. |
+| Type ramp (`design/tokens.ts:218-226`) | `tokens.rs:345` `type_default` | unchecked | display 34/41, title 22/28, headline and body 17/22, micro 11/14 w600 | Ramp not compared line by line. Reference large title is 34 pt. |
+
+## 2. Motion
+
+| cohub-mobile (file) | nsh-cupertino (file) | Status | Key values and source | Gap |
+|---|---|---|---|---|
+| `motion.ts` press | `tokens.rs:535-537` | partial | cohub press scale `.985`, compact `.92` (`motion.ts:89-91`). nsh `PRESS_SCALE .97`, `PRESS_OPACITY .4` | Different press model: cohub scales, nsh also fades. |
+| `motion.ts` sheet | `overlay.rs` `sheet_spring`, `tokens.rs:531-533` | partial | cohub sheet spring mass 3, stiffness 1000, critical damping (`motion.ts:38-44`); present spring 700/65 (`motion.ts:47`). nsh damping `.8`, stiffness `400` | Spring feel differs. Fix: match stiffness and damping. |
+| `motion.ts` fade and settle | `tokens.rs:539-551` | partial | cohub fade 150, fadeOut 120, settle 240, glide 280 (`motion.ts`). nsh `QUICK_MS 150`, `BASE_MS 300`, `PRESS_FADE_OUT_MS 180` | Durations partly differ. |
+| `motion.ts` dialog enter | none | missing | 240 ms, `fromScale 1.125` with settle curve (`motion.ts:145-147`) | No scale-in dialog motion. |
+| `motion.ts` continuity | none | missing | `imageWait 300` (`motion.ts:21`) | No shared-element continuity. |
+
+## 3. Navigation and chrome
+
+| cohub-mobile (file) | nsh-cupertino (file) | Status | Key values and source | Gap |
+|---|---|---|---|---|
+| `ui.tsx` TopBar, `theme.ts` edgeChrome | `navigation.rs` NavigationBar (`navigation.rs:53`), `tokens.rs:557-565` | partial | cohub header min 44 (`theme.ts:9`). nsh `NAV_HEIGHT 44`, `LARGE_TITLE_HEIGHT 52`, `BACK_TARGET 50` | Bar height matches. Large-title height not checked against the reference. |
+| `ui.tsx` ScrollEdge fade, `theme.ts` | `scroll_edge.rs:141-193` | partial | cohub fade 40 bottom, 24 top (`theme.ts:9`) | nsh default height not checked. |
+| `components/FloatingTabBar.tsx` | `tab_bar.rs` GlassTabBar (`tab_bar.rs:282-285`) | partial | cohub bar 62, side margin 21, padding 4, minimized 48 circle (`FloatingTabBar.tsx:59`), label 10/13 (`:486`). nsh HEIGHT 64, INSET 20, LIFT 12 | Bar 2 pt taller, inset differs. Minimize behaviour exists in both. |
+| `components/TabStack.tsx`, `TabStack.ios.tsx` | `tab_bar.rs` TabBar (`tab_bar.rs:84`) | partial | iOS branch uses expo-router native `Stack`, root without top safe-area (`TabStack.ios.tsx:3-9`) | Cohub titles come from the native header. nsh draws its own. |
+| `components/TabRail.tsx` (wide layout) | none | missing | rail 72 wide, icon 24, item `py-1.5 gap-1` (`TabRail.tsx:9-10`) | No vertical rail. |
+| `components/SplitStack.tsx` | none | missing | split-view layout | No split view. |
+| `components/AnimatedTabIcon.tsx` | `tab_bar.rs`, `icon.rs` | unchecked | tab icon animation | Not read in detail. |
+| `ui/Glass.tsx` GlassBackground (`ui/Glass.tsx:128-162`) | `glass.rs` Glass, GlassGroup (`glass.rs:908`, `glass.rs:1137`), `tokens.rs:723-775` | partial | cohub uses system Liquid Glass when available (`Glass.tsx:12`), else BlurView intensity 80 (`:142`). Frost opacity `.8`/`.78`, sigma 6 (`:94-95`). nsh GPU shader: BEVEL 10, THICKNESS 8, BLUR 5, BAR_BLUR 24, SATURATION 2.1 light / 1.4 dark (`tokens.rs:726-757`) | Different glass model. nsh blur and tint are not measured against the reference. |
+| `ui.tsx` IconButton (`ui.tsx:117`) | `glass.rs` GlassButton (`glass.rs:1009`) | partial | cohub target `max(44, size)`, filled glyph 18, system bar glyph 26, tone accent | Circular glass sizes in nsh not checked. |
+| `ui.tsx` AppIcon (`ui.tsx:77`), HarnessIcon (`:91`) | `icon.rs`, `icon_view.rs` | partial | cohub AppIcon size 20, stroke 1.9, HarnessIcon 16 | nsh uses SF Symbol names. Stroke weight is not compared. |
+| `ui.tsx` PrimaryButton (`ui.tsx:416`) | `button.rs:47`, `tokens.rs:599`, `tokens.rs:511` | partial | cohub `min-h-13` (52), `px-5`, `rounded-full`. nsh BUTTON_LARGE 44, corner 12 | Height 44 vs 52, and pill vs 12. |
+| `ui.tsx` SegmentedControl (`ui.tsx:487-537`) | `segmented.rs:54-56` | partial | cohub full-round capsule, `SEGMENT_INSET 2`. nsh TRACK_HEIGHT 32, TRACK_PADDING 2, CORNER 9, min_h 50 | Corner 9 vs capsule. |
+| `ui.tsx` SearchField (`ui.tsx:437`) | `field.rs:231`, `tokens.rs:597`, `tokens.rs:513` | partial | cohub `min-h-11` (44), `rounded-full`, `bg-control-track`, `px-4`. nsh SEARCH_HEIGHT 36, radius 9 | Height 36 vs 44, radius 9 vs pill. |
+| `ui.tsx` Field, FIELD_INPUT_CLASS (`ui.tsx:538`, `:549`) | `field.rs:60` TextField | partial | cohub `min-h-12`, `rounded-sm` (14), `px-3 py-3` | nsh values not compared. |
+| `ui.tsx` ComposerInput (`ui.tsx:553`) | none | missing | composer surface radius 30, `TEXT_PADDING 8`, `CHROME_HEIGHT 130` (`components/timeline/composer-layout.ts`) | No chat composer. |
+| `ui.tsx` StatusPill (`ui.tsx:382`) | none | missing | dot plus label, five tones | No status pill. |
+| `ui.tsx` EmptyState (`ui.tsx:392`) | none | missing | icon, title, description, action | No empty state. |
+| `ui.tsx` ConnectionBanner (`ui.tsx:791`), DataError (`ui.tsx:806`), `components/AppUpdateBanner.tsx` | none | missing | banner `min-h-14`, `rounded-md`, `shadow-float` (`AppUpdateBanner.tsx:88`) | No inline banners. |
+| `components/Toast.tsx` | none | missing | stack offset 10, bottom clearance 84, dismiss distance 56, velocity 800 (`Toast.tsx:41-45`) | No toast. |
+| `ui/Skeleton.tsx` | none | missing | loading placeholder | No skeleton. |
+| `ui.tsx` Avatar (`ui.tsx:99`) | none | missing | default size 40, `round` option | No avatar. |
+| `components/ActivityHeatmap.tsx`, `TokenHeatmap.tsx` | none | missing | cell 11, gap 3 (`ActivityHeatmap.tsx:14-15`) | No heat grid. |
+| `components/SpacePanels.tsx` | none | missing | panel width 0.86, max 360, spring 300 ms damping 1 (`SpacePanels.tsx:62-66`) | No swipe panels. |
+
+## 4. Lists, settings and sheets
+
+| cohub-mobile (file) | nsh-cupertino (file) | Status | Key values and source | Gap |
+|---|---|---|---|---|
+| `components/GroupRow.tsx` | `list.rs:166` ListTile, `tokens.rs:567` | partial | cohub row 52 (`GroupRow.tsx:6`), tile 30 (`:7`), separator inset 58 (`:9`). nsh ROW_HEIGHT 44, leading 28 + gap 16 + edge 20 = 64 | Row 8 pt shorter in nsh. Separator 6 pt off. Fix: use `ROW_TRAILING`, see `list.rs:186-188`. |
+| `components/SettingsRow.tsx` | `list.rs` ListTile | partial | separator inset 58 (`SettingsRow.tsx:59`) | Same as GroupRow. |
+| `components/SettingsSelectRow.ios.tsx` | `list.rs` ListTile, `picker.rs:59` | partial | press held 120 ms opens the menu (`SettingsSelectRow.tsx:16`), check on current choice (`:27`) | No hold-to-open menu. |
+| `ui/ListRow.tsx` | `list.rs` ListTile | partial | row 72, avatar 46 (`tokens.ts:248`), flat separator inset 74 (`ListRow.tsx:15`) | nsh separator 64, no avatar slot. |
+| `ui.tsx` SettingsGroup (`ui.tsx:353`) | `list.rs:75` Section, `tokens.rs:579` | partial | cohub group `mb-6 px-4`, label caption `px-4 pb-2`, card `rounded-md` (20) continuous (`ui.tsx:355-357`). nsh SECTION_EDGE 20, card ROW radius 10 | Card inset: cohub 16 (`ui.tsx:355`, `px-4`). nsh components use 20 (`tokens.rs:579`). nsh's own `theme/theme.json:41` says 16 (generated from `theme_file.rs:59`). Radius 20 vs 10. |
+| `ui.tsx` SectionHeader (`ui.tsx:363`) | `list.rs:75`, `tokens.rs:581-605` | partial | cohub `pt-6 pl-4`, headline 17/22 semibold (`ui.tsx:366`). nsh SECTION_TOP 20, SECTION_HEADER_SIZE 20 | Code says 17 pt headline, reference pixels read about 13 pt. Code and pixels disagree. |
+| `components/FilterChip.tsx` | none | missing | hit target `min-h-12 min-w-12` (`FilterChip.tsx:25`), capsule | No chip. |
+| `ui/AppSwitch.tsx` | `switch.rs:32`, `tokens.rs` SWITCH_WIDTH 51, HEIGHT 31, THUMB 27 | partial | cohub track 63×28, thumb 37×24, spring 1000/80, `LENS_MIN_MS 300` (`AppSwitch.tsx:18`) | Cohub draws its own switch, nsh uses native size. The reference matches the cohub size. |
+| `ui/Loader.tsx` | `indicator.rs:33` ActivityIndicator | partial | sizes `sm` 20 spinner, `md` 72 mascot (`Loader.tsx:9`), pulse 0.35 to 1 | nsh 8 blades. Mascot loader missing. |
+| `ui/SwipeActions.tsx` | `swipe.rs:86` ACTION_WIDTH 80, `swipe.rs:95` SwipeRow | partial | ACTION_WIDTH 76, ACTIVE_X 16, FAIL_Y 8, release projection 0.1 s (`SwipeActions.tsx:14-20`) | Action width 80 vs 76. |
+| `components/SheetConfirmButton.tsx` | `sheet.rs:127` footer | unchecked | confirm button with `loading`, `disabled` | Not compared in detail. |
+| `components/AdaptiveSheet.ios.tsx` | `sheet.rs:127` Sheet, `sheet.rs:66-67`, `tokens.rs:608` | partial | compact breakpoint 720 (`AdaptiveSheet.ios.tsx:17`), header `min-h-14 px-2 pt-2` (`:65`), subtitle `px-4 pb-2` (`:70`), footer hairline `px-4 pt-3` (`:74`). nsh large top = safe top + 10, max width 640 | Reference radius about 37 pt (est.), nsh 14. Spring differs (see motion). |
+| `components/SystemDialogs.ios.tsx` | `alert.rs:97` AlertDialog, `alert.rs:224` width 270 | match | iOS branch uses native `ActionSheetIOS` and `Alert` (`SystemDialogs.ios.tsx:2`). The drawn 318 card (`SystemDialogs.tsx:124-125`) is the non-iOS branch | None for iOS. |
+| `components/AnchoredActionMenu.tsx` | `action_sheet.rs:91` ActionSheet, `action_sheet.rs` min row 57 | partial | menu width 250, rows 42, glyph slot 28, separator inset 24/10 (`AnchoredActionMenu.tsx`) | Row 42 vs 57. |
+| `components/ContextMenu.tsx` | `context_menu.rs:104` ContextMenu, `context_menu.rs` min-h 44, px 14, radius 9, gap 12 | partial | width min 180 max 280, preview 320, row 48 (`ContextMenu.tsx:11-14`), row `min-h-12 px-4 gap-3` (`:72`) | Row 48 vs 44, padding 16 vs 14. |
+| `components/NativeContextMenu.ios.tsx`, `NativeMenu.ios.tsx` | `context_menu.rs`, `action_sheet.rs` | unchecked | iOS branch of the menu layer | Not read in detail. |
+| `components/ComposerMenu.tsx`, `AttachmentMenu.tsx`, `ModelSelectorMenu.tsx`, `SlashCommandMenu.tsx`, `SpaceMentionMenu.tsx`, `ExecutionHarnessMenu.tsx` | `context_menu.rs` | partial | menu family built on the anchored and context menus | Same gaps as the rows above. |
+| `modules/cohub-glass-menu` (morph menu) | none | missing | menu radius 33 (`motion.ts:116`), panel radius 28, warmup 800 ms. Glass recipe (`GlassRecipe.kt`): MenuLight tint `.975`, alpha `.5` | No morphing glass menu. |
+| Settings screens: `SettingsScreen.tsx`, `SettingsHomeScreen.tsx`, `AboutScreen.tsx`, `AppearanceScreen.tsx`, `LanguageScreen.ios.tsx`, `StorageSettingsScreen.ios.tsx` | `list.rs`, `theme.rs` | partial | Appearance uses theme preview cards and accent swatches | Preview cards and swatches missing. Other screens are rows and sections only. |
+
+## 5. Chat timeline (`modules/cohub-chat-timeline` and `components/timeline`)
+
+| cohub-mobile (file) | nsh-cupertino (file) | Status | Key values and source | Gap |
+|---|---|---|---|---|
+| `modules/cohub-chat-timeline/ios` (`CHTTimelineView.mm`, `CHTRow.mm`) | none | missing | estimate 120 (`kDefaultEstimate`), screen-preserving anchor on insert, follow-tail pin, offscreen measure pass about 775 | No chat timeline. |
+| `modules/cohub-chat-timeline/android` | none | missing | `FLIGHT_WAIT_MS 1200`, `ITEM_VIEW_CACHE 8`, anchor default on | No chat timeline. |
+| `components/timeline/NativeChatTimeline.tsx` | none | missing | native timeline host | No chat timeline. |
+| `components/timeline/message-bubble-layout.ts` | none | missing | `BUBBLE_PADDING_X 14`, `REPLY_INSET_X 16`, `BUBBLE_MAX_WIDTH 560`, `CHAT_COLUMN_MAX_WIDTH 768` | No bubbles. |
+| `components/timeline/nodes.ts` | none | missing | `TOOL_DETAILS_MAX_HEIGHT 420`, `COMPACTION_SUMMARY_MAX_HEIGHT 320`, `BOT_EXCHANGE_PREVIEW 280` | No timeline nodes. |
+| `components/BotBubbles.tsx`, `BubbleText.tsx`, `MessageContent.tsx` | none | missing | bubble `paddingX 14`, `maxWidth` from layout | No bubbles. |
+| `components/SendBubbleOverlay.tsx` | none | missing | target wait 1200 ms (`SendBubbleOverlay.tsx:18`) | No send animation. |
+| `components/QueuedFollowupRow.tsx` | none | missing | caption text, steer button `min-h-11` | No queued-message row. |
+| `components/CodeBlock.tsx`, `CodeEditor.tsx` | none | missing | code block in timeline | No code block. |
+| `components/BotRow.tsx` | none | missing | avatar 52, pinned avatar 56, pinned width 72, unread dot `size-3.5` (`BotRow.tsx:18-22`, `:121`) | No avatar, no bot row. |
+
+## 6. Skipped
+
+- **Android-only branches** (no `.ios.tsx` counterpart, so skipped as iOS reference): `AdaptiveSheet.tsx`, `NativeMenu.tsx`, `NativeContextMenu.tsx`, `SettingsSelectRow.tsx`, `SystemDialogs.tsx` (except the 318 card value noted above), `TabStack.tsx`, `LanguageScreen.tsx`, `StorageSettingsScreen.tsx`.
+- **App-specific business screens and rows, not UI chrome:** `BillingHistoryScreen`, `LicensesScreen`, `ReleaseNotes`, `NewChannelScreen`, `ChannelBindingSheet`, `ScheduleForm`, `SessionLabelSheet`, `TurnNavigatorSheet`, `TurnProcess`, `DeviceFolderBrowser`, `BrowserSettings`, `SessionApprovals`, `RelatedSessionLinks`, `LibrarySections`, `LauncherShortcuts`, `AppHostWebView`, `RemoteDisplay`, `MediaViewers`, `GenerationOutput`, `SessionRow`, `SpaceRow`, `DeviceSpaceRow`, `SpaceFileRow`, `SearchResultRow`, `BotTitle`, `RenderErrorBoundary`, and the `use-*` hooks.
+- **`reference/cohub`** is a submodule of `talesofai/cohub`, a web/TypeScript repo with no iOS design values. Not used.
+
+## 7. Sources disagree
+
+- **Card inset (section edge).** cohub `ui.tsx:355` uses `px-4`, which is 16. nsh is inconsistent with itself: Rust components read `tokens.rs:579` SECTION_EDGE = 20 (`list.rs:85`, `:101`, `:113`), while the generator table `theme_file.rs:59` writes `section-edge` = 16px into `theme/theme.json:41`. Both `theme_file.rs` and `theme/theme.json` are nsh's own files, not cohub's. Fix: derive the theme value from `tokens.rs`.
+- **Section header.** cohub code is a 17 pt headline (`ui.tsx:366`). Reference pixels read about 13 pt. Code and pixels disagree.
+- **Accent.** cohub code `#bf3f00` (`tokens.ts:115`). Reference pixels `#c03f00`. Within tolerance.
+- **Glass.** The Kotlin module has no iOS calibration (section 8). nsh's frost and bar-blur comments disagree with their values (`tokens.rs:737`, `:758-760`).
+
+## 8. Glass (cohub-glass-menu → glass.rs)
+
+**Platform.** `modules/cohub-glass-menu/` has only `android/`. `index.ts:78` returns `null` on iOS. On iOS, cohub draws glass with the system Liquid Glass (`src/ui/Glass.tsx:12`), so this module is an Android re-creation of the effect, not an iOS port.
+
+**Calibration.** None is documented. `UPSTREAM.md` says the code is vendored from `rit3zh/expo-glass-custom-menu` (base `0021efd`, MIT), with local changes only in `GlassMenuView.kt`. No comment in the module mentions iOS, calibration or measurement. The one iOS-measured glass value in the docs is the solid stand-in colours and shadow (`docs/design-system.md:92-93`). Every Kotlin number below is upstream's, tuned for Android.
+
+**How the app calls it.** `src/ui/MorphMenuSurface.tsx:224-240` passes only the corner radius (33 for menus, 28 for panels; `motion.ts:116`), backdrop colour, dark flag and plate inset (8). No tuning value is passed, so every default below applies.
+
+**Units and springs.** Kotlin `dp` and nsh `pt` are both logical units, taken as 1:1. A Kotlin spring `GlassSpringSpec(ζ, T)` has ω = 2π/T (`motion/GlassSpring.kt:10-14`). The stiffness shown is k = ω² for unit mass. nsh springs are stiffness plus damping ratio; nsh-core is not in the sandbox, so its mass is unverified and the k values compare only if it is 1.
+
+Kotlin paths below are under `modules/cohub-glass-menu/android/src/main/java/io/github/markbang/cohubmobile/glassmenu/`. nsh paths are under `src/`.
+
+| Parameter | cohub-glass-menu (Kotlin) | nsh-cupertino (glass.rs / tokens.rs) | Status | Gap |
+|---|---|---|---|---|
+| Neck smoothing, sigma | `GlassMenuView.kt:613` NeckSigma 20 dp, set on morph at `motion/GlassMotion.kt:144, 254` (20 × density), released at `:229` (0.21 s × neck hold) | `glass.rs:119-126` smin, `:142-152` k = `spacing`; GlassGroup merge spring `tokens.rs:802-805` | partial | Kotlin blurs the distance field with sigma 20 dp. nsh takes a smooth union of two rounded rects with k = spacing. Different operators. |
+| Gaussian kernel | `field/GlassGaussianField.kt:57-63` step = max(4 dp, σ/4, extent/64); radius = ceil(4σ/step), at most 16 (`:30`, `:63`); taps under 0.002 dropped (`:72`); locked step `GlassMenuView.kt:244-247` | none | missing | No separable Gaussian in nsh. |
+| Field texture | `field/GlassFieldTexture.kt:99-100` ring of 4, 128 px preallocated; RGBA_F16 (`:39-40`); sizes rounded to 64 px (`:56`); bicubic lookup `render/GlassShaders.kt:71-100` | none; the SDF is evaluated per fragment (`glass.rs:102-116` sd_one, `:164-171` sd_gradient) | missing | Not needed for an analytic SDF. |
+| Rounded-rect distance | `field/RoundedField.kt:27-71`, fitted corner with expansion 1.5287 and adjustment 0.5287 (`:116-117`) | `glass.rs:87-116` corner_radius, sd_one | partial | Kotlin corner curve is fitted. nsh uses a standard rounded box. |
+| Displacement profile | `render/GlassShaders.kt:177-179` amount × (1 − √(u(2−u))), u = depth / band; applied along the field gradient (`:221`, `:225`) | `glass.rs:254-262` shift = normal × THICKNESS × (1 − t)^1.6, t = inside / BEVEL | partial | Circular profile vs power 1.6. |
+| Rest lens band | `render/GlassRenderer.kt:171` innerHeight = min(extent/4, 20 dp); `:175` lensHeight = max(state, innerHeight) | `tokens.rs:726-727` BEVEL 10 pt, same for every shape | partial | 11 dp on a 44 dp control vs 10 pt. |
+| Rest lens displacement | `GlassRenderer.kt:172`, `:177` innerAmount = min(extent/2, 60 dp); 22 dp on a 44 dp control | `tokens.rs:729` THICKNESS 8 pt; `tokens.rs:731` LENS 0.8 % | partial | **Largest gap in this section.** Kotlin's resting rim shift is 22 dp at 44 dp and 60 dp at 120 dp and up. nsh is 8 pt everywhere. |
+| Outer band | `GlassRenderer.kt:173-174` outerHeight = max(16, extent/5) dp, outerAmount = max(16, extent/4) dp; blended at 0.6 (`GlassShaders.kt:223-226`) | none | missing | nsh has one lens and no outer ring. |
+| Morph lens band | `motion/GlassMotion.kt:324` 75 dp × lens × min(min(w,h)/250 dp, 1); amount = max(band, innerAmount) (`GlassRenderer.kt:177`) | none | missing | Only during the morph. |
+| Refraction scale | `GlassMenuConfigRecord.kt:13` refraction 1; `GlassTriggerConfigRecord.kt:12` 1; multiplies both amounts (`GlassRenderer.kt:169`, `:177`) | none, fixed | missing | nsh has no knob, and the app never sets one. |
+| Rim and bevel width | `GlassShaders.kt:250-251` highlight strip 1 dp (density) inside 9 dp; `:127` key stroke 0.533 dp | `tokens.rs:726-727` BEVEL 10 pt; `glass.rs:254-257` | partial | Kotlin's highlight is a 1 dp hairline. nsh's bevel is 10 pt wide. |
+| Menu blur at rest | `GlassMenuConfigRecord.kt:8` blur 16 dp; applied at t³ (`GlassRenderer.kt:125-126`) | `tokens.rs:733-734` BLUR 5 pt; `glass.rs:525-528` clear × 0.55, thick × 1.35 | partial | Kotlin menu blur is 3.2 × nsh's control blur. |
+| Trigger and morph blur | `GlassTriggerConfigRecord.kt:8` blur 1 dp; `GlassRenderer.kt:242` MorphBlur 1.2 dp; base → config.blur (`:124-126`) | none | missing | No morph. |
+| Bar blur | none (no bar) | `tokens.rs:736-737` BAR_BLUR 24 pt; its doc says "frosts at 18" | partial | The doc and the value disagree, 18 vs 24. |
+| Blur filter | `render/GlassRenderer.kt:188-190` RenderEffect blur of the backdrop | `glass.rs:203-233` disc sampling, 33 / 17 / 1 taps (`:367-372`), Balanced 17 by default (`:440`) | partial | Gaussian RenderEffect vs disc taps. |
+| Rows blur, portal blur and zoom | `GlassMotion.kt:336` rows blur 18 dp × (1 − reveal); `:338` portal blur 6 dp; `:345-348` zoom 1.65 → 1.2 by height; `GlassRenderer.kt:244` PortalReach 28 dp | none | missing | Morph only. |
+| Saturation | `GlassRecipe.kt:13-16` 1.3 dark / 1.2 light, × config (`GlassMenuConfigRecord.kt:12`, default 1); luma weights `GlassShaders.kt:187` | `tokens.rs:755` SATURATION 2.1 light; `:757` 1.4 dark; `glass.rs:194-196`, `:291` | partial | nsh light 2.1 vs Kotlin 1.2. Dark 1.4 vs 1.3. |
+| Tone map: black, white, roll-off | `GlassRecipe.kt:13-16`: dark black .125, white 1.125, roll-off .4 (control) / .65 (menu); light black .4, white 1.03, roll-off 0; face math `GlassShaders.kt:185-195` | `glass.rs:295` light_lift 0.10 toward white (light only); `tokens.rs:767` BODY_SHADE .32 (dark); `glass.rs:829` | partial | Kotlin lifts light-mode blacks to 0.4. nsh lifts by 10 %. nsh has no roll-off. |
+| White fill | `GlassRecipe.kt:15-16` fillAlpha .2 light, 0 dark; `GlassRenderer.kt:151` | `glass.rs:295` (the same lift) | partial | One lift in nsh, two parameters in Kotlin. |
+| Tint | `GlassRecipe.kt:14` menu dark grey .042 at alpha .7; `:16` menu light white .975 at alpha .5; control none (`:13`, `:15`); mixed by t × 3 (`GlassRenderer.kt:152-167`) | `tokens.rs:773` TINTED_ALPHA .16; `glass.rs:288` alpha = tint.a + adapt × fight × .16, capped at .7; fill choice `glass.rs:592-599` | partial | Kotlin menu tint is 70 % (dark) and 50 % (light). nsh tinted fill is 16 % plus up to 16 % adaptive, capped at 70 %. |
+| Frost (ghost blur) | none | `tokens.rs:759-761` FROST [.6, .40, 2.5] light, [.9, −.45, .5] dark; `glass.rs:203-233`, `:699-707` | missing | nsh only. Its doc comments (`tokens.rs:758`, `:760`) give 0.73 / 0.40 / 2.0 and 0.85 / −0.45 / 0.5, which differ from the values. |
+| Chromatic separation | none | `tokens.rs:747-748` CHROMA 0 | match | Both off. |
+| Rim highlight | `GlassShaders.kt:250-251` 1 dp strip; `GlassRenderer.kt:253-254` rimAlpha dark 1.0 / light .55, × rim (1); `:182` | `tokens.rs:739` SPECULAR .7 with `glass.rs:319` 0.055 × along²; `tokens.rs:763-765` RIM [1, 1] / dark [1, 1.15]; `glass.rs:317` rim_light, core ~1 pt and tail ~7 pt | partial | Different shapes and strengths. |
+| Key stroke and halo | `GlassShaders.kt:133-137` ring: 5 dp sigma, 4 dp shift, coverage × .06; `:210-212` ring window 22 dp | `tokens.rs:744` EDGE .5 hairline; `glass.rs:333-340` | partial | Kotlin's halo sits 8 dp off the edge. nsh's edge is a hairline. |
+| Highlight threshold and direction | `GlassRenderer.kt:180` key threshold dark .2588, light −.2756; key spread 80° (`GlassShaders.kt:147`); key light from the top edge (angle 0, `:252`) | `tokens.rs:751-753` LIGHT 90°, LIGHT_DARK 270°; `glass.rs:788-797` | partial | Kotlin lights the top edge in both modes. nsh's comment says light mode is lit from below. Check the angle convention before matching. |
+| Inner shadow | none | `tokens.rs:745-746` INNER .22; `glass.rs:322` | missing | nsh only. |
+| Drop shadow | `GlassRenderer.kt:127-131` radius 4 + 20t dp, opacity .04 + .56t, offset 8 dp, alpha .3; `GlassShaders.kt:288-291` | `glass.rs:243-251` soft band 9 pt, strength from `shadow(margin, strength)` (`:559-561`); 0 in dark (`:836`) | partial | Kotlin shadow is up to 24 dp blurred and 8 dp down. nsh is a 9 pt band and absent in dark mode. |
+| Press spring | `GlassJelly.kt:112` JellySpring ζ .5, T .45 (k 195) for press, release and drag return; `:115-116` glow in and out | `tokens.rs:794-796` PRESS ζ .72, k 420 (T .31); `:798-800` RELEASE ζ .86, k 300 (T .36) | partial | Kotlin press is softer and more damped: k 195 vs 420, ζ .5 vs .72. Release ζ .5 vs .86. |
+| Press swell | `GlassJelly.kt:79` swell = 1 + press × 4 dp / height (`:110`): 9 % at 44 pt, 5 % at 80 pt | `tokens.rs:791-792` PRESS_SCALE .965 (3.5 %, fixed) | partial | Kotlin's amplitude scales with height. |
+| Press light and pool | `GlassMenuView.kt:616` light radius 80 dp; `:617` lift .018; `:618` pool .03; `:620` rim lift .12 (`:467-470`) | `tokens.rs:788-790` PRESS_BLOOM .8, PRESS_LIFT .22; `glass.rs:654-666` lens 2.4 | partial | nsh lift .22 vs Kotlin .018 plus rim .12. |
+| Drag follow | `GlassJelly.kt:113` DragFollow ζ .65, T .18 (k 1219); `:114` LightFollow ζ .8, T .16 (k 1542) | none | missing | nsh glass does not follow the finger. |
+| Drag lean | `GlassJelly.kt:111` DragLean .05; `:93-94` | none | missing | |
+| Menu jelly: stretch, squash, shift | `GlassJelly.kt:106-109` reach 260 dp, stretch 16, squash 21, shift 21; `:65-76` | none | missing | |
+| Eject and absorb springs | `GlassMotion.kt:363-365` collapse ζ 1, T .21 (k 895); eject ζ .75, T .32 (k 386); absorb from tuning, default ζ .8, T .35 (`GlassMorphTuning.kt:12-17`, `:24-25`) | `tokens.rs:531-533` SHEET ζ .8, k 400; `:527-529` PUSH ζ .86, k 300 | missing | nsh has no morph geometry. Only sheet and push springs. |
+| Shrink | `GlassMorphTuning.kt:11`, `:21-22` shrink scale .25, duration .21 s; eject duration .32 s (`:26`) | none | missing | |
+| Gate timings | `GlassMotion.kt:356-362`: correction .07 s, smoothing release .21 s × neck hold, eject optical .084 s, absorb optical .07 s, unkick .07 s and .105 s | none | missing | |
+| Lens on and off | `GlassMotion.kt:369-371` on ζ 1, T .14 (k 2014); eject-off T .42 (k 224); absorb-off T .28 (k 504) | none | missing | |
+| Kick | `GlassMotion.kt:165`, `:295-300` ±80 dp × height factor | none | missing | |
+| Content and rows reveal | `GlassMotion.kt:372-373` content absorb T .15 (k 1755); rows reveal T .3 (k 439) | none | missing | |
+| Growth and pinch | `GlassMotion.kt:352-353` MaxGrowth 1.2, ClosePinch .84 | none | missing | |
+| Settle tolerances | `GlassSpring.kt:16-17` value .2, velocity 3 (defaults); morph channels .001 and .01 (`GlassMotion.kt:43-52`) | not documented | unchecked | |
+
+**Biggest gaps in this section:** resting rim displacement (22 dp vs 8 pt at 44 pt), the Kotlin menu's tint and blur (16 dp, 70 % tint), the press lift (.22 nsh vs .018 Kotlin), and the whole morph (no nsh equivalent).

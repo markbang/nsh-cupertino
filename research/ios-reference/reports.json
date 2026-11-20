@@ -1,0 +1,1130 @@
+{
+  "reports": [
+    {
+      "id": "20261111-091743-4ac97ff",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-091743-4ac97ff/index.html",
+      "date": "2026-11-11T08:32:27Z",
+      "note": "PR #234 cohub-mobile-continuity: image viewer flight (motion-image), list row moves (motion-list), Android search activation (motion-search)",
+      "runs": {
+        "ios": {
+          "id": "42987843768",
+          "sha": "4ac97ff933546dcb6cac47e8d5c5b5437c44cace",
+          "branch": "router/cohub-mobile-continuity",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T08:32:27Z"
+        },
+        "android": {
+          "id": "42987840792",
+          "sha": "4ac97ff933546dcb6cac47e8d5c5b5437c44cace",
+          "branch": "router/cohub-mobile-continuity",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T08:32:25Z"
+        }
+      },
+      "themes": [
+        "light"
+      ],
+      "screens": [
+        "catalog-list",
+        "chats",
+        "spaces"
+      ],
+      "motions": [
+        "motion-attach",
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-filter",
+        "motion-image",
+        "motion-list",
+        "motion-menu",
+        "motion-model",
+        "motion-press",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-search",
+        "motion-select",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261111-060139-ab77605",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-060139-ab77605/index.html",
+      "date": "2026-11-11T04:48:07Z",
+      "note": "Bot pages: messages from other Bots (follow-up to #229)",
+      "runs": {
+        "ios": {
+          "id": "42961578297",
+          "sha": "ab7760553c71106aa68df4d9447a2fa996a96526",
+          "branch": "router/cohub-mobile-bot-tell-origin",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T04:48:07Z"
+        },
+        "android": {
+          "id": "42961575748",
+          "sha": "ab7760553c71106aa68df4d9447a2fa996a96526",
+          "branch": "router/cohub-mobile-bot-tell-origin",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T04:48:06Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "bot-list",
+        "chat-bot",
+        "chat-bot-js",
+        "chat-conversation"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261111-042347-39cd4c2",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-042347-39cd4c2/index.html",
+      "date": "2026-11-11T03:51:47Z",
+      "note": "PR #229: Bot pages show other Bots' messages under their name",
+      "runs": {
+        "ios": {
+          "id": "42955493768",
+          "sha": "39cd4c2f885cdf2dd9282328867118f9cb3b064a",
+          "branch": "router/cohub-mobile-bot-ui",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T03:51:47Z"
+        },
+        "android": {
+          "id": "42955491705",
+          "sha": "39cd4c2f885cdf2dd9282328867118f9cb3b064a",
+          "branch": "router/cohub-mobile-bot-ui",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T03:51:46Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "bot-list",
+        "chat-bot",
+        "chat-bot-js"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261111-034239-a4cba85",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261111-034239-a4cba85/index.html",
+      "date": "2026-11-11T02:52:05Z",
+      "note": "PR: Bot pages and the Bots view as a messaging app (router/cohub-mobile-bot-ui)",
+      "runs": {
+        "ios": {
+          "id": "42948904074",
+          "sha": "a4cba8588f6dd2dce66ef3c561a1bdbb4fef89f3",
+          "branch": "router/cohub-mobile-bot-ui",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T02:52:05Z"
+        },
+        "android": {
+          "id": "42948901351",
+          "sha": "a4cba8588f6dd2dce66ef3c561a1bdbb4fef89f3",
+          "branch": "router/cohub-mobile-bot-ui",
+          "conclusion": "success",
+          "createdAt": "2026-11-11T02:52:03Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "bot-list",
+        "chat-bot",
+        "chat-bot-js",
+        "chat-conversation"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261109-011040-6811391",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261109-011040-6811391/index.html",
+      "date": "2026-11-09T00:05:34Z",
+      "note": "PR #214 Android 原生液态玻璃菜单，菜单下垫彩条看透明度 / Android native Liquid Glass menus, colored bars under the menu to show translucency (feat/android-glass-menu)",
+      "runs": {
+        "ios": {
+          "id": "42538272716",
+          "sha": "6811391cf65b3e2879b7cf033fa41b4bb465d935",
+          "branch": "feat/android-glass-menu",
+          "conclusion": "success",
+          "createdAt": "2026-11-09T00:05:15Z"
+        },
+        "android": {
+          "id": "42538303314",
+          "sha": "6811391cf65b3e2879b7cf033fa41b4bb465d935",
+          "branch": "feat/android-glass-menu",
+          "conclusion": "success",
+          "createdAt": "2026-11-09T00:05:34Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "catalog-menu",
+        "chats-filter",
+        "composer-attach",
+        "settings-select"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261108-122856-7b781f1",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-122856-7b781f1/index.html",
+      "date": "2026-11-08T10:39:04Z",
+      "note": "PR #207 refactor: make implicit UI state machines explicit",
+      "runs": {
+        "ios": {
+          "id": "42472317687",
+          "sha": "7b781f12a3de302901c8b64a60cc5f37aa5a6ebf",
+          "branch": "refactor/explicit-state-machines",
+          "conclusion": "success",
+          "createdAt": "2026-11-08T10:39:03Z"
+        },
+        "android": {
+          "id": "42472319170",
+          "sha": "7b781f12a3de302901c8b64a60cc5f37aa5a6ebf",
+          "branch": "refactor/explicit-state-machines",
+          "conclusion": "success",
+          "createdAt": "2026-11-08T10:39:04Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-real-model",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-filter",
+        "chats-scrolled",
+        "chats-snap",
+        "composer-attach",
+        "composer-model",
+        "settings",
+        "settings-scrolled",
+        "settings-select",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-attach",
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-filter",
+        "motion-menu",
+        "motion-model",
+        "motion-press",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-select",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261108-064324-a0de849",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-064324-a0de849/index.html",
+      "date": "2026-11-08T05:55:20Z",
+      "note": "菜单全部玻璃化（模型选择、运行环境、斜杠/提及）、真实 Chat 的输入框与菜单、Chats 搜索默认显示 / Every Android menu as glass, the real Chat's composer and menus, Chats search shown on entry (router/cohub-mobile-ui-parity-2)",
+      "runs": {
+        "ios": {
+          "id": "42452632937",
+          "sha": "a0de849388a2b0e3041752e3e62146b4cfa6bb9a",
+          "branch": "router/cohub-mobile-ui-parity-2",
+          "conclusion": "success",
+          "createdAt": "2026-11-08T05:55:20Z"
+        },
+        "android": {
+          "id": "42452631362",
+          "sha": "a0de849388a2b0e3041752e3e62146b4cfa6bb9a",
+          "branch": "router/cohub-mobile-ui-parity-2",
+          "conclusion": "success",
+          "createdAt": "2026-11-08T05:55:18Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-real-model",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-filter",
+        "chats-scrolled",
+        "chats-snap",
+        "composer-attach",
+        "composer-model",
+        "settings",
+        "settings-scrolled",
+        "settings-select",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261108-045507-84a0886",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261108-045507-84a0886/index.html",
+      "date": "2026-11-08T04:12:43Z",
+      "note": "Android 对齐 iOS 27：玻璃模糊、确认框、浮层文字、图标、滚动顶栏、Chats 搜索、Sheet、截图流程 / Android matched to iOS 27: glass blur, alert, overlay text, icons, scrolled bar, Chats search, sheets, capture flow (router/cohub-mobile-ui-parity)",
+      "runs": {
+        "ios": {
+          "id": "42445877157",
+          "sha": "84a08865f39c8b010eae55d23ed06f365d431510",
+          "branch": "router/cohub-mobile-ui-parity",
+          "conclusion": "success",
+          "createdAt": "2026-11-08T04:12:43Z"
+        },
+        "android": {
+          "id": "42445875815",
+          "sha": "84a08865f39c8b010eae55d23ed06f365d431510",
+          "branch": "router/cohub-mobile-ui-parity",
+          "conclusion": "success",
+          "createdAt": "2026-11-08T04:12:42Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-filter",
+        "chats-scrolled",
+        "chats-snap",
+        "composer-attach",
+        "composer-model",
+        "settings",
+        "settings-scrolled",
+        "settings-select",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261107-142300-cd53627",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261107-142300-cd53627/index.html",
+      "date": "2026-11-07T13:28:04Z",
+      "note": "按 iOS 27 修 Chats/Spaces 筛选、Me 选项菜单、附件菜单 / Chats and Spaces filters, Me picker and attachment menu drawn as iOS 27 does (fix/ios27-menus)",
+      "runs": {
+        "ios": {
+          "id": "42377084607",
+          "sha": "cd5362759b203548abf2bf45f79c698e07873230",
+          "branch": "fix/ios27-menus",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T13:28:02Z"
+        },
+        "android": {
+          "id": "42377086409",
+          "sha": "cd5362759b203548abf2bf45f79c698e07873230",
+          "branch": "fix/ios27-menus",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T13:28:04Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-filter",
+        "chats-scrolled",
+        "chats-snap",
+        "composer-attach",
+        "composer-model",
+        "settings",
+        "settings-scrolled",
+        "settings-select",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261107-122704-a5d9840",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261107-122704-a5d9840/index.html",
+      "date": "2026-11-07T10:59:12Z",
+      "note": "新增场景：Chats 筛选、Me 选项、输入框附件与模型选择、玻璃按钮按压 / New scenes: Chats filter, Me picker, composer attachment and model menus, glass press (feat/ui-snapshots-scenes)",
+      "runs": {
+        "ios": {
+          "id": "42366218521",
+          "sha": "a5d984082098a83450405dd0e32c63a52a462f15",
+          "branch": "feat/ui-snapshots-scenes",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T10:59:10Z"
+        },
+        "android": {
+          "id": "42366220164",
+          "sha": "a5d984082098a83450405dd0e32c63a52a462f15",
+          "branch": "feat/ui-snapshots-scenes",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T10:59:12Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-filter",
+        "chats-scrolled",
+        "chats-snap",
+        "composer-attach",
+        "composer-model",
+        "settings",
+        "settings-scrolled",
+        "settings-select",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-attach",
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-filter",
+        "motion-menu",
+        "motion-model",
+        "motion-press",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-select",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261107-072455-fc83a99",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261107-072455-fc83a99/index.html",
+      "date": "2026-11-07T06:55:32Z",
+      "note": "iOS 27 参照：菜单收起按 iOS 27 实录、Sheet/确认框尺寸按实测 / iOS 27 reference: menu close from the iOS 27 recording, sheet and alert sizes as measured (feat/ios27-parity)",
+      "runs": {
+        "ios": {
+          "id": "42343668360",
+          "sha": "7fa3da83e8f54164149ee198050c5c40e4aacbfb",
+          "branch": "feat/ios27-parity",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T05:39:41Z"
+        },
+        "android": {
+          "id": "42349086448",
+          "sha": "fc83a995dbcb3123347c27e56cec3e52d64e910b",
+          "branch": "feat/ios27-parity",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T06:55:32Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261107-064617-7fa3da8",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261107-064617-7fa3da8/index.html",
+      "date": "2026-11-07T05:39:42Z",
+      "note": "iOS 27 参照：菜单形变、玻璃按压、确认框、Sheet、开关、Tab 胶囊 / iOS 27 reference: menu morph, glass press, alert, sheets, switch, tab lens (feat/ios27-parity)",
+      "runs": {
+        "ios": {
+          "id": "42343668360",
+          "sha": "7fa3da83e8f54164149ee198050c5c40e4aacbfb",
+          "branch": "feat/ios27-parity",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T05:39:41Z"
+        },
+        "android": {
+          "id": "42343669829",
+          "sha": "7fa3da83e8f54164149ee198050c5c40e4aacbfb",
+          "branch": "feat/ios27-parity",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T05:39:42Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261107-050910-b064549",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261107-050910-b064549/index.html",
+      "date": "2026-11-07T04:37:16Z",
+      "note": "按 UI 差异标注修复，含原生 timeline 的 terminal 图标 / Fixes from the UI review, including the native timeline's terminal glyph (fix/android-ios-review)",
+      "runs": {
+        "ios": {
+          "id": "42331997712",
+          "sha": "8893c890eb07aeffd2ce94f2e772d92f72d5081f",
+          "branch": "fix/android-ios-review",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T03:01:07Z"
+        },
+        "android": {
+          "id": "42339250468",
+          "sha": "b064549f03665c49ebd9a819106382ca3455f24b",
+          "branch": "fix/android-ios-review",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T04:37:16Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261107-042855-8893c89",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261107-042855-8893c89/index.html",
+      "date": "2026-11-07T03:01:07Z",
+      "note": "按 UI 差异标注修复：菜单、Sheet、确认框、输入框、Tab 胶囊 / Fixes from the UI review: menus, sheets, confirmation, composer, tab lens (fix/android-ios-review)",
+      "runs": {
+        "ios": {
+          "id": "42331997712",
+          "sha": "8893c890eb07aeffd2ce94f2e772d92f72d5081f",
+          "branch": "fix/android-ios-review",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T03:01:07Z"
+        },
+        "android": {
+          "id": "42331995260",
+          "sha": "8893c890eb07aeffd2ce94f2e772d92f72d5081f",
+          "branch": "fix/android-ios-review",
+          "conclusion": "success",
+          "createdAt": "2026-11-07T03:01:06Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261106-132759-1b16291",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261106-132759-1b16291/index.html",
+      "date": "2026-11-06T12:56:52Z",
+      "note": "Android 对齐 iOS（含 Me tab 图标）/ Android matches iOS bar buttons, menus, Large Title, tab bar, Me tab icon (feat/android-ios-alignment)",
+      "runs": {
+        "ios": {
+          "id": "42201383380",
+          "sha": "b49ef5be0fff80f3f2382b590dde6a267c9afb1f",
+          "branch": "feat/android-ios-alignment",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T10:16:20Z"
+        },
+        "android": {
+          "id": "42221553180",
+          "sha": "1b16291a044f7093830a04f853d44b77cf57bd34",
+          "branch": "feat/android-ios-alignment",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T12:56:52Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261106-120507-b49ef5b",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261106-120507-b49ef5b/index.html",
+      "date": "2026-11-06T10:16:22Z",
+      "note": "Android 对齐 iOS：返回按钮、菜单、大标题切换、tab 栏收缩 / Android matches iOS bar buttons, menus, Large Title swap, tab bar minimize (feat/android-ios-alignment)",
+      "runs": {
+        "ios": {
+          "id": "42201383380",
+          "sha": "b49ef5be0fff80f3f2382b590dde6a267c9afb1f",
+          "branch": "feat/android-ios-alignment",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T10:16:20Z"
+        },
+        "android": {
+          "id": "42201386254",
+          "sha": "b49ef5be0fff80f3f2382b590dde6a267c9afb1f",
+          "branch": "feat/android-ios-alignment",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T10:16:22Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "v2.3.10",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/cohub-mobile-ui-v2.3.10/index.html",
+      "date": "2026-11-06T07:55:06Z",
+      "note": "v2.3.10 发版对比（Android 跑在 main，仅多一个 CI 提交） / v2.3.10 release; Android ran main, one CI-only commit ahead",
+      "runs": {
+        "ios": {
+          "id": "42177399631",
+          "sha": "7fe8f11ffbaac5e0a0e10b7fedd8ef7a9e06c6f4",
+          "branch": "v2.3.10",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T06:54:22Z"
+        },
+        "android": {
+          "id": "42180896792",
+          "sha": "97dd8a2b474d0434ad8f73dbdd7167d014e61f95",
+          "branch": "main",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T07:26:34Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-native",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "chats-snap",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "20261106-074646-8aee394",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261106-074646-8aee394/index.html",
+      "date": "2026-11-06T03:56:03Z",
+      "note": "Android soft edge (PR #189)",
+      "runs": {
+        "ios": {
+          "id": "42159474403",
+          "sha": "8aee394bf9225fa2e2cd265b09376c2729399a34",
+          "branch": "feat/android-soft-edge",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T03:56:03Z"
+        },
+        "android": {
+          "id": "42158632612",
+          "sha": "8aee394bf9225fa2e2cd265b09376c2729399a34",
+          "branch": "feat/android-soft-edge",
+          "conclusion": "success",
+          "createdAt": "2026-11-06T03:47:20Z"
+        }
+      },
+      "themes": [
+        "light"
+      ],
+      "screens": [
+        "chats",
+        "chats-scrolled"
+      ],
+      "motions": []
+    },
+    {
+      "id": "20261106-074205-943a682",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/ui-compare/20261106-074205-943a682/index.html",
+      "date": "2026-11-05T08:26:59Z",
+      "note": "main 全量基线 / Full baseline on main",
+      "runs": {
+        "ios": {
+          "id": "41994537586",
+          "sha": "943a682403089b4278b33918a9b9f4fe3f415820",
+          "branch": "main",
+          "conclusion": "success",
+          "createdAt": "2026-11-05T08:26:57Z"
+        },
+        "android": {
+          "id": "41994541026",
+          "sha": "943a682403089b4278b33918a9b9f4fe3f415820",
+          "branch": "main",
+          "conclusion": "success",
+          "createdAt": "2026-11-05T08:26:59Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "activity",
+        "activity-scrolled",
+        "chat-real",
+        "chats",
+        "chats-scrolled",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    },
+    {
+      "id": "legacy-cohub-mobile-ui-snapshots",
+      "url": "https://public.cohub.live/p/c649d081-fa43-411e-b2d0-bf1d746f3ae6/cohub-mobile-ui-snapshots/index.html",
+      "date": "2026-11-05T09:03:30Z",
+      "note": "首版对比页（多次运行合并） / First edition, merged from several runs",
+      "runs": {
+        "ios": {
+          "id": "41994537586",
+          "sha": "943a682403089b4278b33918a9b9f4fe3f415820",
+          "branch": "main",
+          "conclusion": "success",
+          "createdAt": "2026-11-05T08:26:57Z"
+        },
+        "android": {
+          "id": "41994541026",
+          "sha": "943a682403089b4278b33918a9b9f4fe3f415820",
+          "branch": "main",
+          "conclusion": "success",
+          "createdAt": "2026-11-05T08:26:59Z"
+        }
+      },
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "screens": [
+        "about",
+        "activity",
+        "activity-scrolled",
+        "appearance",
+        "catalog-confirm",
+        "catalog-controls",
+        "catalog-menu",
+        "catalog-page",
+        "catalog-rows",
+        "catalog-sheet",
+        "catalog-states",
+        "catalog-type",
+        "chat-conversation",
+        "chat-long",
+        "chat-real",
+        "chat-states",
+        "chat-tools",
+        "chats",
+        "chats-scrolled",
+        "settings",
+        "settings-scrolled",
+        "spaces",
+        "spaces-scrolled"
+      ],
+      "motions": [
+        "motion-chat",
+        "motion-confirm",
+        "motion-controls",
+        "motion-menu",
+        "motion-push",
+        "motion-scroll-activity",
+        "motion-scroll-chats",
+        "motion-scroll-settings",
+        "motion-scroll-spaces",
+        "motion-sheet",
+        "motion-space",
+        "motion-tabs"
+      ]
+    }
+  ]
+}
