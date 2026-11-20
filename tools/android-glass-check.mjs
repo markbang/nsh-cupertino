@@ -263,51 +263,51 @@ for (const scheme of SCHEMES) {
   }
 }
 
-// The floating bars: the expanded bar spans the screen (inset by 20 pt), the
+// The floating bars: the expanded bar spans the screen with its own inset, the
 // minimized one is a pill around the chosen tab; content shows in the gaps.
 function bottomBand(image) {
   return { y0: Math.round(image.height * 0.865), y1: Math.round(image.height * 0.955) };
 }
 
 /**
- * The bar's top edge: the row in the bottom of the screen with the most
- * horizontal change (the capsule's upper rim), and how far that edge reaches.
- * Expanded it spans the screen's width less the 20 pt insets; minimised it is a
- * 50 pt pill, so the same measurement needs no colour assumptions.
+ * The bar's top rim: the row in the bottom of the screen whose longest unbroken
+ * run of vertical luminance step is longest, and where that run lies. The rim
+ * is one straight edge across the bar; a card's edges and its text are short
+ * steps or split by the text, so the rim wins without assuming an inset. The
+ * run's ends curve with the capsule, so its width is a lower bound on the bar.
  */
 function barEdge(image) {
   let best = { row: 0, count: 0, first: 0, last: 0 };
   const from = Math.round(image.height * 0.82);
   for (let y = from; y < image.height - 4; y += 2) {
-    let count = 0;
-    let first = -1;
-    let last = -1;
-    for (let x = 3; x < image.width; x += 2) {
-      if (Math.abs(image.luminance(x, y) - image.luminance(x - 2, y)) > 0.02) {
-        count += 1;
-        if (first < 0) first = x;
-        last = x;
+    let run = 0;
+    let start = 0;
+    for (let x = 0; x < image.width; x += 2) {
+      if (Math.abs(image.luminance(x, y - 3) - image.luminance(x, y + 3)) > 0.02) {
+        if (run === 0) start = x;
+        run += 1;
+        if (run > best.count) best = { row: y, count: run, first: start, last: x };
+      } else {
+        run = 0;
       }
     }
-    if (count > best.count) best = { row: y, count, first, last };
   }
   const scale = image.width / 411;
-  return { ...best, width: (best.last - best.first) / scale, inset: best.first / scale };
+  return { ...best, width: (best.last - best.first) / scale, inset: best.first / scale, centre: (best.first + best.last) / 2 / image.width };
 }
 
 for (const scheme of SCHEMES) {
-  // The bar is expanded mid-scroll (a downward scroll minimises it by design),
+  // The bar is expanded after a drag back up (a downward scroll minimises it by
+  // design; `mid-` is taken while the bar is still minimising, so it is not used),
   // and minimised after scrolling on: the two states the behaviour has.
-  const expanded = must(`mid-${scheme}`);
+  const expanded = must(`scrolled-${scheme}`);
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized) continue;
   const wide = barEdge(expanded);
-  if (wide.width < 340) {
-    fail(`scrolled-${scheme}.png's tab bar is ${wide.width.toFixed(0)} pt wide: it is not the floating capsule (about 370 pt expected)`);
-  } else if (wide.inset < 12 || wide.inset > 34) {
-    fail(`scrolled-${scheme}.png's tab bar starts ${wide.inset.toFixed(0)} pt from the screen edge: it is not inset by 20 pt`);
+  if (wide.width < 300 || Math.abs(wide.centre - 0.5) > 0.03) {
+    fail(`scrolled-${scheme}.png's tab bar rim spans ${wide.width.toFixed(0)} pt, centred at ${(wide.centre * 100).toFixed(0)} %: it is not the floating capsule (about 350 pt, centred)`);
   } else {
-    report(`${scheme}: the tab bar spans ${wide.width.toFixed(0)} pt, ${wide.inset.toFixed(0)} pt in from the edge`);
+    report(`${scheme}: the tab bar's rim spans ${wide.width.toFixed(0)} pt, centred on the screen`);
   }
   // Minimised, the bar is a 50 pt pill at the chosen tab: three quarters of the
   // way across the row it is content again, where the expanded bar's glass was.
