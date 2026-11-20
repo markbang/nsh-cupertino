@@ -27,6 +27,7 @@ import {
   DatePicker,
   Glass,
   GlassButton,
+  Icon,
   GlassTabBar,
   List,
   ListTile,
@@ -50,6 +51,7 @@ import { Count, DemoTile } from "cupertino-demo/native";
 const PAGES: { id: string; title: string; blurb: string; icon: string; tint: string }[] = [
   { id: "navigation", title: "Navigation bar", blurb: "Large title, back, trailing action", icon: "arrow.up.right", tint: "system-blue" },
   { id: "lists", title: "Lists", blurb: "Sections, rows, accessories", icon: "list.bullet", tint: "system-orange" },
+  { id: "controls", title: "UI Catalog", blurb: "Buttons, segments, chips, switches, search", icon: "slider.horizontal.3", tint: "system-blue" },
   { id: "buttons", title: "Buttons", blurb: "Filled, tinted, plain, destructive", icon: "sparkles", tint: "system-purple" },
   { id: "textfields", title: "Text fields", blurb: "Cupertino box, clear, secure", icon: "square.grid.2x2", tint: "system-teal" },
   { id: "search", title: "Search field", blurb: "Magnifier, clear, cancel", icon: "magnifyingglass", tint: "system-indigo" },
@@ -77,6 +79,7 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
 const page = signal("gallery");
 const history = signal<string[]>([]);
 const contrast = signal("normal");
+const preset = signal<string | null>(null);
 const appearance = signal("system");
 const overlaySeed = signal("");
 const presses = new Count();
@@ -236,6 +239,63 @@ function ListsPage() {
         </Section>
       </List>
     </Page>
+  );
+}
+
+// The catalog's controls in the order of Cohub Mobile's `catalog-controls`
+// snapshot, under the cohub preset (`cupertino.preset`) it is compared with.
+function ControlsPage() {
+  const notify = signal(true);
+  const scope = signal("all");
+  const sort = signal("recent");
+  const query = signal("");
+  return (
+    <View class="min-h-0 flex-1 bg-background">
+      {/* The status bar's 59 pt, then the bar's 44 pt, as the reference frame has them. */}
+      <View style={{ height: 103, justifyContent: "flex-end", alignItems: "center" }}>
+        <Text class="text-label" style={{ fontSize: 17, fontWeight: "600", height: 44, lineHeight: 44 }}>UI Catalog</Text>
+      </View>
+      <View style={{ paddingHorizontal: 16, gap: 12 }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: "#6c6c70" }}>Buttons</Text>
+        <Button title="Primary" icon="plus" />
+        <Button title="Secondary" variant="tinted" />
+        <Button title="Ghost" variant="plain" />
+        <Button title="Danger" variant="destructive" />
+        <Button title="Loading" disabled />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Icon name="arrow.up.right" size={22} />
+          <Icon name="doc" size={22} tint="system-blue" />
+          <Icon name="line.3.horizontal.decrease" size={22} tint="system-blue" />
+          <Icon name="plus" size={22} tint="system-blue" />
+          <Icon name="trash" size={22} tint="system-red" />
+          <Icon name="archivebox" size={22} tint="system-gray" />
+        </View>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: "#6c6c70" }}>Selection</Text>
+        <SegmentedControl
+          items={[
+            { value: "all", title: "All" },
+            { value: "mine", title: "Mine" },
+            { value: "shared", title: "Shared" },
+          ]}
+          value={scope()}
+          onChange={(event: { value: string }) => scope.set(event.value)}
+        />
+        <SegmentedControl
+          items={[
+            { value: "recent", title: "All" },
+            { value: "mine", title: "Mine" },
+          ]}
+          value={sort()}
+          onChange={(event: { value: string }) => sort.set(event.value)}
+        />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Switch checked={notify()} label="On" onChange={(event: { value: boolean }) => notify.set(event.value)} />
+          <Switch checked={false} label="Off" />
+          <Switch checked disabled label="Disabled" />
+        </View>
+        <SearchField value={query()} placeholder="Search" label="Search" onChange={(event: { value: string }) => query.set(event.value)} />
+      </View>
+    </View>
   );
 }
 
@@ -1376,6 +1436,7 @@ function CurrentPage() {
   if (id === "gallery") return <Gallery />;
   if (id === "navigation") return <NavigationPage />;
   if (id === "lists") return <ListsPage />;
+  if (id === "controls") return <ControlsPage />;
   if (id === "buttons") return <ButtonsPage />;
   if (id === "textfields") return <TextFieldsPage />;
   if (id === "search") return <SearchPage />;
@@ -1408,12 +1469,14 @@ function App() {
   void (async () => {
     const seedPage = await Storage.getItem("cupertino.page");
     const seedContrast = await Storage.getItem("cupertino.contrast");
+    const seedPreset = await Storage.getItem("cupertino.preset");
     const seedAppearance = await Storage.getItem("cupertino.appearance");
     const seedOverlay = await Storage.getItem("cupertino.overlay");
     const seedGlass = await Storage.getItem("cupertino.glass");
     if (seedGlass) glassMode.set(seedGlass);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     if (seedContrast === "high" || seedContrast === "normal") contrast.set(seedContrast);
+    if (seedPreset === "cohub") preset.set("cohub");
     if (seedAppearance === "light" || seedAppearance === "dark" || seedAppearance === "system") {
       appearance.set(seedAppearance);
       setColorScheme(seedAppearance);
@@ -1422,7 +1485,7 @@ function App() {
   })();
 
   return (
-    <Theme contrast={contrast()}>
+    <Theme contrast={contrast()} preset={preset()}>
       <Each of={[page()]} key={(id) => id}>
         {(_id) => <CurrentPage />}
       </Each>

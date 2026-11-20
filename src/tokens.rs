@@ -121,6 +121,40 @@ roles! {
     "activity-tick" = 0x3c3c_44ff, 0xebeb_f5ff, 0x0000_00ff, 0xffff_ffff;
 }
 
+/// The cohub theme preset: Cohub Mobile's palette over the system roles it
+/// names (`src/design/tokens.ts` in cohub-mobile: `lightPalette` and
+/// `darkPalette`). The increased-contrast values are the standard ones.
+pub const COHUB_PRESET: &[Role] = &[
+    preset_role("system-blue", 0xbf3f_00ff, 0xff8a_3dff),
+    preset_role("system-red", 0xbf2b_3cff, 0xf278_7fff),
+    preset_role("system-grouped-background", 0xf6f3_eeff, 0x1212_14ff),
+    preset_role(
+        "secondary-system-grouped-background",
+        0xffff_ffff,
+        0x1c1c_1eff,
+    ),
+    preset_role("label", 0x1613_0fff, 0xf2f2_f7ff),
+    preset_role("secondary-label", 0x4a45_3eff, 0xd1d1_d6ff),
+];
+
+const fn preset_role(name: &'static str, light: u32, dark: u32) -> Role {
+    Role {
+        name,
+        light,
+        dark,
+        light_hc: light,
+        dark_hc: dark,
+    }
+}
+
+/// The preset named `name`: `cohub` is [`COHUB_PRESET`]; none for any other.
+pub fn preset(name: &str) -> Option<&'static [Role]> {
+    match name {
+        "cohub" => Some(COHUB_PRESET),
+        _ => None,
+    }
+}
+
 /// Role names [`Role::name`] of the shadcn tokens `nsh/base` and NSH's classes
 /// use, so stock components and `bg-background` follow the same values.
 pub const ALIASES: &[(&str, &str)] = &[
