@@ -494,6 +494,13 @@ export const API: Record<string, ApiGroup[]> = {
           "note": "`secondary-label`, `system-blue`, `system-red`, ..."
         },
         {
+          "tsx": "`stroke`",
+          "rust": "`.stroke(..)`",
+          "type": "number",
+          "default": "2.4",
+          "note": "Line weight at 24 pt: 2.4 is SF Symbols' regular; 1.5 draws a control's thin glyph"
+        },
+        {
           "tsx": "`label`",
           "rust": "`.label(..)`",
           "type": "string",
@@ -562,6 +569,10 @@ export const API: Record<string, ApiGroup[]> = {
         {
           "name": "`doc`, `photo`",
           "note": "Files and images"
+        },
+        {
+          "name": "`palette`, `globe`, `arrow.up.right.square`, `chevron.up.down`",
+          "note": "Settings rows: appearance, website, external link, a value's picker"
         }
       ]
     }
@@ -605,7 +616,7 @@ export const API: Record<string, ApiGroup[]> = {
           "rust": "`.header(..)`",
           "type": "`string`",
           "default": "none",
-          "note": "20 pt bold, 16 pt above, 6 pt below"
+          "note": "13 pt bold in the secondary label, 32 pt from the edge, 16 pt above, 10 pt below"
         },
         {
           "tsx": "`footer`",
@@ -647,14 +658,14 @@ export const API: Record<string, ApiGroup[]> = {
           "rust": "`.leading(..)`",
           "type": "icon name",
           "default": "none",
-          "note": "A 28 pt box with a 22 pt icon"
+          "note": "A 30 pt tile with an 18 pt line icon"
         },
         {
           "tsx": "`leadingColor`",
           "rust": "`.leading_color(..)`",
           "type": "token name",
-          "default": "`system-blue`",
-          "note": "The icon's color"
+          "default": "`secondary-label`",
+          "note": "The icon's color (`system-blue` for an `accent` row)"
         },
         {
           "tsx": "`accessory`",
@@ -675,7 +686,14 @@ export const API: Record<string, ApiGroup[]> = {
           "rust": "`.destructive(..)`",
           "type": "`boolean`",
           "default": "`false`",
-          "note": "Red title"
+          "note": "Red title; with a leading icon, a red tile with a white icon"
+        },
+        {
+          "tsx": "`accent`",
+          "rust": "`.accent(..)`",
+          "type": "`boolean`",
+          "default": "`false`",
+          "note": "Blue title and icon: an action such as \"Add item\""
         },
         {
           "tsx": "`separator`",

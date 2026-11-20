@@ -1,7 +1,7 @@
 """Compares a rendered catalog page with its iOS reference shot, from pixels.
 
     python3 tools/compare-ios.py controls light out/controls-light.png
-    python3 tools/compare-ios.py controls dark out/controls-dark.png --table out/controls-dark.md
+    python3 tools/compare-ios.py rows dark out/rows-dark.png --table out/rows-dark.md
 
 Three columns, 720 px wide each: the iOS reference, ours, and ours diffed
 against the reference, with each measured element boxed and labelled. The
@@ -22,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = ROOT / "research" / "ios-reference" / "shots"
-SHOT = {"controls": "catalog-controls"}
+SHOT = {"controls": "catalog-controls", "rows": "catalog-rows"}
 PT = 720 / 402
 TOL = 20
 BG_TOL = 14
@@ -59,7 +59,17 @@ ELEMENTS = {
             ("switch off", (265, 1300), "fill", None),
             ("search field", (500, 1395), "fill", None),
         ],
-    }
+    },
+    "rows": {
+        "light": [
+            ("switch on", (578, 413), "fill", None),
+            ("tile destructive", (62, 700), "fill", None),
+        ],
+        "dark": [
+            ("switch on", (578, 413), "fill", None),
+            ("tile destructive", (62, 700), "fill", None),
+        ],
+    },
 }
 
 
@@ -95,12 +105,16 @@ def column_runs(im, x, bg):
     return runs
 
 
+# Where an element sits on a card rather than the page: the background is read
+# there, so the card's separators (a hairline, not ink) do not cut the element.
+BG_PROBE = {("rows", "switch on"): (500, 413), ("rows", "tile destructive"): (40, 700)}
+
 # Where an element's colour is sampled, as (x, y) fractions of its box: clear of the label and the thumb.
 SAMPLE = {"switch on": (0.25, 0.5), "switch off": (0.8, 0.5), "status pill neutral": (0.96, 0.5), "status pill running": (0.96, 0.5)}
 SAMPLE_DEFAULT = (0.5, 0.2)
 
 
-def measure(im, probe, ref_box=None, name=None):
+def measure(im, probe, ref_box=None, name=None, bg_at=None):
     """The element through `probe`: its box in px, its colour and its radius.
 
     In the reference the run through the probe is the element. In ours, the run
@@ -108,7 +122,7 @@ def measure(im, probe, ref_box=None, name=None):
     that moved an element still gets measured where it is.
     """
     x, y = probe
-    bg = rgb(im, 2, y)
+    bg = rgb(im, *bg_at) if bg_at else rgb(im, 2, y)
     runs = column_runs(im, x, bg)
     if not runs:
         return None
@@ -182,8 +196,9 @@ def compare(page, scheme, ours_path):
         ours = ours.resize(ref.size, Image.LANCZOS)
     rows = []
     for name, probe, _, ink_box in ELEMENTS[page][scheme]:
-        reference = measure(ref, probe, name=name)
-        mine = measure(ours, probe, reference["box"] if reference else None, name=name)
+        bg_at = BG_PROBE.get((page, name))
+        reference = measure(ref, probe, name=name, bg_at=bg_at)
+        mine = measure(ours, probe, reference["box"] if reference else None, name=name, bg_at=bg_at)
         ink_pair = None
         if ink_box and reference and mine:
             ink_pair = (ink(ref, ink_box, rgb(ref, 2, probe[1])), ink(ours, ink_box, rgb(ours, 2, probe[1])))
@@ -227,36 +242,50 @@ def table(rows):
 # 720 px frame, covering both renders, label). Listed per scheme; the boxes are
 # where the reference and ours disagree, so they sit on the diff column.
 SEEN = {
-    "light": [
-        ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
-        ((284, 139, 436, 175), "title 3 px low, 4 px taller"),
-        ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
-        ((31, 223, 145, 247), "\"Buttons\" label: 16 pt inset, ref 32 pt, 7 px high"),
-        ((30, 960, 162, 996), "\"Selection\" label: 16 pt inset, ref 32 pt, 17 px high"),
-        ((277, 764, 312, 794), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
-        ((53, 871, 83, 906), "share icon: ours black and heavier, 17×20 pt, ref 15×18 pt"),
-        ((120, 847, 204, 931), "copy button: white disc with no ring"),
-        ((425, 872, 455, 906), "trash icon: heavier red stroke"),
-        ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
-        ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
-        ((60, 1375, 87, 1411), "magnifier: black and heavier"),
-    ],
-    "dark": [
-        ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
-        ((284, 139, 436, 175), "title 3 px low, 4 px taller"),
-        ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
-        ((31, 223, 145, 247), "\"Buttons\" label: 16 pt inset, ref 32 pt, 7 px high"),
-        ((30, 960, 162, 996), "\"Selection\" label: 16 pt inset, ref 32 pt, 17 px high"),
-        ((277, 764, 314, 798), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
-        ((53, 871, 83, 906), "share icon: ours heavier, 17×20 pt, ref 15×18 pt"),
-        ((120, 847, 204, 931), "copy button: ours disc without the ring"),
-        ((425, 872, 455, 906), "trash icon: heavier stroke"),
-        ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
-        ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
-        ((60, 1375, 87, 1411), "magnifier: heavier"),
-        ((312, 1287, 424, 1337), "disabled switch: ref thumb at half opacity, ours full white"),
-    ],
+    "controls": {
+        "light": [
+            ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+            ((284, 139, 436, 175), "title 3 px low, 4 px taller"),
+            ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
+            ((31, 223, 145, 247), "\"Buttons\" label: 7 px high"),
+            ((30, 960, 162, 996), "\"Selection\" label: 17 px high"),
+            ((277, 764, 312, 794), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
+            ((53, 871, 83, 906), "share icon: 17×20 pt, ref 15×18 pt"),
+            ((120, 847, 204, 931), "copy button: ring added, 1 px thinner than ref"),
+            ((425, 872, 455, 906), "trash icon: a touch heavier than ref"),
+            ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
+            ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
+            ((60, 1375, 87, 1411), "magnifier: black and heavier"),
+        ],
+        "dark": [
+            ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+            ((284, 139, 436, 175), "title 3 px low, 4 px taller"),
+            ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
+            ((31, 223, 145, 247), "\"Buttons\" label: 7 px high"),
+            ((30, 960, 162, 996), "\"Selection\" label: 17 px high"),
+            ((277, 764, 314, 798), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
+            ((53, 871, 83, 906), "share icon: 17×20 pt, ref 15×18 pt"),
+            ((120, 847, 204, 931), "copy button: ring added, 1 px thinner than ref"),
+            ((425, 872, 455, 906), "trash icon: a touch heavier than ref"),
+            ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
+            ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
+            ((60, 1375, 87, 1411), "magnifier: heavier"),
+        ],
+    },
+    "rows": {
+        "light": [
+            ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+            ((50, 372, 690, 484), "Notifications: ref title high, detail and switch low, row 60 pt; ours centred, 52 pt"),
+            ((74, 370, 690, 378), "separator: ref a 0.33 pt hairline, #f3f3f3 peak; ours one full pixel, #c7c7c9"),
+        ],
+        "dark": [
+            ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+            ((50, 372, 690, 484), "Notifications: ref title high, detail and switch low, row 60 pt; ours centred, 52 pt"),
+            ((74, 370, 690, 378), "separator: ref a 0.33 pt hairline; ours one full pixel"),
+        ],
+    },
 }
+
 
 # A measured element is a remaining difference past these: height/width in pt, radius in pt,
 # colour as the summed channel error, ink as the share of a text box.
@@ -293,8 +322,8 @@ def measured_findings(rows):
     return out
 
 
-def findings(scheme, rows):
-    items = list(SEEN[scheme]) + measured_findings(rows)
+def findings(page, scheme, rows):
+    items = list(SEEN[page][scheme]) + measured_findings(rows)
     return sorted(items, key=lambda item: (item[0][1], item[0][0]))
 
 
@@ -360,7 +389,7 @@ def main():
     parser.add_argument("--table", type=Path, help="write the metric table and the remaining differences (Markdown) here")
     args = parser.parse_args()
     ref, ours, rows = compare(args.page, args.scheme, args.ours)
-    items = findings(args.scheme, rows)
+    items = findings(args.page, args.scheme, rows)
     diff = annotate(ref, ours, items)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     sheet(ref, ours, diff, legend_image(items, ref.width * 3 + 40)).save(args.out)

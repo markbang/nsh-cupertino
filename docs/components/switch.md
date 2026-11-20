@@ -30,7 +30,8 @@ Notes
 ## Accessibility
 
 - Role switch with `checked`; the label is either `label` or the text beside it.
-- Disabled switches are announced as dimmed and report no presses.
+- Disabled switches are announced as dimmed and report no presses. Dimming is the
+  whole switch at 50 % opacity, thumb included, as the iOS reference draws it.
 
 ## Motion
 

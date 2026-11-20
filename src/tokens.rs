@@ -562,8 +562,12 @@ pub mod space {
 pub mod radius {
     use nsh_core::geometry::{Points, px};
 
-    /// 10 pt: a row in a grouped list, a grouped text field.
+    /// 10 pt: a grouped text field.
     pub const ROW: Points = px(10.0);
+    /// 20 pt: a grouped card of rows (`rounded-md` in Cohub Mobile's settings).
+    pub const GROUP: Points = px(20.0);
+    /// 8 pt: a leading icon's tile (`rounded-xs`).
+    pub const TILE: Points = px(8.0);
     /// 14 pt: a sheet.
     pub const SHEET: Points = px(14.0);
     /// 26 pt: a large button, a capsule of its 52 pt height.
@@ -622,27 +626,38 @@ pub mod metrics {
     pub const NAV_EDGE: f32 = 16.0;
     /// How wide the system back button's target is.
     pub const BACK_TARGET: f32 = 50.0;
-    /// A list row's smallest height, without a subtitle.
-    pub const ROW_HEIGHT: f32 = 44.0;
-    /// A list row's smallest height, with a subtitle.
-    pub const ROW_HEIGHT_SUBTITLE: f32 = 48.0;
-    /// A row's leading inset.
-    pub const ROW_EDGE: f32 = 20.0;
+    /// A text field's smallest height.
+    pub const FIELD_HEIGHT: f32 = 44.0;
+    /// A list row's smallest height, without a subtitle (52 pt, `GroupRow`).
+    pub const ROW_HEIGHT: f32 = 52.0;
+    /// A list row's smallest height, with a subtitle: the iOS reference's
+    /// two-line row, 57.5 pt.
+    pub const ROW_HEIGHT_SUBTITLE: f32 = 57.0;
+    /// A row's leading and trailing inset from the card's edge (16 pt).
+    pub const ROW_EDGE: f32 = 16.0;
     /// A row's trailing inset.
-    pub const ROW_TRAILING: f32 = 14.0;
-    /// A leading icon's box.
-    pub const LEADING_SIZE: f32 = 28.0;
-    /// Between a leading icon and the title.
-    pub const LEADING_GAP: f32 = 16.0;
+    pub const ROW_TRAILING: f32 = 16.0;
+    /// A leading icon's tile: 30 pt, as Cohub Mobile's `GroupTile`.
+    pub const LEADING_SIZE: f32 = 30.0;
+    /// Between a leading tile and the title: 12 pt, so the text starts 58 pt
+    /// from the card's edge, where the separator starts too.
+    pub const LEADING_GAP: f32 = 12.0;
+    /// A leading icon's glyph, in its tile.
+    pub const LEADING_GLYPH: f32 = 18.0;
     /// A grouped section's margin from the screen's edge: 16 pt, as Cohub
     /// Mobile's settings groups (`px-4` in `ui.tsx`'s `SettingsGroup`).
     pub const SECTION_EDGE: f32 = 16.0;
+    /// A section header's inset from the screen's edge: 32 pt in the iOS
+    /// reference, the card's edge plus a row's inset.
+    pub const SECTION_HEADER_EDGE: f32 = 32.0;
     /// Above a section's group (`_kDefaultInsetGroupedRowsMargin`'s top).
     pub const SECTION_TOP: f32 = 20.0;
     /// Above a section's header (`_kInsetGroupedDefaultHeaderMargin`).
     pub const HEADER_TOP: f32 = 16.0;
-    /// Between a section's header and its group.
-    pub const HEADER_BOTTOM: f32 = 6.0;
+    /// Between a section's header and its group, and between its group and
+    /// its footer: 23 pt from a header's cap height to its group, as the iOS
+    /// reference measures it.
+    pub const HEADER_BOTTOM: f32 = 10.0;
     /// Below a section's footer.
     pub const FOOTER_BOTTOM: f32 = 10.0;
     /// Between a row's title and its subtitle (`_kNotchedTitleToSubtitle`).
@@ -663,8 +678,9 @@ pub mod metrics {
     pub const BUTTON_MEDIUM: f32 = 32.0;
     /// A small button.
     pub const BUTTON_SMALL: f32 = 28.0;
-    /// A section header's text size (`CupertinoListSection.insetGrouped`).
-    pub const SECTION_HEADER_SIZE: f32 = 20.0;
+    /// A section header's text size: 13 pt by the iOS reference's pixels (the
+    /// cohub code says 17 pt; the pixels win).
+    pub const SECTION_HEADER_SIZE: f32 = 13.0;
     /// The widest a sheet's panel gets: wider windows centre it as a card
     /// (an iPad form sheet's width; the panel is full width on a phone).
     pub const SHEET_MAX_WIDTH: f32 = 640.0;

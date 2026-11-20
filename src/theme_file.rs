@@ -70,6 +70,7 @@ fn numbers() -> Vec<(&'static str, String)> {
         ("switch-thumb-width", px(metrics::SWITCH_THUMB_WIDTH)),
         ("search-height", px(metrics::SEARCH_HEIGHT)),
         ("radius-row", px(radius::ROW.0)),
+        ("radius-group", px(radius::GROUP.0)),
         ("radius-sheet", px(radius::SHEET.0)),
         ("radius-button", px(radius::BUTTON.0)),
         ("radius-search", px(radius::SEARCH.0)),

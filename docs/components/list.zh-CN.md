@@ -2,12 +2,12 @@
 
 # 列表：`List`、`Section`、`ListTile`
 
-iOS 的分组内嵌列表：行在一整块 10 pt 圆角表面上，页面边距 20 pt，细线从文字开始的位置起，
+iOS 的分组内嵌列表：行在一整块 20 pt 圆角表面上，页面边距 16 pt，细线从文字开始的位置起，
 能打开的行走右箭头，已选中的行显示勾选。
 
-度量来自 `cupertino_ui` 的 `CupertinoListSection.insetGrouped` 与 `CupertinoListTile`
-（见 `NOTICE`）：20 pt 边距、20 pt 粗体分组标题、13 pt 的 header/footer 色脚注、44 pt 行
-（带副标题 48 pt）、17 pt 标题、12 pt 副标题、20/14 pt 行内缩进与 28 pt 前置图标盒。
+数值取自 iOS 参考图的像素（Cohub Mobile 的设置行）：16 pt 边距、距边缘 32 pt 的 13 pt 分组标题、
+header/footer 色的 13 pt 脚注、52 pt 行（带副标题 57 pt）、17 pt 标题、12 pt 副标题、16 pt 行内边距，
+以及 30 pt 前置图标块，因此文字与分隔线都从卡片边缘 58 pt 处开始。
 
 | | |
 | --- | --- |
@@ -30,23 +30,24 @@ iOS 的分组内嵌列表：行在一整块 10 pt 圆角表面上，页面边距
 
 | TSX | Rust | 类型 | 默认值 | |
 | --- | --- | --- | --- | --- |
-| `header` | `.header(..)` | `string` | 无 | 20 pt 粗体，上方 16 pt、下方 6 pt |
+| `header` | `.header(..)` | `string` | 无 | 13 pt 粗体、secondary label，距边缘 32 pt，上方 16 pt、下方 10 pt |
 | `footer` | `.footer(..)` | `string` | 无 | 13 pt、header/footer 色，下方 10 pt |
 | `children` | `.child(..)` | JSX | — | 各行 |
 
 ## ListTile
 
-一行：高 44 pt（带副标题 48 pt），前缩进 20 pt（有图标时 14 pt），标题 17 pt，副标题 12 pt。
+一行：高 52 pt（带副标题 57 pt），左右内边距 16 pt，标题 17 pt，副标题 12 pt。前置图标放在 30 pt 的 `system-gray5` 图块上（`destructive` 时为红块、白色图标）。
 
 | TSX | Rust | 类型 | 默认值 | |
 | --- | --- | --- | --- | --- |
 | `title` | `.title(..)` | `string` | 无 | 标题，17 pt |
 | `subtitle` | `.subtitle(..)` | `string` | 无 | 标题下的一行，12 pt secondary label，间距 3 pt |
-| `leading` | `.leading(..)` | 图标名 | 无 | 28 pt 盒子里 22 pt 图标 |
-| `leadingColor` | `.leading_color(..)` | token 名 | `system-blue` | 图标颜色 |
+| `leading` | `.leading(..)` | 图标名 | 无 | 30 pt 图块里 18 pt 线条图标 |
+| `leadingColor` | `.leading_color(..)` | token 名 | `secondary-label` | 图标颜色（`accent` 行为 `system-blue`） |
 | `accessory` | `.accessory(..)` | `"chevron"` \| `"checkmark"` \| `"none"` | chevron | 右侧附件 |
 | `checked` | `.checked(..)` | `boolean` | `false` | 显示勾选，并设置行的读屏状态 |
-| `destructive` | `.destructive(..)` | `boolean` | `false` | 红色标题 |
+| `destructive` | `.destructive(..)` | `boolean` | `false` | 红色标题；带前置图标时为红色图块、白色图标 |
+| `accent` | `.accent(..)` | `boolean` | `false` | 蓝色标题与图标，用于"添加项"这类操作 |
 | `separator` | `.separator(..)` | `boolean` | `true` | 行下的细线 |
 | `disabled` | `.disabled(..)` | `boolean` | `false` | 变灰，不可按下 |
 | `children` | `.child(..)` | JSX | 无 | 行尾的控件：`<ListTile title="Wi-Fi"><Switch/></ListTile>` |
@@ -55,7 +56,7 @@ iOS 的分组内嵌列表：行在一整块 10 pt 圆角表面上，页面边距
 
 ## 分隔线
 
-分组中除最后一行外，每一行都画一条细分隔线，与行的种类无关：普通行、带副标题、破坏性、禁用、带前置图标、带箭头、勾选选中都一样。线从文字开始处起（有前置图标时在图标之后，否则从行自身的内缩开始），厚度是一台**设备像素**：
+分组中除最后一行外，每一行都画一条细分隔线，与行的种类无关：普通行、带副标题、破坏性、禁用、带前置图标、带箭头、勾选选中都一样。线从文字开始处起（有前置图块时距卡片边缘 58 pt，否则 16 pt），厚度是一台**设备像素**：
 
 ```text
 thickness = round(max(configured * pixelRatio, 1)) / pixelRatio
@@ -66,7 +67,7 @@ thickness = round(max(configured * pixelRatio, 1)) / pixelRatio
 说明
 
 - 行自己绘制细线；分组最后一行传 `separator={false}`。
-- 细线从文字开始处起：内缩 20 pt，有前置图标时为图标之后。
+- 细线从文字开始处起：有前置图块时距卡片边缘 58 pt，否则 16 pt。
 - 按压高亮是 `systemGrey4`（与 `CupertinoListTile` 一致），不是缩放。
 - 没传 `accessory` 的行会显示右箭头：不打开任何东西的行传 `accessory="none"`。
 

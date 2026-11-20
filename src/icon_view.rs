@@ -2,7 +2,7 @@
 
 use nsh_core::{AccessibilityRole, prelude::*};
 
-use crate::{icon::icon as draw_icon, tokens};
+use crate::{icon::icon_stroke, tokens};
 
 /// The props of [`Icon`].
 #[derive(Debug, Clone, PartialEq, Props)]
@@ -11,6 +11,9 @@ pub struct IconProps {
     pub name: Prop<Option<SharedString>>,
     /// Its side in points (20 unless set).
     pub size: Prop<Option<f32>>,
+    /// Its line weight at 24 pt (2.4, SF Symbols' regular, unless set; 1.9
+    /// draws the thin line of a control's glyph).
+    pub stroke: Prop<Option<f32>>,
     /// The token it is drawn in (`label` unless set): `secondary-label`,
     /// `system-blue`, `system-red`, ...
     pub tint: Prop<Option<SharedString>>,
@@ -28,9 +31,10 @@ pub fn Icon(props: IconProps) -> impl IntoElement {
     let tint = props.tint;
     let label = props.label;
     let size = props.size.get_untracked().unwrap_or(20.0);
+    let stroke = props.stroke.get_untracked().unwrap_or(2.4);
     let named = props.label.get_untracked().is_some();
     dynamic(move || {
-        draw_icon(&name.get().unwrap_or_default(), size)
+        icon_stroke(&name.get().unwrap_or_default(), size, stroke)
             .text_color(match tint.get() {
                 Some(name) => tokens::system(&name),
                 None => tokens::label(),
