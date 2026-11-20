@@ -5,7 +5,7 @@ use nsh_base::button;
 use nsh_core::{AccessibilityRole, element::Children, prelude::*};
 
 use crate::{
-    icon::{icon, icon_stroke},
+    icon::icon_stroke,
     tokens::{self, metrics, radius, type_default},
 };
 
@@ -57,8 +57,8 @@ pub fn List(props: ListProps) -> impl IntoElement {
 /// The props of [`Section`].
 #[derive(Debug, Clone, PartialEq, Props)]
 pub struct SectionProps {
-    /// The group's heading: 20 pt bold, as `CupertinoListSection.insetGrouped`
-    /// draws it.
+    /// The group's heading: 13 pt bold, in the secondary label color, at 32 pt
+    /// from the screen's edge.
     pub header: Prop<Option<SharedString>>,
     /// A note under the group, 13 pt in the header/footer color.
     pub footer: Prop<Option<SharedString>>,
@@ -66,13 +66,14 @@ pub struct SectionProps {
     pub children: Prop<Children>,
 }
 
-/// A group of rows on one rounded surface, 10 pt corners, with an optional
+/// A group of rows on one rounded surface, 20 pt corners, with an optional
 /// header above and footer below.
 ///
 /// Rows draw their own hairline ([`ListTile`]'s `separator`): set it to `false`
 /// on the group's last row.
 #[component]
 pub fn Section(props: SectionProps) -> impl IntoElement {
+    let has_header = props.header.get_untracked().is_some();
     let header = props.header;
     let footer = props.footer;
     view()
@@ -82,14 +83,14 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
             move || {
                 view()
                     .pt(px(metrics::HEADER_TOP))
-                    .px(px(metrics::SECTION_EDGE))
+                    .px(px(metrics::SECTION_HEADER_EDGE))
                     .pb(px(metrics::HEADER_BOTTOM))
                     .child(
                         text(move || header.get().unwrap_or_default())
                             .text_size(px(metrics::SECTION_HEADER_SIZE))
                             .line_height(px(metrics::SECTION_HEADER_SIZE * 1.2))
                             .font_weight(FontWeight::BOLD)
-                            .text_color(tokens::label)
+                            .text_color(tokens::secondary_label)
                             .role(AccessibilityRole::Header)
                             .accessibility_level(2),
                     )
@@ -99,8 +100,13 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
             view()
                 .flex_col()
                 .mx(px(metrics::SECTION_EDGE))
-                .mt(px(metrics::SECTION_TOP))
-                .rounded(px(radius::ROW.0))
+                // A header's own bottom space stands in for the top margin.
+                .mt(px(if has_header {
+                    0.0
+                } else {
+                    metrics::SECTION_TOP
+                }))
+                .rounded(px(radius::GROUP.0))
                 .overflow_hidden()
                 .bg(tokens::secondary_system_grouped_background)
                 .role(AccessibilityRole::Group)
@@ -128,20 +134,31 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
 pub struct ListTileProps {
     /// The row's title, 17 pt.
     pub title: Prop<Option<SharedString>>,
-    /// A line under the title, 12 pt in the secondary label color.
+    /// A line under the title, 13 pt in the secondary label color.
     pub subtitle: Prop<Option<SharedString>>,
     /// An icon leading the title, by name ([`crate::icon::NAMES`]).
     pub leading: Prop<Option<SharedString>>,
-    /// The token the leading icon is drawn in (`system-blue` unless set).
+    /// The token the leading icon is drawn in (`secondary-label` unless set;
+    /// an `accent` row draws it in `system-blue`).
     pub leading_color: Prop<Option<SharedString>>,
     /// The accessory at the trailing edge: `"chevron"`, `"checkmark"` or
-    /// `"none"`. Left out, a row that can be pressed shows a chevron.
+    /// `"none"`, which leaves no gap. Left out, a row that can be pressed
+    /// shows a chevron.
     pub accessory: Prop<Option<SharedString>>,
+    /// `top` lays the row out for a switch with a detail beside it (iOS's
+    /// Notifications row): 60 pt tall, the title and the trailing controls
+    /// start 8 pt from the top, and a leading tile stays centred. Unset, the
+    /// row centres its content.
+    pub align: Prop<Option<SharedString>>,
     /// A checkmark shows while this holds (a selection list), and it is the
     /// row's state for screen readers.
     pub checked: Prop<Option<bool>>,
-    /// The title is red: a destructive action.
+    /// The title is red: a destructive action. With a leading icon, its tile
+    /// fills red too, and the icon is white.
     pub destructive: Prop<Option<bool>>,
+    /// The title and an unset leading color are `system-blue`: an action such
+    /// as "Add item".
+    pub accent: Prop<Option<bool>>,
     /// The hairline under the row (on unless `false`): leave the last row of
     /// a group without one.
     pub separator: Prop<Option<bool>>,
@@ -159,9 +176,9 @@ pub enum ListTileEvent {
     Press,
 }
 
-/// A row: a title, an optional subtitle, an optional leading icon and an
-/// accessory, 44 pt tall at least (48 with a subtitle), with the pressed
-/// highlight iOS uses (`systemGrey4` while the finger is down).
+/// A row: a title, an optional subtitle, an optional leading icon on a 30 pt
+/// tile and an accessory, 52 pt tall at least (57 with a subtitle), with the
+/// pressed highlight iOS uses (`systemGrey4` while the finger is down).
 #[component]
 pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElement {
     let disabled = {
@@ -172,8 +189,13 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
         let destructive = props.destructive;
         move || destructive.get().unwrap_or(false)
     };
+    let accent = {
+        let accent = props.accent;
+        move || accent.get().unwrap_or(false)
+    };
     let has_leading = props.leading.get_untracked().is_some();
     let has_subtitle = props.subtitle.get_untracked().is_some();
+    let top_aligned = props.align.get_untracked().as_deref() == Some("top");
     let leading = props.leading;
     let leading_color = props.leading_color;
     let title = props.title;
@@ -183,6 +205,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
     let accessory = props.accessory;
     let checked = props.checked;
     let separator = props.separator;
+    // The separator starts where the title does: past the tile when there is one.
     let leading_inset = if has_leading {
         metrics::ROW_EDGE + metrics::LEADING_SIZE + metrics::LEADING_GAP
     } else {
@@ -221,30 +244,52 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                         .w_full()
                         .flex_row()
                         .items_center()
-                        .min_h(px(if has_subtitle {
+                        .when(top_aligned, |v| v.items_start())
+                        .min_h(px(if top_aligned {
+                            metrics::ROW_HEIGHT_TOP
+                        } else if has_subtitle {
                             metrics::ROW_HEIGHT_SUBTITLE
                         } else {
                             metrics::ROW_HEIGHT
                         }))
-                        .pl(px(if has_leading {
-                            metrics::ROW_TRAILING
-                        } else {
-                            metrics::ROW_EDGE
-                        }))
+                        .when(top_aligned, |v| v.py(px(metrics::ROW_TOP_INSET)))
+                        .pl(px(metrics::ROW_EDGE))
                         .pr(px(metrics::ROW_TRAILING))
                         .gap(px(metrics::LEADING_GAP))
                         .when(has_leading, |v| {
                             v.child(
                                 view()
                                     .size(px(metrics::LEADING_SIZE))
+                                    .rounded(px(radius::TILE.0))
+                                    .when(top_aligned, |v| v.self_center())
                                     .items_center()
                                     .justify_center()
+                                    .bg(move || {
+                                        if destructive() {
+                                            tokens::system_red()
+                                        } else {
+                                            tokens::system_gray5()
+                                        }
+                                    })
                                     .child(
-                                        icon(&leading.get_untracked().unwrap_or_default(), 22.0)
-                                            .text_color(move || match leading_color.get() {
-                                                Some(name) => tokens::system(&name),
-                                                None => tokens::system_blue(),
-                                            }),
+                                        icon_stroke(
+                                            &leading.get_untracked().unwrap_or_default(),
+                                            metrics::LEADING_GLYPH,
+                                            1.9,
+                                        )
+                                        .text_color(
+                                            move || {
+                                                if destructive() {
+                                                    tokens::on_tint()
+                                                } else {
+                                                    match leading_color.get() {
+                                                        Some(name) => tokens::system(&name),
+                                                        None if accent() => tokens::system_blue(),
+                                                        None => tokens::secondary_label(),
+                                                    }
+                                                }
+                                            },
+                                        ),
                                     ),
                             )
                         })
@@ -263,6 +308,8 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                                 tokens::tertiary_label()
                                             } else if destructive() {
                                                 tokens::system_red()
+                                            } else if accent() {
+                                                tokens::system_blue()
                                             } else {
                                                 tokens::label()
                                             }
@@ -283,7 +330,10 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                     },
                                 )),
                         )
-                        .child(accessory_view(&accessory, &checked))
+                        .child(when(
+                            move || accessory.get().as_deref() != Some("none"),
+                            move || accessory_view(accessory, checked),
+                        ))
                         .child(props.children),
                 ),
         )
@@ -300,12 +350,12 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
 }
 
 fn accessory_view(
-    accessory: &Prop<Option<SharedString>>,
-    checked: &Prop<Option<bool>>,
+    accessory: Prop<Option<SharedString>>,
+    checked: Prop<Option<bool>>,
 ) -> impl IntoElement {
-    let tick = *accessory;
-    let tick_checked = *checked;
-    let chevron = *accessory;
+    let tick = accessory;
+    let tick_checked = checked;
+    let chevron = accessory;
     view()
         .flex_row()
         .items_center()
@@ -316,8 +366,8 @@ fn accessory_view(
         .child(when(
             move || !matches!(chevron.get().as_deref(), Some("checkmark") | Some("none")),
             move || {
-                // `CupertinoListTileChevron`: the text size, systemGrey2.
-                icon_stroke("chevron.right", 17.0, 2.2).text_color(tokens::system_gray2)
+                // Cohub Mobile's row chevron: a thin line in the secondary label.
+                icon_stroke("chevron.right", 20.0, 1.9).text_color(tokens::secondary_label)
             },
         ))
 }

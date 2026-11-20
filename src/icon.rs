@@ -60,6 +60,10 @@ pub const NAMES: &[&str] = &[
     "doc",
     "photo",
     "arrow.up.right",
+    "arrow.up.right.square",
+    "chevron.up.down",
+    "palette",
+    "globe",
 ];
 
 fn markup(name: &str) -> Option<&'static str> {
@@ -191,6 +195,16 @@ fn markup(name: &str) -> Option<&'static str> {
             r#"<rect x="3" y="4.6" width="18" height="14.8" rx="2.4"/><circle cx="8.6" cy="10" r="1.6"/><path d="m4.4 17.6 5.2-5.2 3.4 3.4 2.6-2.6 4 4"/>"#
         }
         "arrow.up.right" => r#"<path d="M6.5 17.5 17 7M9.5 6.5H17.5V14.5"/>"#,
+        "arrow.up.right.square" => {
+            r#"<rect x="3.5" y="3.5" width="17" height="17" rx="3.6"/><path d="M8.6 15.4 15.4 8.6M9.4 8.4h6.2v6.2"/>"#
+        }
+        "chevron.up.down" => r#"<path d="m7.5 9.5 4.5-4.5 4.5 4.5M7.5 14.5l4.5 4.5 4.5-4.5"/>"#,
+        "palette" => {
+            r#"<path d="M12 3a9 9 0 0 0 0 18c1.3 0 1.9-.9 1.9-1.8 0-1-.7-1.6-.7-2.5 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"/><circle cx="7.3" cy="11" r="1.1" fill="currentColor"/><circle cx="9.9" cy="7.2" r="1.1" fill="currentColor"/><circle cx="14.6" cy="7.2" r="1.1" fill="currentColor"/>"#
+        }
+        "globe" => {
+            r#"<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3Z"/>"#
+        }
         _ => return None,
     };
     Some(body)

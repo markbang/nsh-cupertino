@@ -31,6 +31,7 @@ rather than of a control, use `Icon`:
 | `name` | `.name(..)` | string | none | A name from the table below |
 | `size` | `.size(..)` | number | 20 | Its side in points |
 | `tint` | `.tint(..)` | token name | `label` | `secondary-label`, `system-blue`, `system-red`, ... |
+| `stroke` | `.stroke(..)` | number | 2.4 | Line weight at 24 pt: 2.4 is SF Symbols' regular; 1.5 draws a control's thin glyph |
 | `label` | `.label(..)` | string | none | What screen readers say; leave it out beside text that already names it |
 
 | Name | |
@@ -49,6 +50,7 @@ rather than of a control, use `Icon`:
 | `square.grid.2x2`, `list.bullet`, `slider.horizontal.3` | Sections and settings |
 | `info.circle`, `sparkles`, `exclamationmark.triangle` | Notes, highlights, failures |
 | `doc`, `photo` | Files and images |
+| `palette`, `globe`, `arrow.up.right.square`, `chevron.up.down` | Settings rows: appearance, website, external link, a value's picker |
 
 Unknown names draw nothing (and log), so a typo is visible rather than loud.
 

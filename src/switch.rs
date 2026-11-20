@@ -49,17 +49,20 @@ pub fn Switch(props: SwitchProps, cx: Scope<SwitchEvent>) -> impl IntoElement {
                 .p(px(2.0))
                 .transition_colors()
                 .duration(motion::THUMB_MS)
-                .bg(move || {
-                    let off = tokens::system("switch-off");
-                    let on = tokens::system("switch-on");
+                // A disabled switch is the whole control at half opacity, its thumb included.
+                .opacity(move || {
                     if dimmed.get().unwrap_or(false) {
-                        return if checked_track.get() {
-                            on.opacity(0.5)
-                        } else {
-                            off
-                        };
+                        0.5_f32
+                    } else {
+                        1.0_f32
                     }
-                    if checked_track.get() { on } else { off }
+                })
+                .bg(move || {
+                    if checked_track.get() {
+                        tokens::system("switch-on")
+                    } else {
+                        tokens::system("switch-off")
+                    }
                 })
         })
         .thumb_style(move |s| {

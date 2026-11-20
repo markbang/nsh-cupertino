@@ -16,6 +16,6 @@ Deep links: seed the app's storage with `cupertino.page` (`gallery`,
 `navigation`, `lists`, `buttons`, `textfields`, `search`, `switches`,
 `indicators`, `scroll`, `materials`, `colors`, `type`, `sheet`, `actionsheet`,
 `alert`, `contextmenu`, `picker`, `datepicker`, `segmented`, `slider`, `tabbar`,
-`swipe`, `refresh`, `bar-materials`), `cupertino.overlay` (`sheet`,
+`swipe`, `refresh`, `bar-materials`, `controls`, `rows`), `cupertino.overlay` (`sheet`,
 `actionsheet`, `alert`) to open an overlay on landing, `cupertino.contrast`
 (`normal`, `high`) and `cupertino.appearance` (`light`, `dark`, `system`).

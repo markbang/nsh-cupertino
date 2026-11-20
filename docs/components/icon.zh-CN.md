@@ -28,6 +28,7 @@ TSX 里组件按名字接收图标：`<ListTile leading="bell" />`、`<Button ic
 | `name` | `.name(..)` | string | 无 | 下表里的名字 |
 | `size` | `.size(..)` | number | 20 | 边长（pt） |
 | `tint` | `.tint(..)` | token 名 | `label` | `secondary-label`、`system-blue`、`system-red` …… |
+| `stroke` | `.stroke(..)` | number | 2.4 | 按 24 pt 计的线宽：2.4 是 SF Symbols 的 regular；1.5 画控件的细线图标 |
 | `label` | `.label(..)` | string | 无 | 读屏读到的文字；旁边已有文字命名它时不写 |
 
 | 名称 | |
@@ -43,6 +44,7 @@ TSX 里组件按名字接收图标：`<ListTile leading="bell" />`、`<Button ic
 | `arrow.clockwise`、`arrowshape.turn.up.left`、`arrowshape.turn.up.right`、`arrow.up.right` | 刷新、回复、转发、打开 |
 | `link`、`key`、`line.3.horizontal.decrease` | 链接、密钥、筛选与规则 |
 | `sun.max`、`moon`、`cloud`、`circle.lefthalf.filled` | 外观与状态 |
+| `palette`、`globe`、`arrow.up.right.square`、`chevron.up.down` | 设置行：外观、网站、外链、取值选择 |
 | `square.grid.2x2`、`list.bullet`、`slider.horizontal.3` | 分区与设置 |
 | `info.circle`、`sparkles`、`exclamationmark.triangle` | 说明、亮点、失败 |
 | `doc`、`photo` | 文件与图片 |

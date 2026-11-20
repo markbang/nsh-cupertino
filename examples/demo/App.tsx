@@ -54,6 +54,7 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
   { id: "navigation", title: "Navigation bar", blurb: "Large title, back, trailing action", icon: "arrow.up.right", tint: "system-blue" },
   { id: "lists", title: "Lists", blurb: "Sections, rows, accessories", icon: "list.bullet", tint: "system-orange" },
   { id: "controls", title: "UI Catalog", blurb: "Buttons, segments, chips, switches, search", icon: "slider.horizontal.3", tint: "system-blue" },
+  { id: "rows", title: "Settings rows", blurb: "Value, switch, chevron, destructive, group rows", icon: "list.bullet", tint: "system-blue" },
   { id: "buttons", title: "Buttons", blurb: "Filled, tinted, plain, destructive", icon: "sparkles", tint: "system-purple" },
   { id: "textfields", title: "Text fields", blurb: "Cupertino box, clear, secure", icon: "square.grid.2x2", tint: "system-teal" },
   { id: "search", title: "Search field", blurb: "Magnifier, clear, cancel", icon: "magnifyingglass", tint: "system-indigo" },
@@ -247,7 +248,22 @@ function ListsPage() {
 // The catalog's controls in the order of Cohub Mobile's `catalog-controls`
 // snapshot, under the cohub preset (`cupertino.preset`) it is compared with.
 // The spacing is the snapshot's, in points from the top of the frame.
-const HEADING = { fontSize: 13, fontWeight: "600" as const, lineHeight: 16 };
+// A section label sits 32 pt from the screen's edge: the card's 16 pt and a row's 16 pt.
+const HEADING = { fontSize: 13, fontWeight: "600" as const, lineHeight: 16, paddingLeft: 16 };
+
+// The catalog's bar: the title sits in the frame's status bar and bar space, 59 + 44 pt from the top.
+function CatalogHeader() {
+  return (
+    <View style={{ height: 15, paddingHorizontal: 16 }}>
+      <View style={{ position: "absolute", left: 16, top: 2, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }} class="bg-secondary-system-grouped-background">
+        <Icon name="chevron.left" size={20} tint="label" />
+      </View>
+      <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
+        <Text class="text-label" style={{ fontSize: 17, fontWeight: "600" }}>UI Catalog</Text>
+      </View>
+    </View>
+  );
+}
 
 function ControlsPage() {
   const notify = signal(true);
@@ -256,17 +272,9 @@ function ControlsPage() {
   const chip = signal("recent");
   const query = signal("");
   return (
-    // The page's background is the Rust page's, so the cohub preset paints it; the
-    // title sits in the frame's status bar and bar space, 59 + 44 pt from the top.
+    // The page's background is the Rust page's, so the cohub preset paints it.
     <NavPage title="UI Catalog">
-      <View style={{ height: 15, paddingHorizontal: 16 }}>
-        <View style={{ position: "absolute", left: 16, top: 2, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }} class="bg-secondary-system-grouped-background">
-          <Icon name="chevron.left" size={20} tint="label" />
-        </View>
-        <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
-          <Text class="text-label" style={{ fontSize: 17, fontWeight: "600" }}>UI Catalog</Text>
-        </View>
-      </View>
+      <CatalogHeader />
       <View style={{ paddingHorizontal: 16 }}>
         <Text class="text-secondary-label" style={{ ...HEADING, marginTop: 22 }}>Buttons</Text>
         <View style={{ marginTop: 16, gap: 12 }}>
@@ -278,22 +286,22 @@ function ControlsPage() {
         </View>
         <View style={{ marginTop: 12, height: 44, flexDirection: "row", gap: 8 }}>
           <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="square.and.arrow.up" size={22} tint="label" />
+            <Icon name="square.and.arrow.up" size={22} tint="label" stroke={1.5} />
           </View>
-          <View class="bg-secondary-system-grouped-background" style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="doc.on.doc" size={22} tint="label" />
-          </View>
-          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="line.3.horizontal.decrease" size={22} tint="system-blue" />
+          <View class="bg-secondary-system-grouped-background border-separator" style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 0.5, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="doc.on.doc" size={22} tint="label" stroke={1.5} />
           </View>
           <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="plus" size={22} tint="system-blue" />
+            <Icon name="line.3.horizontal.decrease" size={22} tint="system-blue" stroke={1.5} />
           </View>
           <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="trash" size={22} tint="system-red" />
+            <Icon name="plus" size={22} tint="system-blue" stroke={1.5} />
           </View>
           <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="archivebox" size={22} tint="system-gray" />
+            <Icon name="trash" size={22} tint="system-red" stroke={1.5} />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="archivebox" size={22} tint="system-gray" stroke={1.5} />
           </View>
         </View>
         <Text class="text-secondary-label" style={{ ...HEADING, marginTop: 16 }}>Selection</Text>
@@ -339,6 +347,42 @@ function ControlsPage() {
           <StatusPill label="Failed" tone="danger" />
           <StatusPill label="Queued" tone="info" />
         </View>
+      </View>
+    </NavPage>
+  );
+}
+
+// The catalog's rows in the order of Cohub Mobile's `catalog-rows` snapshot
+// (its debug page's RowsSection): the settings rows, then the group rows.
+function RowsPage() {
+  const notify = signal(true);
+  return (
+    <NavPage title="UI Catalog">
+      <CatalogHeader />
+      {/* The first header sits where the reference's does, 127 pt from the top. */}
+      <View style={{ marginTop: 9 }}>
+        <List scroll={false}>
+          <Section header="Settings rows" footer="A footnote under the group explains its rows.">
+            <ListTile title="Appearance" subtitle="System" leading="palette" accessory="chevron" separator />
+            <ListTile title="Notifications" leading="bell" accessory="none" align="top" separator>
+              <Text class="text-secondary-label truncate" style={{ fontSize: 15, maxWidth: 102, marginTop: 12 }}>Mentions and replies</Text>
+              <Switch checked={notify()} onChange={(event: { value: boolean }) => notify.set(event.value)} />
+            </ListTile>
+            <ListTile title="Theme" leading="sun.max" accessory="none" separator>
+              <Text class="text-secondary-label" style={{ fontSize: 17 }}>System</Text>
+              <Icon name="chevron.up.down" size={16} tint="secondary-label" stroke={1.6} />
+            </ListTile>
+            <ListTile title="Website" leading="globe" accessory="none" separator>
+              <Icon name="arrow.up.right.square" size={16} tint="secondary-label" stroke={1.6} />
+            </ListTile>
+            <ListTile title="Delete account" leading="trash" destructive separator={false} />
+          </Section>
+          <Section header="Group rows">
+            <ListTile title="Design review" subtitle="12 files · Updated 2 min ago" leading="folder" accessory="none" separator />
+            <ListTile title="A long title that has to truncate before it reaches the detail" subtitle="Today" leading="person" leadingColor="system-blue" accessory="none" separator />
+            <ListTile title="Add item" leading="plus" accent accessory="none" separator={false} />
+          </Section>
+        </List>
       </View>
     </NavPage>
   );
@@ -1482,6 +1526,7 @@ function CurrentPage() {
   if (id === "navigation") return <NavigationPage />;
   if (id === "lists") return <ListsPage />;
   if (id === "controls") return <ControlsPage />;
+  if (id === "rows") return <RowsPage />;
   if (id === "buttons") return <ButtonsPage />;
   if (id === "textfields") return <TextFieldsPage />;
   if (id === "search") return <SearchPage />;

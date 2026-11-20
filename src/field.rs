@@ -81,7 +81,7 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
 
     view()
         .w_full()
-        .min_h(px(metrics::ROW_HEIGHT))
+        .min_h(px(metrics::FIELD_HEIGHT))
         .flex_row()
         .items_center()
         .gap(px(8.0))
@@ -111,7 +111,7 @@ pub fn TextField(props: TextFieldProps, cx: Scope<TextFieldEvent>) -> impl IntoE
             input()
                 .element_ref(&input_ref)
                 .flex_1()
-                .min_h(px(metrics::ROW_HEIGHT))
+                .min_h(px(metrics::FIELD_HEIGHT))
                 .py(px(11.0))
                 .value(move || value.get().to_string())
                 .placeholder(placeholder.get_untracked().unwrap_or_default().to_string())

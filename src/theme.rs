@@ -64,6 +64,7 @@ pub fn merged(base: &Tokens) -> Tokens {
         "switch-thumb",
         "search-height",
         "radius-row",
+        "radius-group",
         "radius-sheet",
         "radius-button",
         "radius-search",
