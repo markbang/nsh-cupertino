@@ -22,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = ROOT / "research" / "ios-reference" / "shots"
-SHOT = {"controls": "catalog-controls", "rows": "catalog-rows"}
+SHOT = {"controls": "catalog-controls", "rows": "catalog-rows", "states": "catalog-states"}
 PT = 720 / 402
 TOL = 20
 BG_TOL = 14
@@ -68,6 +68,16 @@ ELEMENTS = {
         "dark": [
             ("switch on", (578, 413), "fill", None),
             ("tile destructive", (62, 700), "fill", None),
+        ],
+    },
+    "states": {
+        "light": [
+            ("skeleton tile", (60, 900), "fill", None),
+            ("skeleton bar", (200, 874), "fill", None),
+        ],
+        "dark": [
+            ("skeleton tile", (60, 900), "fill", None),
+            ("skeleton bar", (200, 874), "fill", None),
         ],
     },
 }
@@ -270,6 +280,22 @@ SEEN = {
             ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
             ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
             ((60, 1375, 87, 1411), "magnifier: heavier"),
+        ],
+    },
+    "states": {
+        "light": [
+            ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+            ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
+            ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider: the face (FreeSans here)"),
+            ((130, 720, 452, 752), "banner title 3.5 % wider: the face (FreeSans here)"),
+            ((120, 500, 612, 540), "description: a touch lighter in ours, FreeSans here"),
+        ],
+        "dark": [
+            ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+            ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
+            ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider: the face (FreeSans here)"),
+            ((130, 720, 452, 752), "banner title 3.5 % wider: the face (FreeSans here)"),
+            ((120, 500, 612, 540), "description: a touch lighter in ours, FreeSans here"),
         ],
     },
     "rows": {

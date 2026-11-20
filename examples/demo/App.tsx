@@ -25,6 +25,8 @@ import {
   Button,
   ContextMenu,
   DatePicker,
+  EmptyState,
+  ErrorBanner,
   FilterChip,
   Glass,
   GlassButton,
@@ -40,6 +42,7 @@ import {
   Section,
   SegmentedControl,
   Sheet,
+  Skeleton,
   Slider,
   StatusPill,
   SwipeRow,
@@ -48,13 +51,14 @@ import {
   TextField,
   Theme,
 } from "cupertino";
-import { Count, DemoTile } from "cupertino-demo/native";
+import { Count, DemoTile, Mascot } from "cupertino-demo/native";
 
 const PAGES: { id: string; title: string; blurb: string; icon: string; tint: string }[] = [
   { id: "navigation", title: "Navigation bar", blurb: "Large title, back, trailing action", icon: "arrow.up.right", tint: "system-blue" },
   { id: "lists", title: "Lists", blurb: "Sections, rows, accessories", icon: "list.bullet", tint: "system-orange" },
   { id: "controls", title: "UI Catalog", blurb: "Buttons, segments, chips, switches, search", icon: "slider.horizontal.3", tint: "system-blue" },
   { id: "rows", title: "Settings rows", blurb: "Value, switch, chevron, destructive, group rows", icon: "list.bullet", tint: "system-blue" },
+  { id: "states", title: "Empty and loading", blurb: "Empty state, failed load, skeleton rows", icon: "tray", tint: "system-blue" },
   { id: "buttons", title: "Buttons", blurb: "Filled, tinted, plain, destructive", icon: "sparkles", tint: "system-purple" },
   { id: "textfields", title: "Text fields", blurb: "Cupertino box, clear, secure", icon: "square.grid.2x2", tint: "system-teal" },
   { id: "search", title: "Search field", blurb: "Magnifier, clear, cancel", icon: "magnifyingglass", tint: "system-indigo" },
@@ -383,6 +387,36 @@ function RowsPage() {
             <ListTile title="Add item" leading="plus" accent accessory="none" separator={false} />
           </Section>
         </List>
+      </View>
+    </NavPage>
+  );
+}
+
+// The catalog's states in the order of Cohub Mobile's `catalog-states` snapshot: an empty list, the failed
+// load under it, then the rows still loading. The spacing is the snapshot's, in points from the top of the frame.
+function StatesPage() {
+  // One child under the header: the page puts 20 pt between its children, so the spacing below is set here.
+  return (
+    <NavPage title="UI Catalog">
+      <CatalogHeader />
+      <View>
+        <View style={{ marginTop: 42 }}>
+          <EmptyState
+            title="No files yet"
+            description="Files you add to this space show up here."
+            badge="folder"
+            action="Add file"
+            actionIcon="plus"
+          >
+            <Mascot size={92} />
+          </EmptyState>
+        </View>
+        <View style={{ marginTop: 28.5, marginHorizontal: 16 }}>
+          <ErrorBanner title="Could not load your data" message="Could not load this list. Check your connection.">
+            <Mascot size={32} mood="worried" />
+          </ErrorBanner>
+        </View>
+        <Skeleton rows={3} />
       </View>
     </NavPage>
   );
@@ -1534,6 +1568,7 @@ function CurrentPage() {
   if (id === "lists") return <ListsPage />;
   if (id === "controls") return <ControlsPage />;
   if (id === "rows") return <RowsPage />;
+  if (id === "states") return <StatesPage />;
   if (id === "buttons") return <ButtonsPage />;
   if (id === "textfields") return <TextFieldsPage />;
   if (id === "search") return <SearchPage />;

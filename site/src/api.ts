@@ -287,6 +287,101 @@ export const API: Record<string, ApiGroup[]> = {
       ]
     }
   ],
+  "empty-state": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`title`",
+          "rust": "`.title(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The headline"
+        },
+        {
+          "tsx": "`description`",
+          "rust": "`.description(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The line under it"
+        },
+        {
+          "tsx": "`badge`",
+          "rust": "`.badge(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "An icon name on the accent disc: `folder`, `magnifyingglass`, ..."
+        },
+        {
+          "tsx": "`action`",
+          "rust": "`.action(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "A plain button under the description, by its title"
+        },
+        {
+          "tsx": "`actionIcon`",
+          "rust": "`.action_icon(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The action's icon, before its title"
+        },
+        {
+          "tsx": "`onAction`",
+          "rust": "`Action` event",
+          "type": "event",
+          "default": "—",
+          "note": "The action was pressed"
+        },
+        {
+          "tsx": "children",
+          "rust": "`.child(..)`",
+          "type": "JSX",
+          "default": "none",
+          "note": "The illustration, drawn in a 92 pt box"
+        }
+      ]
+    }
+  ],
+  "error-banner": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`title`",
+          "rust": "`.title(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The headline"
+        },
+        {
+          "tsx": "`message`",
+          "rust": "`.message(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "What went wrong, in the danger colour"
+        },
+        {
+          "tsx": "`onRetry`",
+          "rust": "`Retry` event",
+          "type": "event",
+          "default": "—",
+          "note": "The retry button was pressed"
+        },
+        {
+          "tsx": "children",
+          "rust": "`.child(..)`",
+          "type": "JSX",
+          "default": "none",
+          "note": "The illustration at the leading edge, in a 32 pt box"
+        }
+      ]
+    }
+  ],
   "filter-chip": [
     {
       "title": "Props",
@@ -1114,6 +1209,22 @@ export const API: Record<string, ApiGroup[]> = {
           "type": "JSX",
           "default": "—",
           "note": "The content"
+        }
+      ]
+    }
+  ],
+  "skeleton": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`rows`",
+          "rust": "`.rows(..)`",
+          "type": "`number`",
+          "default": "`3`",
+          "note": "How many rows to draw"
         }
       ]
     }

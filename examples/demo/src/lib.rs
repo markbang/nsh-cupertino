@@ -2,13 +2,20 @@
 //! counter the gallery shows (`Count`). Everything visual comes from
 //! `nsh-cupertino`, imported from `"cupertino"`.
 
-use nsh_cupertino::list_tile;
+mod mascot;
+
+pub use mascot::{Mascot, MascotProps};
+
 use nsh_core::prelude::*;
+use nsh_cupertino::list_tile;
 
 /// The crate's UI set: what `App.tsx` imports from `"cupertino-demo/native"`.
 #[native_module("cupertino-demo/native")]
 fn native(registry: &mut Registry) {
-    registry.register::<DemoTile>().class::<Count>();
+    registry
+        .register::<DemoTile>()
+        .register::<Mascot>()
+        .class::<Count>();
 }
 
 /// The props of [`DemoTile`].
