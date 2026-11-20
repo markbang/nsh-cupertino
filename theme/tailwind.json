@@ -3,8 +3,8 @@
     "radius": {
       "row": 10,
       "sheet": 14,
-      "button": 12,
-      "search": 9
+      "button": 26,
+      "search": 22
     },
     "fontSize": {
       "largeTitle": [34, 1.206],

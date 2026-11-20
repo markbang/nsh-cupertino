@@ -97,6 +97,18 @@ roles! {
     "glass-regular" = 0xf8f8_f887, 0xffff_ff24, 0xf8f8_f8f2, 0xffff_ff4d;
     "glass-clear" = 0xffff_ff38, 0xffff_ff0d, 0xffff_ffd9, 0xffff_ff33;
     "glass-thick" = 0xf8f8_f8ad, 0xffff_ff33, 0xf8f8_f8f7, 0xffff_ff66;
+    // Status and control colors. The defaults are the system's, so an app that
+    // sets no preset draws what it always did: the cohub preset replaces them.
+    "on-tint" = 0xffff_ffff, 0xffff_ffff, 0xffff_ffff, 0xffff_ffff;
+    "switch-on" = 0x34c7_59ff, 0x30d1_58ff, 0x248a_3dff, 0x30db_5bff;
+    "switch-off" = 0x7878_8028, 0x7878_8051, 0x7878_803d, 0x7878_8066;
+    "success" = 0x34c7_59ff, 0x30d1_58ff, 0x248a_3dff, 0x30db_5bff;
+    "success-soft" = 0x34c7_591f, 0x30d1_581f, 0x248a_3d1f, 0x30db_5b1f;
+    "warning" = 0xff95_00ff, 0xff9f_0aff, 0xc934_00ff, 0xffb3_40ff;
+    "warning-soft" = 0xff95_001f, 0xff9f_0a1f, 0xc934_001f, 0xffb3_401f;
+    "info" = 0x007a_ffff, 0x0a84_ffff, 0x0040_ddff, 0x409c_ffff;
+    "info-soft" = 0x007a_ff1f, 0x0a84_ff1f, 0x0040_dd1f, 0x409c_ff1f;
+    "danger-soft" = 0xff3b_301f, 0xff45_3a1f, 0xd700_151f, 0xff69_611f;
     // System colors.
     "system-blue" = 0x007a_ffff, 0x0a84_ffff, 0x0040_ddff, 0x409c_ffff;
     "system-green" = 0x34c7_59ff, 0x30d1_58ff, 0x248a_3dff, 0x30db_5bff;
@@ -125,6 +137,7 @@ roles! {
 /// names (`src/design/tokens.ts` in cohub-mobile: `lightPalette` and
 /// `darkPalette`). The increased-contrast values are the standard ones.
 pub const COHUB_PRESET: &[Role] = &[
+    preset_role("system-background", 0xf6f3_eeff, 0x1212_14ff),
     preset_role("system-blue", 0xbf3f_00ff, 0xff8a_3dff),
     preset_role("system-red", 0xbf2b_3cff, 0xf278_7fff),
     preset_role("system-grouped-background", 0xf6f3_eeff, 0x1212_14ff),
@@ -133,8 +146,20 @@ pub const COHUB_PRESET: &[Role] = &[
         0xffff_ffff,
         0x1c1c_1eff,
     ),
+    preset_role("secondary-system-background", 0xffff_ffff, 0x6464_6aff),
+    preset_role("system-gray5", 0xefeb_e4ff, 0x2c2c_2eff),
     preset_role("label", 0x1613_0fff, 0xf2f2_f7ff),
     preset_role("secondary-label", 0x4a45_3eff, 0xd1d1_d6ff),
+    preset_role("on-tint", 0xffff_ffff, 0x1c0d_02ff),
+    preset_role("switch-on", 0xbf3f_00ff, 0xff8a_3dff),
+    preset_role("switch-off", 0xbfbc_bbff, 0x5353_57ff),
+    preset_role("success", 0x1c7a_4aff, 0x62c9_94ff),
+    preset_role("success-soft", 0xe6f5_ecff, 0x1b31_27ff),
+    preset_role("warning", 0x8a60_10ff, 0xe6b8_5cff),
+    preset_role("warning-soft", 0xfdf3_d8ff, 0x362d_1bff),
+    preset_role("info", 0x3a68_a8ff, 0x83a9_e8ff),
+    preset_role("info-soft", 0xe9f0_fbff, 0x1f2b_3fff),
+    preset_role("danger-soft", 0xfdea_ecff, 0x3a20_24ff),
 ];
 
 const fn preset_role(name: &'static str, light: u32, dark: u32) -> Role {
@@ -289,10 +314,10 @@ tokens! {
     activity_tick => "activity-tick";
 }
 
-/// White, for text on a system color (`button(for: .filled)` in both
-/// appearances).
+/// The text on a system color (`button(for: .filled)`): white, unless a
+/// preset sets `on-tint`.
 pub fn on_tint() -> Hsla {
-    rgba(0xffff_ffff).into()
+    system("on-tint")
 }
 
 /// The tokens the high-contrast appearances set, over `base`: every role and
@@ -541,12 +566,12 @@ pub mod radius {
     pub const ROW: Points = px(10.0);
     /// 14 pt: a sheet.
     pub const SHEET: Points = px(14.0);
-    /// 12 pt: a large button.
-    pub const BUTTON: Points = px(12.0);
-    /// 9 pt: a search field.
-    pub const SEARCH: Points = px(9.0);
-    /// 15.5 pt: a switch track.
-    pub const SWITCH: Points = px(15.5);
+    /// 26 pt: a large button, a capsule of its 52 pt height.
+    pub const BUTTON: Points = px(26.0);
+    /// 22 pt: a search field, a capsule of its 44 pt height.
+    pub const SEARCH: Points = px(22.0);
+    /// 14 pt: a switch track, a capsule of its 28 pt height.
+    pub const SWITCH: Points = px(14.0);
 }
 
 /// The motion of the design system: springs, durations, presses.
@@ -609,8 +634,9 @@ pub mod metrics {
     pub const LEADING_SIZE: f32 = 28.0;
     /// Between a leading icon and the title.
     pub const LEADING_GAP: f32 = 16.0;
-    /// A grouped section's margin from the screen's edge (`_kDefaultInsetGroupedRowsMargin`).
-    pub const SECTION_EDGE: f32 = 20.0;
+    /// A grouped section's margin from the screen's edge: 16 pt, as Cohub
+    /// Mobile's settings groups (`px-4` in `ui.tsx`'s `SettingsGroup`).
+    pub const SECTION_EDGE: f32 = 16.0;
     /// Above a section's group (`_kDefaultInsetGroupedRowsMargin`'s top).
     pub const SECTION_TOP: f32 = 20.0;
     /// Above a section's header (`_kInsetGroupedDefaultHeaderMargin`).
@@ -622,15 +648,17 @@ pub mod metrics {
     /// Between a row's title and its subtitle (`_kNotchedTitleToSubtitle`).
     pub const TITLE_SUBTITLE_GAP: f32 = 3.0;
     /// A switch's track.
-    pub const SWITCH_WIDTH: f32 = 51.0;
+    pub const SWITCH_WIDTH: f32 = 63.0;
     /// A switch's track height.
-    pub const SWITCH_HEIGHT: f32 = 31.0;
-    /// A switch's thumb.
-    pub const SWITCH_THUMB: f32 = 27.0;
+    pub const SWITCH_HEIGHT: f32 = 28.0;
+    /// A switch's thumb, its height.
+    pub const SWITCH_THUMB: f32 = 24.0;
+    /// A switch's thumb, its width.
+    pub const SWITCH_THUMB_WIDTH: f32 = 37.0;
     /// A search field's height.
-    pub const SEARCH_HEIGHT: f32 = 36.0;
-    /// A large button (`kCupertinoButtonMinSize`).
-    pub const BUTTON_LARGE: f32 = 44.0;
+    pub const SEARCH_HEIGHT: f32 = 44.0;
+    /// A large button: 52 pt, as Cohub Mobile's primary button (`min-h-13`).
+    pub const BUTTON_LARGE: f32 = 52.0;
     /// A medium button.
     pub const BUTTON_MEDIUM: f32 = 32.0;
     /// A small button.
@@ -766,8 +794,7 @@ pub mod glass {
     /// The blur radius of the material, in points: small, so the detail under
     /// a control survives (the scroll edge effect carries the dissolve).
     pub const BLUR: f32 = 5.0;
-    /// The blur of a bar: a page of 14 pt rows under 5 pt of blur is a page of
-    /// legible rows, so a floating bar frosts at 18.
+    /// The blur of a floating bar, in points (24).
     pub const BAR_BLUR: f32 = 24.0;
     /// The strength of the specular rim.
     pub const SPECULAR: f32 = 0.7;
@@ -789,9 +816,9 @@ pub mod glass {
     pub const SATURATION: f32 = 2.1;
     /// See [`SATURATION`].
     pub const SATURATION_DARK: f32 = 1.4;
-    /// The frost: opacity, clamp and weight (iOS 27 light: 0.73, 0.40, 2.0).
+    /// The frost in light: opacity, clamp and weight, [0.6, 0.40, 2.5].
     pub const FROST: [f32; 3] = [0.6, 0.40, 2.5];
-    /// The frost of the dark appearance (0.85, −0.45, 0.5).
+    /// The frost in dark: opacity, clamp and weight, [0.9, −0.45, 0.5].
     pub const FROST_DARK: [f32; 3] = [0.9, -0.45, 0.5];
     /// The hairline's darkening, and the rim light's strength.
     pub const RIM: [f32; 2] = [1.0, 1.0];

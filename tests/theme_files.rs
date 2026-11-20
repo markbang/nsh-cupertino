@@ -25,8 +25,9 @@ fn committed_theme_files_match_the_tokens() {
 fn every_role_has_its_own_dark_and_increased_contrast_values() {
     let mut adjusted = 0;
     for role in nsh_cupertino::tokens::ROLES {
-        // A gray that is the same in both appearances, as Apple's systemGray.
-        if role.name != "system-gray" {
+        // Grays that are the same in both appearances (Apple's systemGray), and
+        // the text on a tint, which is white in both.
+        if role.name != "system-gray" && role.name != "on-tint" {
             assert_ne!(
                 role.light, role.dark,
                 "{}: one value for both appearances",

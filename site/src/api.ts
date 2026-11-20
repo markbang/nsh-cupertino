@@ -287,6 +287,36 @@ export const API: Record<string, ApiGroup[]> = {
       ]
     }
   ],
+  "filter-chip": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "onPress.",
+      "rows": [
+        {
+          "tsx": "`label`",
+          "rust": "`.label(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The chip's label"
+        },
+        {
+          "tsx": "`suffix`",
+          "rust": "`.suffix(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "A count or window: \"3\", \"24h\""
+        },
+        {
+          "tsx": "`selected`",
+          "rust": "`.selected(..)`",
+          "type": "`boolean`",
+          "default": "`false`",
+          "note": "Chosen: the tint fill"
+        }
+      ]
+    }
+  ],
   "glass": [
     {
       "title": "Glass",
@@ -1117,6 +1147,36 @@ export const API: Record<string, ApiGroup[]> = {
           "type": "`string`",
           "default": "`\"Slider\"`",
           "note": "What screen readers call it"
+        }
+      ]
+    }
+  ],
+  "status-pill": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`label`",
+          "rust": "`.label(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The state's name"
+        },
+        {
+          "tsx": "`tone`",
+          "rust": "`.tone(..)`",
+          "type": "`string`",
+          "default": "`\"neutral\"`",
+          "note": "`neutral`, `success`, `warning`, `danger`, `info`"
+        },
+        {
+          "tsx": "`dot`",
+          "rust": "`.dot(..)`",
+          "type": "`boolean`",
+          "default": "`true`",
+          "note": "A dot before the label"
         }
       ]
     }

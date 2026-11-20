@@ -25,6 +25,7 @@
 pub mod action_sheet;
 pub mod alert;
 pub mod button;
+pub mod chip;
 pub mod context_menu;
 pub mod date_picker;
 pub mod field;
@@ -56,6 +57,7 @@ pub use alert::{
     AlertDialog, AlertDialogElement, AlertDialogEvent, AlertDialogProps, DialogAction, alert_dialog,
 };
 pub use button::{Button, ButtonElement, ButtonEvent, ButtonProps, button};
+pub use chip::{FilterChip, FilterChipEvent, FilterChipProps, StatusPill, StatusPillProps};
 pub use context_menu::{
     ContextAction, ContextMenu, ContextMenuElement, ContextMenuEvent, ContextMenuProps,
     context_menu,
@@ -126,6 +128,8 @@ fn native(registry: &mut Registry) {
         .register::<TextField>()
         .register::<SearchField>()
         .register::<Switch>()
+        .register::<FilterChip>()
+        .register::<StatusPill>()
         .register::<ActivityIndicator>()
         .register::<ScrollView>()
         .register::<Sheet>()

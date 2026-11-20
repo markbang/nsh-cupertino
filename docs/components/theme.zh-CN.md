@@ -32,6 +32,13 @@
 TSX 里 token 就是类名：`bg-system-blue`、`text-secondary-label`、`border-separator`。
 Rust 里是函数：`tokens::system_blue()`、`tokens::secondary_label()`；两者都是响应式的。
 
+## 预设
+
+默认是系统色。`Theme` 的 `preset` 属性会用一套配色覆盖它命名的角色：`preset="cohub"` 是
+Cohub Mobile 的配色（`src/design/tokens.ts`）：暖纸色 `#f6f3ee` 与 `#121214`、着色
+`#bf3f00` 与 `#ff8a3d`、白色或 `#1c1c1e` 的表面、暖灰与状态色。高对比度仍使用系统色，与其他角色一致。
+生成的主题文件（`theme/theme.json`）仍是系统色，所以 `bg-system-blue` 等类名暂不跟随预设；Rust 组件跟随。
+
 ## 材质
 
 `tokens::materials` 保存浮动层的玻璃：`ultra-thin`、`thin`、`regular`、`thick` 与 `chrome`，

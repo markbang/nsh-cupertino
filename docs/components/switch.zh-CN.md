@@ -2,8 +2,8 @@
 
 # 开关
 
-iOS 的开关：51 × 31 pt 胶囊，开启为 `systemGreen`，关闭为 `secondaryFill`，27 pt 白色滑块
-在 200 ms 内移动 20 pt。
+iOS 的开关：63 × 28 pt 胶囊，开启为 `systemGreen`，关闭为 `secondaryFill`（即 `switch-on` 与
+`switch-off` 角色，cohub 预设将它们设为着色与暖灰），37 × 24 pt 白色滑块在 200 ms 内移动 22 pt。
 
 | | |
 | --- | --- |

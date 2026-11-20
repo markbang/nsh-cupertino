@@ -2,8 +2,8 @@
 
 # 搜索框
 
-iOS 的搜索框：36 pt 高、9 pt 圆角，放大镜与 placeholder 使用 secondary label 色，有清除按钮，
-旁边可选"取消"。内边距（左右 5.5 pt、上下 8 pt）与 20 pt 图标来自 `CupertinoSearchTextField`。
+iOS 的搜索框：44 pt 高的胶囊，放大镜与 placeholder 使用 secondary label 色，有清除按钮，
+旁边可选"取消"。左右内边距 16 pt，放大镜 18 pt，与 Cohub Mobile 的 `SearchField` 一致。
 
 | | |
 | --- | --- |

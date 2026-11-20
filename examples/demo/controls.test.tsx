@@ -12,7 +12,7 @@ for (const scheme of ["light", "dark"] as const) {
       storage: { "cupertino.page": "controls", "cupertino.preset": "cohub" },
       colorScheme: scheme,
       width: 402,
-      height: 874,
+      height: 918,
 
     });
     try {

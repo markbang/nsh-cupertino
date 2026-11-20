@@ -24,23 +24,27 @@ Events: `onPress`.
 
 Looks
 
-- **filled**: `systemBlue` background, white text, 12 pt corners, 44 pt tall.
+- **filled**: `systemBlue` background (the tint), white text.
+- **secondary**: `systemGray5` background, label text.
+- **danger**: `systemRed` background, white text.
 - **tinted**: the tint at 18 % in light and 26 % in dark, blue text.
 - **plain**: blue text only.
 - **destructive**: red text (iOS's destructive style), same shape as plain.
+- `loading`: a spinner in place of the icon, the whole button at 55 % and not pressable.
 
 Sizes
 
 | Size | Height | Text | Padding | Corners | Target |
 | --- | --- | --- | --- | --- | --- |
-| large | 44 pt | 17 semibold | 20 × 16 | 12 pt | 44 pt |
+| large | 52 pt | 17 semibold | 20 × 8 | capsule (26 pt) | 44 pt |
 | medium | 32 pt | 15 semibold | 15 × 10 | pill (40 pt) | 44 pt |
 | small | 28 pt | 15 semibold | 12 × 6 | pill (40 pt) | 44 pt |
 
 Notes
 
-- The visual height is `CupertinoButton`'s; a medium or small button grows its
-  hit area to 44 pt, not its look, as the guidelines ask.
+- The large button is 52 pt, the height of Cohub Mobile's primary button; the
+  medium and small ones keep `CupertinoButton`'s heights. A medium or small button
+  grows its hit area to 44 pt, not its look, as the guidelines ask.
 - A disabled button reports no presses and is announced as dimmed; its text
   takes the tertiary label color and a filled one keeps its tint at 40 %.
 - An icon is drawn at 1.2 × the text size, as `CupertinoButton` sizes it.

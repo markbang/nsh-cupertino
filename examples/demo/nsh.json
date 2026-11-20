@@ -6,7 +6,7 @@
   "rust": ["../..", "."],
   "theme": "../../theme/theme.json",
   "tailwind": {
-    "radius": { "row": 10, "sheet": 14, "button": 12, "search": 9 },
+    "radius": { "row": 10, "sheet": 14, "button": 26, "search": 22 },
     "fontWeight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700 }
   },
   "appearance": "system"

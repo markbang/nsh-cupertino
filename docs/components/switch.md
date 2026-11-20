@@ -2,8 +2,10 @@
 
 # Switch
 
-iOS's on / off switch: a 51 × 31 pt pill, `systemGreen` when on, `secondaryFill`
-when off, with a 27 pt white thumb that travels 20 pt over 200 ms.
+iOS's on / off switch: a 63 × 28 pt capsule, `systemGreen` when on, `secondaryFill`
+when off (the `switch-on` and `switch-off` roles, which the cohub preset sets to
+the accent and a warm grey), with a 37 × 24 pt white thumb that travels 22 pt
+over 200 ms.
 
 | | |
 | --- | --- |

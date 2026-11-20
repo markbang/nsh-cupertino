@@ -4,6 +4,7 @@ use nsh_core::{AccessibilityRole, prelude::*};
 
 use crate::{
     icon::icon,
+    indicator::activity_indicator,
     tokens::{self, metrics, motion, radius, type_default},
 };
 
@@ -13,10 +14,11 @@ pub struct ButtonProps {
     /// The button's text. Leave it out for an icon-only button (give it a
     /// `label`).
     pub title: Prop<Option<SharedString>>,
-    /// `"filled"` (blue, the default), `"tinted"` (blue at 18 %), `"plain"`
-    /// (blue text) or `"destructive"` (red text).
+    /// `"filled"` (the tint, the default), `"tinted"` (the tint at 18 %),
+    /// `"plain"` (tint text), `"destructive"` (red text), `"secondary"` (a grey
+    /// fill, label text) or `"danger"` (a red fill).
     pub variant: Prop<Option<SharedString>>,
-    /// `"large"` (44 pt, the default), `"medium"` (32 pt) or `"small"`
+    /// `"large"` (52 pt, the default), `"medium"` (32 pt) or `"small"`
     /// (28 pt). The press target is 44 pt at every size.
     pub size: Prop<Option<SharedString>>,
     /// An icon before the title, by name ([`crate::icon::NAMES`]), drawn at
@@ -24,6 +26,9 @@ pub struct ButtonProps {
     pub icon: Prop<Option<SharedString>>,
     /// Dimmed and not pressable.
     pub disabled: Prop<Option<bool>>,
+    /// A request in progress: a spinner in place of the icon, the button at
+    /// 55 % and not pressable (`disabled` keeps its own look).
+    pub loading: Prop<Option<bool>>,
     /// What screen readers say, for a button whose title is an icon or short.
     pub label: Prop<Option<SharedString>>,
 }
@@ -35,14 +40,15 @@ pub enum ButtonEvent {
     Press,
 }
 
-/// A button in one of iOS's four looks, with the pressed state as iOS draws
-/// it: the whole button fades to 40 % over 120 ms (`kFadeOutDuration`), and
-/// back over 180 ms.
+/// A button in one of iOS's looks, with the pressed state as iOS draws it: the
+/// whole button fades to 40 % over 120 ms (`kFadeOutDuration`), and back over
+/// 180 ms.
 ///
-/// The visual height is `CupertinoButton`'s (44, 32 or 28 pt); presses count
-/// over a 44 pt target at every size, as the guidelines ask. A disabled button
-/// keeps its shape and reports nothing, and its text takes the tertiary label
-/// color as `CupertinoButton` does.
+/// The large button is a 52 pt capsule, the height of Cohub Mobile's primary
+/// button; the medium and small ones are `CupertinoButton`'s (32 and 28 pt).
+/// Presses count over a 44 pt target at every size, as the guidelines ask. A
+/// disabled button keeps its shape and reports nothing, and its text takes the
+/// tertiary label color as `CupertinoButton` does.
 #[component]
 pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
     let variant = props
@@ -53,13 +59,16 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
     let destructive = variant == "destructive";
     let filled = variant == "filled";
     let tinted = variant == "tinted";
+    let secondary = variant == "secondary";
+    let danger = variant == "danger";
+    let solid = filled || secondary || danger;
     let (visual_height, padding_x, padding_y, step, corner) = match size.as_str() {
         "small" => (28.0, 12.0, 6.0, type_default::SUBHEADLINE, 40.0),
         "medium" => (32.0, 15.0, 10.0, type_default::SUBHEADLINE, 40.0),
         _ => (
             metrics::BUTTON_LARGE,
             20.0,
-            16.0,
+            8.0,
             type_default::HEADLINE,
             radius::BUTTON.0,
         ),
@@ -67,10 +76,10 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
     // The touch target stays 44 pt: a small button grows its hit area, not its
     // look.
     let slop = (44.0 - visual_height).max(0.0) / 2.0;
-    let disabled = {
-        let disabled = props.disabled;
-        move || disabled.get().unwrap_or(false)
-    };
+    let disabled_prop = props.disabled;
+    let disabled = move || disabled_prop.get().unwrap_or(false);
+    let loading = props.loading.get_untracked().unwrap_or(false);
+    let blocked = move || disabled() || loading;
     let title = props.title;
     let icon_name = props.icon;
     let has_icon = props.icon.get_untracked().is_some();
@@ -87,13 +96,17 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
         .px(px(padding_x))
         .py(px(padding_y))
         .rounded(px(corner))
+        .when(loading, |v| v.opacity(LOADING_OPACITY))
         .bg(move || {
-            if filled {
-                if disabled() {
-                    tokens::system_blue().opacity(0.4)
+            if solid {
+                let fill = if secondary {
+                    tokens::system_gray5()
+                } else if danger {
+                    tokens::system_red()
                 } else {
                     tokens::system_blue()
-                }
+                };
+                if disabled() { fill.opacity(0.4) } else { fill }
             } else if tinted {
                 let alpha = if nsh_core::element::dark() {
                     0.26
@@ -112,7 +125,7 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
         .active(|s| s.opacity(motion::PRESS_OPACITY))
         .transition_opacity()
         .duration(motion::PRESS_FADE_IN_MS)
-        .disabled(disabled())
+        .disabled(blocked())
         .role(AccessibilityRole::Button)
         .accessibility_label(move || {
             Some(
@@ -123,17 +136,24 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
             )
         })
         .on_press(move || {
-            if !disabled() {
+            if !blocked() {
                 cx.emit(ButtonEvent::Press);
             }
         })
-        .when(has_icon, |v| {
+        .when(loading, |v| {
+            v.child(
+                activity_indicator()
+                    .size(step.size.0 * 1.2)
+                    .color("on-tint"),
+            )
+        })
+        .when(has_icon && !loading, |v| {
             v.child(
                 icon(
                     &icon_name.get_untracked().unwrap_or_default(),
                     step.size.0 * 1.2,
                 )
-                .text_color(move || button_text(filled, destructive, disabled())),
+                .text_color(move || button_text(solid, secondary, destructive, disabled())),
             )
         })
         .child(when(
@@ -144,17 +164,23 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
                     .line_height(step.line_height)
                     .letter_spacing(tokens::tracking(step))
                     .font_weight(FontWeight(step.weight))
-                    .text_color(move || button_text(filled, destructive, disabled()))
+                    .text_color(move || button_text(solid, secondary, destructive, disabled()))
             },
         ))
 }
 
-fn button_text(filled: bool, destructive: bool, disabled: bool) -> Hsla {
+/// The opacity of a loading button: `disabled:opacity-55` in Cohub Mobile's
+/// `PrimaryButton` (`ui.tsx`).
+const LOADING_OPACITY: f32 = 0.55;
+
+fn button_text(solid: bool, secondary: bool, destructive: bool, disabled: bool) -> Hsla {
     if disabled {
         // `CupertinoButton`'s disabled foreground: the tertiary label, whatever
         // the variant.
         tokens::tertiary_label()
-    } else if filled {
+    } else if secondary {
+        tokens::label()
+    } else if solid {
         tokens::on_tint()
     } else if destructive {
         tokens::system_red()

@@ -2,10 +2,9 @@
 
 # Search field
 
-iOS's search field: 36 pt tall, 9 pt corners, a magnifier and the placeholder in
-the secondary label color, a clear button, and an optional Cancel beside it.
-The insets (5.5 pt sides, 8 pt above and below) and the 20 pt icons are
-`CupertinoSearchTextField`'s.
+iOS's search field: a 44 pt capsule, a magnifier and the placeholder in the
+secondary label color, a clear button, and an optional Cancel beside it. The
+insets (16 pt sides) and the 18 pt magnifier are Cohub Mobile's `SearchField`.
 
 | | |
 | --- | --- |

@@ -25,10 +25,11 @@ import {
   Button,
   ContextMenu,
   DatePicker,
+  FilterChip,
   Glass,
   GlassButton,
-  Icon,
   GlassTabBar,
+  Icon,
   List,
   ListTile,
   NavPage,
@@ -40,6 +41,7 @@ import {
   SegmentedControl,
   Sheet,
   Slider,
+  StatusPill,
   SwipeRow,
   Switch,
   TabBar,
@@ -244,58 +246,101 @@ function ListsPage() {
 
 // The catalog's controls in the order of Cohub Mobile's `catalog-controls`
 // snapshot, under the cohub preset (`cupertino.preset`) it is compared with.
+// The spacing is the snapshot's, in points from the top of the frame.
+const HEADING = { fontSize: 13, fontWeight: "600" as const, lineHeight: 16 };
+
 function ControlsPage() {
   const notify = signal(true);
   const scope = signal("all");
   const sort = signal("recent");
+  const chip = signal("recent");
   const query = signal("");
   return (
-    <View class="min-h-0 flex-1 bg-background">
-      {/* The status bar's 59 pt, then the bar's 44 pt, as the reference frame has them. */}
-      <View style={{ height: 103, justifyContent: "flex-end", alignItems: "center" }}>
-        <Text class="text-label" style={{ fontSize: 17, fontWeight: "600", height: 44, lineHeight: 44 }}>UI Catalog</Text>
-      </View>
-      <View style={{ paddingHorizontal: 16, gap: 12 }}>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: "#6c6c70" }}>Buttons</Text>
-        <Button title="Primary" icon="plus" />
-        <Button title="Secondary" variant="tinted" />
-        <Button title="Ghost" variant="plain" />
-        <Button title="Danger" variant="destructive" />
-        <Button title="Loading" disabled />
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <Icon name="arrow.up.right" size={22} />
-          <Icon name="doc" size={22} tint="system-blue" />
-          <Icon name="line.3.horizontal.decrease" size={22} tint="system-blue" />
-          <Icon name="plus" size={22} tint="system-blue" />
-          <Icon name="trash" size={22} tint="system-red" />
-          <Icon name="archivebox" size={22} tint="system-gray" />
+    // The page's background is the Rust page's, so the cohub preset paints it; the
+    // title sits in the frame's status bar and bar space, 59 + 44 pt from the top.
+    <NavPage title="UI Catalog">
+      <View style={{ height: 15, paddingHorizontal: 16 }}>
+        <View style={{ position: "absolute", left: 16, top: 2, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }} class="bg-secondary-system-grouped-background">
+          <Icon name="chevron.left" size={20} tint="label" />
         </View>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: "#6c6c70" }}>Selection</Text>
-        <SegmentedControl
-          items={[
-            { value: "all", title: "All" },
-            { value: "mine", title: "Mine" },
-            { value: "shared", title: "Shared" },
-          ]}
-          value={scope()}
-          onChange={(event: { value: string }) => scope.set(event.value)}
-        />
-        <SegmentedControl
-          items={[
-            { value: "recent", title: "All" },
-            { value: "mine", title: "Mine" },
-          ]}
-          value={sort()}
-          onChange={(event: { value: string }) => sort.set(event.value)}
-        />
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
+          <Text class="text-label" style={{ fontSize: 17, fontWeight: "600" }}>UI Catalog</Text>
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: 16 }}>
+        <Text class="text-secondary-label" style={{ ...HEADING, marginTop: 22 }}>Buttons</Text>
+        <View style={{ marginTop: 16, gap: 12 }}>
+          <Button title="Primary" icon="plus" />
+          <Button title="Secondary" variant="secondary" />
+          <Button title="Ghost" variant="plain" />
+          <Button title="Danger" variant="danger" />
+          <Button title="Loading" loading />
+        </View>
+        <View style={{ marginTop: 12, height: 44, flexDirection: "row", gap: 8 }}>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="square.and.arrow.up" size={22} tint="label" />
+          </View>
+          <View class="bg-secondary-system-grouped-background" style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="doc.on.doc" size={22} tint="label" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="line.3.horizontal.decrease" size={22} tint="system-blue" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="plus" size={22} tint="system-blue" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="trash" size={22} tint="system-red" />
+          </View>
+          <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="archivebox" size={22} tint="system-gray" />
+          </View>
+        </View>
+        <Text class="text-secondary-label" style={{ ...HEADING, marginTop: 16 }}>Selection</Text>
+        {/* A segmented control is a 50 pt target around its 32 pt track: the rows are 32 pt tall. */}
+        <View style={{ marginTop: 14, height: 32 }}>
+          <SegmentedControl
+            items={[
+              { value: "all", title: "All" },
+              { value: "mine", title: "Mine" },
+              { value: "shared", title: "Shared" },
+            ]}
+            value={scope()}
+            onChange={(event: { value: string }) => scope.set(event.value)}
+          />
+        </View>
+        <View style={{ marginTop: 11, height: 32 }}>
+          <SegmentedControl
+            items={[
+              { value: "recent", title: "All" },
+              { value: "mine", title: "Mine" },
+            ]}
+            value={sort()}
+            onChange={(event: { value: string }) => sort.set(event.value)}
+          />
+        </View>
+        <View style={{ marginTop: 20, flexDirection: "row", gap: 4 }}>
+          <FilterChip label="Recent" suffix="3" selected={chip() === "recent"} onPress={() => chip.set("recent")} />
+          <FilterChip label="Pinned" selected={chip() === "pinned"} onPress={() => chip.set("pinned")} />
+          <FilterChip label="Archived" selected={chip() === "archived"} onPress={() => chip.set("archived")} />
+        </View>
+        <View style={{ marginTop: 18, flexDirection: "row", gap: 16 }}>
           <Switch checked={notify()} label="On" onChange={(event: { value: boolean }) => notify.set(event.value)} />
           <Switch checked={false} label="Off" />
           <Switch checked disabled label="Disabled" />
         </View>
-        <SearchField value={query()} placeholder="Search" label="Search" onChange={(event: { value: string }) => query.set(event.value)} />
+        <View style={{ marginTop: 12 }}>
+          <SearchField value={query()} placeholder="Search" label="Search" onChange={(event: { value: string }) => query.set(event.value)} />
+        </View>
+        <View style={{ marginTop: 12, flexDirection: "row", gap: 6 }}>
+          <StatusPill label="Neutral" />
+          <StatusPill label="Running" tone="success" />
+          <StatusPill label="Paused" tone="warning" />
+          <StatusPill label="Failed" tone="danger" />
+          <StatusPill label="Queued" tone="info" />
+        </View>
       </View>
-    </View>
+    </NavPage>
   );
 }
 

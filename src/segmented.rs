@@ -53,9 +53,9 @@ pub enum SegmentedControlEvent {
 
 const TRACK_HEIGHT: f32 = 32.0;
 const TRACK_PADDING: f32 = 2.0;
-const CORNER: f32 = 9.0;
+const CORNER: f32 = 16.0;
 
-/// A 32 pt track (a 50 pt target) whose white thumb slides to the chosen
+/// A 32 pt capsule track (a 50 pt target) whose white thumb slides to the chosen
 /// segment over the design system's spring, with a haptic tick.
 ///
 /// The segments are buttons: Tab reaches them, Return activates one. With
