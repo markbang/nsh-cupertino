@@ -79,3 +79,14 @@ test("the tokens follow the system appearance", async () => {
   expect(light.spanStyle("text:system-blue >> nth=1")!.color).toBe("#3c3c434c");
   expect(dark.spanStyle("text:system-blue >> nth=1")!.color).toBe("#ebebf54c");
 });
+
+test("a class colour follows the preset, as a component's does", async () => {
+  const system = await open("./App.tsx", { storage: { "cupertino.page": "controls" }, colorScheme: "light" });
+  const cohub = await open("./App.tsx", {
+    storage: { "cupertino.page": "controls", "cupertino.preset": "cohub" },
+    colorScheme: "light",
+  });
+  // The heading is `text-secondary-label`: the system's grey, then the cohub preset's secondary label.
+  expect(system.spanStyle("text:Buttons")!.color).not.toBe("#4a453eff");
+  expect(cohub.spanStyle("text:Buttons")!.color).toBe("#4a453eff");
+});

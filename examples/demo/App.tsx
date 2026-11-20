@@ -713,6 +713,13 @@ function ColorsPage() {
             </Each>
           </View>
         </Section>
+        <Section header="Aliases" footer="Classes that name a role follow the same preset: bg-primary is the tint, bg-destructive the red.">
+          <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+            <Each of={["primary", "destructive", "background", "muted"]} key={(token) => token}>
+              {(token) => <Swatch token={token()} name={token()} />}
+            </Each>
+          </View>
+        </Section>
         <Section header="Text and separators">
           <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
             <Each of={["label", "secondary-label", "tertiary-label", "quaternary-label", "separator", "opaque-separator", "fill"]} key={(token) => token}>
