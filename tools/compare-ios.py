@@ -18,7 +18,7 @@ Colour is the fill sampled at the probe, in the lossy webp's ±3. Needs Pillow.
 import argparse
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = ROOT / "research" / "ios-reference" / "shots"
@@ -26,7 +26,7 @@ SHOT = {"controls": "catalog-controls"}
 PT = 720 / 402
 TOL = 20
 BG_TOL = 14
-GAP = 6  # px of background a run may cross: a label's antialiased edge is not a gap
+GAP = 2  # px of background a run may cross: a label's antialiased edge is not a gap
 
 # name, probe (px in the 720 frame, on the fill), reference fill, kind, label box (px) for ink.
 ELEMENTS = {
@@ -39,13 +39,13 @@ ELEMENTS = {
             ("segmented 3 track", (590, 1034), "fill", None),
             ("segmented 3 thumb", (120, 1040), "fill", None),
             ("segmented 2 track", (600, 1130), "fill", None),
-            ("chip selected", (45, 1220), "fill", None),
-            ("chip unselected", (222, 1220), "fill", None),
+            ("chip selected", (56, 1220), "fill", None),
+            ("chip unselected", (285, 1220), "fill", None),
             ("switch on", (45, 1300), "fill", None),
             ("switch off", (265, 1300), "fill", None),
             ("search field", (500, 1395), "fill", None),
-            ("status pill neutral", (40, 1475), "fill", None),
-            ("status pill running", (175, 1475), "fill", None),
+            ("status pill neutral", (56, 1475), "fill", None),
+            ("status pill running", (185, 1475), "fill", None),
         ],
         "dark": [
             ("button primary", (200, 320), "fill", (270, 300, 450, 350)),
@@ -54,7 +54,7 @@ ELEMENTS = {
             ("button loading", (200, 780), "fill", None),
             ("segmented 3 track", (590, 1034), "fill", None),
             ("segmented 2 track", (600, 1130), "fill", None),
-            ("chip selected", (45, 1220), "fill", None),
+            ("chip selected", (56, 1220), "fill", None),
             ("switch on", (45, 1300), "fill", None),
             ("switch off", (265, 1300), "fill", None),
             ("search field", (500, 1395), "fill", None),
@@ -95,7 +95,12 @@ def column_runs(im, x, bg):
     return runs
 
 
-def measure(im, probe, ref_box=None):
+# Where an element's colour is sampled, as (x, y) fractions of its box: clear of the label and the thumb.
+SAMPLE = {"switch on": (0.25, 0.5), "switch off": (0.8, 0.5), "status pill neutral": (0.96, 0.5), "status pill running": (0.96, 0.5)}
+SAMPLE_DEFAULT = (0.5, 0.2)
+
+
+def measure(im, probe, ref_box=None, name=None):
     """The element through `probe`: its box in px, its colour and its radius.
 
     In the reference the run through the probe is the element. In ours, the run
@@ -126,7 +131,8 @@ def measure(im, probe, ref_box=None):
             b += 1
         left, right = min(left, a), max(right, b)
     box = (left, top, right, bottom)
-    sample = (min(left + max(12, (bottom - top) // 2), right), (top + bottom) // 2)
+    fx, fy = SAMPLE.get(name, SAMPLE_DEFAULT)
+    sample = (round(left + (right - left) * fx), round(top + (bottom - top) * fy))
     return {
         "box": box,
         "h": (bottom - top + 1) / PT,
@@ -176,8 +182,8 @@ def compare(page, scheme, ours_path):
         ours = ours.resize(ref.size, Image.LANCZOS)
     rows = []
     for name, probe, _, ink_box in ELEMENTS[page][scheme]:
-        reference = measure(ref, probe)
-        mine = measure(ours, probe, reference["box"] if reference else None)
+        reference = measure(ref, probe, name=name)
+        mine = measure(ours, probe, reference["box"] if reference else None, name=name)
         ink_pair = None
         if ink_box and reference and mine:
             ink_pair = (ink(ref, ink_box, rgb(ref, 2, probe[1])), ink(ours, ink_box, rgb(ours, 2, probe[1])))
@@ -217,7 +223,92 @@ def table(rows):
     return "\n".join(lines)
 
 
-def annotate(ref, ours, rows):
+# Differences the measurements do not carry, seen on the native crops: (box in the
+# 720 px frame, covering both renders, label). Listed per scheme; the boxes are
+# where the reference and ours disagree, so they sit on the diff column.
+SEEN = {
+    "light": [
+        ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+        ((284, 139, 436, 175), "title 3 px low, 4 px taller"),
+        ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
+        ((31, 223, 145, 247), "\"Buttons\" label: 16 pt inset, ref 32 pt, 7 px high"),
+        ((30, 960, 162, 996), "\"Selection\" label: 16 pt inset, ref 32 pt, 17 px high"),
+        ((277, 764, 312, 794), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
+        ((53, 871, 83, 906), "share icon: ours black and heavier, 17×20 pt, ref 15×18 pt"),
+        ((120, 847, 204, 931), "copy button: white disc with no ring"),
+        ((425, 872, 455, 906), "trash icon: heavier red stroke"),
+        ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
+        ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
+        ((60, 1375, 87, 1411), "magnifier: black and heavier"),
+    ],
+    "dark": [
+        ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
+        ((284, 139, 436, 175), "title 3 px low, 4 px taller"),
+        ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
+        ((31, 223, 145, 247), "\"Buttons\" label: 16 pt inset, ref 32 pt, 7 px high"),
+        ((30, 960, 162, 996), "\"Selection\" label: 16 pt inset, ref 32 pt, 17 px high"),
+        ((277, 764, 314, 798), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
+        ((53, 871, 83, 906), "share icon: ours heavier, 17×20 pt, ref 15×18 pt"),
+        ((120, 847, 204, 931), "copy button: ours disc without the ring"),
+        ((425, 872, 455, 906), "trash icon: heavier stroke"),
+        ((26, 1190, 536, 1254), "chip labels: ink +15% (Pinned 0.215 vs 0.187)"),
+        ((28, 1348, 692, 1446), "search field 10 px high (ours y 1348, ref 1358)"),
+        ((60, 1375, 87, 1411), "magnifier: heavier"),
+        ((312, 1287, 424, 1337), "disabled switch: ref thumb at half opacity, ours full white"),
+    ],
+}
+
+# A measured element is a remaining difference past these: height/width in pt, radius in pt,
+# colour as the summed channel error, ink as the share of a text box.
+THRESHOLD = {"h": 1.0, "w": 2.0, "radius": 3.0, "colour": 8, "ink": 0.04}
+NOTE = {"switch on": " (edge noise: row scans read 60-64 pt on both)"}
+
+
+def measured_findings(rows):
+    out = []
+    for name, ref_m, mine_m, ink_pair in rows:
+        if ref_m is None or mine_m is None:
+            continue
+        parts = []
+        dh = mine_m["h"] - ref_m["h"]
+        dw = mine_m["w"] - ref_m["w"]
+        if abs(dh) >= THRESHOLD["h"]:
+            parts.append(f"height {dh:+.1f} pt")
+        if abs(dw) >= THRESHOLD["w"]:
+            parts.append(f"width {dw:+.1f} pt")
+        if ref_m["radius"] is not None and mine_m["radius"] is not None:
+            dr = mine_m["radius"] - ref_m["radius"]
+            if abs(dr) >= THRESHOLD["radius"]:
+                parts.append(f"radius {dr:+.1f} pt")
+        dc = sum(abs(a - b) for a, b in zip(ref_m["colour"], mine_m["colour"]))
+        if dc >= THRESHOLD["colour"]:
+            parts.append(f"colour {hexc(ref_m['colour'])} vs {hexc(mine_m['colour'])}")
+        if ink_pair and abs(ink_pair[1] - ink_pair[0]) >= THRESHOLD["ink"]:
+            parts.append(f"ink {ink_pair[1] - ink_pair[0]:+.2f}")
+        if not parts:
+            continue
+        a, b = ref_m["box"], mine_m["box"]
+        box = (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
+        out.append((box, f"{name}: " + ", ".join(parts) + NOTE.get(name, "")))
+    return out
+
+
+def findings(scheme, rows):
+    items = list(SEEN[scheme]) + measured_findings(rows)
+    return sorted(items, key=lambda item: (item[0][1], item[0][0]))
+
+
+def font(size):
+    for path in ("/usr/share/fonts/truetype/freefont/FreeSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+        if Path(path).exists():
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default(size=size)
+
+
+RED = (230, 0, 60)
+
+
+def annotate(ref, ours, items):
     diff = Image.new("RGB", ref.size, (255, 255, 255))
     px_a, px_b = ref.load(), ours.load()
     out = diff.load()
@@ -227,27 +318,36 @@ def annotate(ref, ours, rows):
             d = min(255, sum(abs(p - q) for p, q in zip(a, b)) // 2)
             out[x, y] = (255, 255 - d, 255 - d)
     draw = ImageDraw.Draw(diff)
-    for name, ref_m, mine_m, _ in rows:
-        if ref_m is None:
-            continue
-        left, top, right, bottom = ref_m["box"]
-        draw.rectangle((left, top, right, bottom), outline=(0, 120, 255), width=2)
-        if mine_m is not None:
-            l, t, r, b = mine_m["box"]
-            draw.rectangle((l, t, r, b), outline=(255, 0, 180), width=2)
-            dh = (mine_m["h"] - ref_m["h"])
-            label = f"{name}  dh {dh:+.1f}"
-        else:
-            label = f"{name}  missing"
-        draw.text((left + 2, max(0, top - 12)), label, fill=(0, 0, 0))
+    small = font(13)
+    for number, (box, label) in enumerate(items, 1):
+        left, top, right, bottom = box
+        draw.rectangle(box, outline=RED, width=2)
+        tag = f"{number}"
+        text_w = draw.textlength(f"{number} {label}", font=small)
+        x = min(left, ref.width - text_w - 8)
+        y = top - 18 if top >= 18 else bottom + 2
+        draw.rectangle((x, y, x + text_w + 8, y + 16), fill=RED)
+        draw.text((x + 4, y + 1), f"{tag} {label}", fill=(255, 255, 255), font=small)
     return diff
 
 
-def sheet(ref, ours, diff):
-    out = Image.new("RGB", (ref.width * 3 + 40, ref.height), (255, 255, 255))
+def legend_image(items, width):
+    body = font(17)
+    line = 24
+    img = Image.new("RGB", (width, 24 + line * len(items)), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    draw.text((12, 6), "Remaining differences (numbers match the boxes)", fill=(0, 0, 0), font=font(19))
+    for i, (_, label) in enumerate(items, 1):
+        draw.text((12, 30 + (i - 1) * line), f"{i}. {label}", fill=(0, 0, 0), font=body)
+    return img
+
+
+def sheet(ref, ours, diff, legend):
+    out = Image.new("RGB", (ref.width * 3 + 40, ref.height + legend.height), (255, 255, 255))
     out.paste(ref, (0, 0))
     out.paste(ours, (ref.width + 20, 0))
     out.paste(diff, (ref.width * 2 + 40, 0))
+    out.paste(legend, (0, ref.height))
     return out
 
 
@@ -256,18 +356,21 @@ def main():
     parser.add_argument("page", choices=sorted(SHOT))
     parser.add_argument("scheme", choices=["light", "dark"])
     parser.add_argument("ours", type=Path, help="our rendered PNG (any size; resized to the reference's)")
-    parser.add_argument("out", type=Path, help="where to write the three-column image")
-    parser.add_argument("--table", type=Path, help="write the metric table (Markdown) here")
+    parser.add_argument("out", type=Path, help="where to write the three-column image (reference | ours | annotated diff)")
+    parser.add_argument("--table", type=Path, help="write the metric table and the remaining differences (Markdown) here")
     args = parser.parse_args()
     ref, ours, rows = compare(args.page, args.scheme, args.ours)
-    diff = annotate(ref, ours, rows)
+    items = findings(args.scheme, rows)
+    diff = annotate(ref, ours, items)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    sheet(ref, ours, diff).save(args.out)
+    sheet(ref, ours, diff, legend_image(items, ref.width * 3 + 40)).save(args.out)
     text = table(rows)
+    remaining = "\n".join(f"{i}. {label}" for i, (_, label) in enumerate(items, 1))
+    report = text + "\n\n## Remaining differences\n\n" + remaining
     if args.table:
         args.table.parent.mkdir(parents=True, exist_ok=True)
-        args.table.write_text(text + "\n")
-    print(text)
+        args.table.write_text(report + "\n")
+    print(report)
 
 
 if __name__ == "__main__":
