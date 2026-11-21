@@ -405,6 +405,7 @@ function RowsPage() {
 // load under it, then the rows still loading. The spacing is the snapshot's, in points from the top of the frame.
 function StatesPage() {
   const toastShown = signal(true);
+  const savedShown = signal(true);
   // One child under the header: the page puts 20 pt between its children, so the spacing below is set here.
   return (
     <NavPage title="UI Catalog">
@@ -434,9 +435,17 @@ function StatesPage() {
       </View>
       {toastShown() ? (
         <ToastLayer>
-          <Toast depth={1} title="Saved to Files" message="Added to Design review." tone="success">
-            <Icon name="checkmark.circle" size={16} tint="system-green" />
-          </Toast>
+          {savedShown() ? (
+            <Toast
+              depth={1}
+              title="Saved to Files"
+              message="Added to Design review."
+              tone="success"
+              onExpire={() => savedShown.set(false)}
+            >
+              <Icon name="checkmark.circle" size={16} tint="system-green" />
+            </Toast>
+          ) : null}
           <Toast
             title="Could not send"
             message="Check your connection and try again."
@@ -444,6 +453,7 @@ function StatesPage() {
             action="Retry"
             onAction={() => toastShown.set(false)}
             onDismiss={() => toastShown.set(false)}
+            onExpire={() => toastShown.set(false)}
           >
             <Mascot size={20} mood="worried" />
           </Toast>

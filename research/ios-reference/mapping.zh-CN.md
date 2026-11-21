@@ -48,7 +48,7 @@
 | `ui.tsx` StatusPill（`ui.tsx:382`） | 无 | missing | 圆点加文字，五种色调 | 没有状态胶囊。 |
 | `ui.tsx` EmptyState（`ui.tsx:392`） | 无 | missing | 图标、标题、描述、操作 | 没有空状态。 |
 | `ui.tsx` ConnectionBanner（`ui.tsx:791`）、DataError（`ui.tsx:806`）、`components/AppUpdateBanner.tsx` | 无 | missing | 横幅 `min-h-14`、`rounded-md`、`shadow-float`（`AppUpdateBanner.tsx:88`） | 没有内嵌横幅。 |
-| `components/Toast.tsx` | `state.rs` Toast、ToastLayer | partial | 堆叠偏移 10、底部留白 84、关闭距离 56、速度 800、进入弹簧 400 ms（`Toast.tsx:41-45`） | 卡片、堆叠、进入、滑动和距底 84 pt 的图层已有。没有自动消失计时，没有按住时暂停。 |
+| `components/Toast.tsx` | `state.rs` Toast、ToastLayer | partial | 堆叠偏移 10、底部留白 84、关闭距离 56、速度 800、进入弹簧 400 ms（`Toast.tsx:41-45`） | 卡片、堆叠、进入、滑动、距底 84 pt 的图层、Cohub 的按色调计时（3.2 秒 / 5 秒，有操作时 5 秒）、按住时暂停以及松开后至少 1.5 秒的宽限已有。按住时整层计时暂停，与 Cohub 一致。 |
 | `ui/Skeleton.tsx` | 无 | missing | 加载占位 | 没有骨架屏。 |
 | `ui.tsx` Avatar（`ui.tsx:99`） | 无 | missing | 默认尺寸 40，`round` 选项 | 没有头像。 |
 | `components/ActivityHeatmap.tsx`、`TokenHeatmap.tsx` | 无 | missing | 格子 11、间距 3（`ActivityHeatmap.tsx:14-15`） | 没有热力网格。 |

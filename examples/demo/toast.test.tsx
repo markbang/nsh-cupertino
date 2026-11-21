@@ -17,3 +17,15 @@ test("a short swipe springs the front toast back", async () => {
   await app.wait(500);
   expect(app.shows("text:Could not send")).toBe(true);
 });
+
+// The states page's stack on a manual clock: the neutral card leaves at 3.2 s, the danger card (with an action)
+// at 5 s; each fades for 240 ms and is taken out of the layer when it expires.
+test("the toasts leave when their time runs out", async () => {
+  const app = await open("./App.tsx", { storage: { "cupertino.page": "states" }, clock: {} });
+  expect(app.shows("text:Saved to Files")).toBe(true);
+  await app.wait(3500);
+  expect(app.shows("text:Saved to Files")).toBe(false);
+  expect(app.shows("text:Could not send")).toBe(true);
+  await app.wait(2000);
+  expect(app.shows("text:Could not send")).toBe(false);
+});

@@ -48,7 +48,7 @@ Paths: `cohub:` is relative to `src/` in cohub-mobile unless it starts with `mod
 | `ui.tsx` StatusPill (`ui.tsx:382`) | none | missing | dot plus label, five tones | No status pill. |
 | `ui.tsx` EmptyState (`ui.tsx:392`) | none | missing | icon, title, description, action | No empty state. |
 | `ui.tsx` ConnectionBanner (`ui.tsx:791`), DataError (`ui.tsx:806`), `components/AppUpdateBanner.tsx` | none | missing | banner `min-h-14`, `rounded-md`, `shadow-float` (`AppUpdateBanner.tsx:88`) | No inline banners. |
-| `components/Toast.tsx` | `state.rs` Toast, ToastLayer | partial | stack offset 10, bottom clearance 84, dismiss distance 56, velocity 800, enter spring 400 ms (`Toast.tsx:41-45`) | Card, stack, enter, swipe and the 84 pt layer are in. No auto-dismiss timers, no pause while held. |
+| `components/Toast.tsx` | `state.rs` Toast, ToastLayer | partial | stack offset 10, bottom clearance 84, dismiss distance 56, velocity 800, enter spring 400 ms (`Toast.tsx:41-45`) | Card, stack, enter, swipe, the 84 pt layer, Cohub's tone timers (3.2 s / 5 s, 5 s with an action), pause while held and the 1.5 s release grace are in. The hold pauses the whole layer, as Cohub's does. |
 | `ui/Skeleton.tsx` | none | missing | loading placeholder | No skeleton. |
 | `ui.tsx` Avatar (`ui.tsx:99`) | none | missing | default size 40, `round` option | No avatar. |
 | `components/ActivityHeatmap.tsx`, `TokenHeatmap.tsx` | none | missing | cell 11, gap 3 (`ActivityHeatmap.tsx:14-15`) | No heat grid. |

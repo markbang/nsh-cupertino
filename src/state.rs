@@ -2,7 +2,20 @@
 //! shows while it has nothing yet, has failed to load, is loading, or has
 //! something to say about what just happened.
 
-use nsh_core::{AccessibilityRole, element::Children, prelude::*};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashSet,
+    rc::{Rc, Weak},
+    sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
+};
+
+use nsh_core::{
+    AccessibilityRole,
+    element::{Children, Easing},
+    prelude::*,
+    time::{Instant, now},
+};
 
 use crate::{
     button::button,
@@ -295,6 +308,11 @@ pub struct ToastProps {
     /// Its place in a [`ToastLayer`]: 0 is the front card (the default); 1 and
     /// up sit behind it, 10 pt higher, 4 % smaller and 35 % fainter per place.
     pub depth: Prop<Option<f32>>,
+    /// How long it stays, in milliseconds, from when it shows. By default it
+    /// follows its tone and action (see [`default_duration_ms`]).
+    pub duration: Prop<Option<f32>>,
+    /// Stays until it is swiped away or the app removes it, with no timer.
+    pub sticky: Prop<Option<bool>>,
     /// The icon or mascot at the leading edge, drawn by the caller.
     pub children: Prop<Children>,
 }
@@ -306,6 +324,8 @@ pub enum ToastEvent {
     Action,
     /// It was swiped away: the app takes it out of its layer.
     Dismiss,
+    /// Its time ran out: it has faded, and the app takes it out of its layer.
+    Expire,
 }
 
 /// Cohub Mobile's `Toast` motion (`components/Toast.tsx`): the card rises 16 pt
@@ -322,6 +342,148 @@ const DISMISS_DISTANCE: f32 = 56.0;
 const DISMISS_VELOCITY: f32 = 800.0;
 /// The layer's bottom edge: 84 pt above the bottom inset, over the tab bar.
 const BOTTOM_CLEARANCE: f32 = 84.0;
+/// Cohub Mobile's `toast-queue.ts`: a neutral or success toast stays 3.2 s, a
+/// danger one 5 s, and one with an action at least 5 s. A toast released after
+/// a hold stays at least 1.5 s more.
+const NEUTRAL_MS: f32 = 3200.0;
+const DANGER_MS: f32 = 5000.0;
+const ACTION_MS: f32 = 5000.0;
+const RELEASE_GRACE_MS: f32 = 1500.0;
+/// Cohub Mobile's `motion.settle`: the fade before an expired toast leaves.
+const SETTLE_MS: f32 = 240.0;
+
+/// How long a toast of this tone stays, with or without an action.
+pub fn default_duration_ms(tone: &str, action: bool) -> f32 {
+    let by_tone = if tone == "danger" {
+        DANGER_MS
+    } else {
+        NEUTRAL_MS
+    };
+    if action {
+        by_tone.max(ACTION_MS)
+    } else {
+        by_tone
+    }
+}
+
+/// The toasts of one layer share a hold: a finger on the front card pauses
+/// every toast's time, as Cohub Mobile's `ToastClock` does. The layer provides
+/// it; a toast outside a layer holds only itself.
+#[derive(Default)]
+struct Group {
+    holders: HashSet<u64>,
+    timers: Vec<Weak<RefCell<Timer>>>,
+}
+
+type SharedGroup = Rc<RefCell<Group>>;
+
+/// One toast's time: what is left of it, and the task that ends it.
+struct Timer {
+    me: Weak<RefCell<Timer>>,
+    left_ms: f32,
+    started: Option<Instant>,
+    task: Option<Spawned<()>>,
+    on_expire: Rc<dyn Fn()>,
+}
+
+fn new_timer(ms: f32, on_expire: Rc<dyn Fn()>) -> Rc<RefCell<Timer>> {
+    Rc::new_cyclic(|me| {
+        RefCell::new(Timer {
+            me: me.clone(),
+            left_ms: ms,
+            started: None,
+            task: None,
+            on_expire,
+        })
+    })
+}
+
+fn next_holder() -> u64 {
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Adds `timer` to the group; it starts at once unless the group is held.
+fn join(group: &SharedGroup, timer: &Rc<RefCell<Timer>>) {
+    let paused = {
+        let mut g = group.borrow_mut();
+        g.timers.retain(|t| t.strong_count() > 0);
+        g.timers.push(Rc::downgrade(timer));
+        !g.holders.is_empty()
+    };
+    if !paused {
+        start(&mut timer.borrow_mut());
+    }
+}
+
+/// Holds or releases the group for `holder`. The first hold pauses every
+/// timer; the last release resumes them, each with at least
+/// [`RELEASE_GRACE_MS`] left.
+fn set_hold(group: &SharedGroup, holder: u64, holding: bool) {
+    let (paused, timers) = {
+        let mut g = group.borrow_mut();
+        let was = !g.holders.is_empty();
+        if holding {
+            g.holders.insert(holder);
+        } else {
+            g.holders.remove(&holder);
+        }
+        let paused = !g.holders.is_empty();
+        if paused == was {
+            return;
+        }
+        g.timers.retain(|t| t.strong_count() > 0);
+        (
+            paused,
+            g.timers
+                .iter()
+                .filter_map(Weak::upgrade)
+                .collect::<Vec<_>>(),
+        )
+    };
+    for timer in timers {
+        let mut t = timer.borrow_mut();
+        if paused {
+            pause(&mut t);
+        } else {
+            if t.left_ms > 0.0 {
+                t.left_ms = t.left_ms.max(RELEASE_GRACE_MS);
+            }
+            start(&mut t);
+        }
+    }
+}
+
+fn pause(t: &mut Timer) {
+    if let Some(task) = t.task.take() {
+        task.cancel();
+        if let Some(started) = t.started.take() {
+            t.left_ms = (t.left_ms - (now() - started).as_secs_f32() * 1000.0).max(0.0);
+        }
+    }
+}
+
+fn start(t: &mut Timer) {
+    if t.task.is_some() || t.left_ms <= 0.0 {
+        return;
+    }
+    t.started = Some(now());
+    let me = t.me.clone();
+    t.task = Some(set_timeout(
+        Duration::from_secs_f32(t.left_ms / 1000.0),
+        move || {
+            let Some(timer) = me.upgrade() else { return };
+            let on_expire = {
+                let mut t = timer.borrow_mut();
+                t.task = None;
+                t.started = None;
+                t.left_ms = 0.0;
+                t.on_expire.clone()
+            };
+            on_expire();
+        },
+    ));
+}
 
 /// The enter spring: unit mass, critically damped, settling in about 400 ms
 /// (the exit and the return use their own stiffness inline).
@@ -343,6 +505,14 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
     let danger = move || tone.get().as_deref() == Some("danger");
     let depth = props.depth.get_untracked().unwrap_or(0.0).max(0.0);
     let front = depth == 0.0;
+    let has_action = props.action.get_untracked().is_some();
+    let duration = props.duration.get_untracked().unwrap_or_else(|| {
+        default_duration_ms(
+            tone.get_untracked().as_deref().unwrap_or("neutral"),
+            has_action,
+        )
+    });
+    let timed = !props.sticky.get_untracked().unwrap_or(false);
 
     let fade = animated_value(0.0);
     let rise = animated_value(ENTER_RISE);
@@ -358,7 +528,63 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
         grow.spring(1.0, enter_spring());
     }
 
+    let on_expire: Rc<dyn Fn()> = Rc::new(move || {
+        if nsh_core::element::reduce_motion() {
+            fade.set(0.0);
+            cx.emit(ToastEvent::Expire);
+        } else {
+            fade.timing(0.0, SETTLE_MS, Easing::EaseOut);
+            set_timeout(Duration::from_millis(SETTLE_MS as u64), move || {
+                cx.emit(ToastEvent::Expire)
+            });
+        }
+    });
+    let group = use_context::<SharedGroup>().unwrap_or_default();
+    let holder = next_holder();
+    let timer = timed.then(|| new_timer(duration, on_expire));
+    if let Some(timer) = &timer {
+        join(&group, timer);
+    }
+    {
+        let group = group.clone();
+        cleanup(move || {
+            set_hold(&group, holder, false);
+            drop(timer);
+        });
+    }
+    // (pressed, panning): the card holds while either is true.
+    let holds = Rc::new(Cell::new((false, false)));
+    let hold_by = {
+        let (group, holds) = (group.clone(), holds.clone());
+        Rc::new(move |pressed: Option<bool>, panning: Option<bool>| {
+            if !front {
+                return;
+            }
+            let (p, n) = holds.get();
+            let next = (pressed.unwrap_or(p), panning.unwrap_or(n));
+            holds.set(next);
+            set_hold(&group, holder, next.0 || next.1);
+        })
+    };
+    let on_press_down = {
+        let hold_by = hold_by.clone();
+        move || hold_by(Some(true), None)
+    };
+    let on_press_up = {
+        let hold_by = hold_by.clone();
+        move || hold_by(Some(false), None)
+    };
+    let on_pan_start = {
+        let hold_by = hold_by.clone();
+        move |_: &PanEvent| hold_by(None, Some(true))
+    };
+    let pan_end_hold = {
+        let hold_by = hold_by.clone();
+        move || hold_by(None, Some(false))
+    };
+
     let release = move |event: &PanEvent| {
+        pan_end_hold();
         let moved = event.value_x.unwrap_or(0.0);
         let flung = event.velocity_x.abs() > DISMISS_VELOCITY;
         if !flung && moved.abs() <= DISMISS_DISTANCE {
@@ -398,8 +624,12 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
         .bind_translate_y(&rise)
         .bind_scale(&grow)
         .bind_translate_x(&swipe)
+        .on_press_down(on_press_down)
+        .on_press_up(on_press_up)
         .when(front, |v| {
-            v.pan_values(Some(&swipe), None).on_pan_end(release)
+            v.pan_values(Some(&swipe), None)
+                .on_pan_start(on_pan_start)
+                .on_pan_end(release)
         })
         .child(props.children)
         .child(
@@ -446,7 +676,7 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
             )
         });
 
-    // Behind the front card, a card sits over its edge; the sliver it shows above takes touches.
+    // Behind the front card, a card sits over its edge; the sliver it shows above lets touches through.
     let lift = animated_value(0.0);
     let shrink = animated_value(1.0);
     lift.set(-STACK_OFFSET * depth);
@@ -454,7 +684,13 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
     view()
         .w_full()
         .z_index((10.0 - depth) as i32)
-        .when(!front, |v| v.absolute().left_0().right_0().bottom_0())
+        .when(!front, |v| {
+            v.absolute()
+                .left_0()
+                .right_0()
+                .bottom_0()
+                .pointer_events(PointerEvents::None)
+        })
         .opacity(1.0 - STACK_FADE * depth)
         .bind_translate_y(&lift)
         .bind_scale(&shrink)
@@ -474,6 +710,7 @@ pub struct ToastLayerProps {
 /// The layer takes no touches except on its toasts.
 #[component]
 pub fn ToastLayer(props: ToastLayerProps) -> impl IntoElement {
+    provide_context(SharedGroup::default());
     crate::overlay::layer()
         .pointer_events(PointerEvents::BoxNone)
         .flex_col()
