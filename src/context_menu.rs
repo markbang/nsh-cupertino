@@ -194,6 +194,7 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
                     false,
                 ))
                 .backdrop_blur(tokens::materials::blur("thick"))
+                // Fitted to the UIKit system menu in the iOS reference shot (catalog-menu), not to a drawn glass control.
                 .shadow([nsh_core::BoxShadow {
                     offset_y: px(4.0),
                     blur: px(40.0),

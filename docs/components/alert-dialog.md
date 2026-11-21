@@ -28,7 +28,9 @@ Events: `onOpenChange(open)`, `onAction(id, text)`, `onCancel()`.
 Notes
 
 - The card's shadow is 0 8 pt offset, 32 pt blur, 3 pt spread, black at 20 %,
-  fitted to the iOS reference's falloff on a light page; it does not show on a dark page, as in the reference.
+  fitted to the UIKit system alert in the iOS reference shot (`catalog-confirm`) on a light
+  page; it does not show on a dark page, as in the reference. It is not cohub's `shadow-glass`:
+  on iOS, cohub-mobile's alerts are UIKit's (`SystemDialogs.ios.tsx:2`, `:58`, `:75`).
 - The card is the `thick` material: its fill over a 30 pt blur. Secondary text
   keeps Apple's contrast ([issue #3](https://github.com/markbang/nsh-cupertino/issues/3)).
 - The text-entry variant is the standard iOS alert with one field; the field's

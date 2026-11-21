@@ -32,7 +32,7 @@
 |---|---|---|---|---|
 | `ui.tsx` TopBar、`theme.ts` edgeChrome | `navigation.rs` NavigationBar（`navigation.rs:53`）、`tokens.rs:557-565` | partial | cohub 头部最小 44（`theme.ts:9`）。nsh `NAV_HEIGHT 44`、`LARGE_TITLE_HEIGHT 52`、`BACK_TARGET 50` | 栏高一致。大标题高度未对照参考图检查。 |
 | `ui.tsx` ScrollEdge 渐隐、`theme.ts` | `scroll_edge.rs:141-193` | partial | cohub 底部渐隐 40、顶部 24（`theme.ts:9`） | nsh 默认高度未检查。 |
-| `components/FloatingTabBar.tsx` | `tab_bar.rs` GlassTabBar（`tab_bar.rs:282-285`） | partial | cohub 栏高 62、左右边距 21、padding 4、收起为 48 圆（`FloatingTabBar.tsx:59`）、标签 10/13（`:486`）。nsh HEIGHT 64、INSET 20、LIFT 12 | 栏高多 2 pt，边距不同。收起行为两边都有。 |
+| `components/FloatingTabBar.tsx` | `tab_bar.rs` GlassTabBar（`tab_bar.rs:282-285`） | partial | cohub 栏高 62、左右边距 21、padding 4、收起为 48 圆（`FloatingTabBar.tsx:59`）、标签 10/13（`:486`）。nsh HEIGHT 64、INSET 20、LIFT 12；标签 10 pt（`tab_bar.rs` TAB_LABEL_SIZE），原为 11。参考图中 "Me" 与 "Activity" 的大写字母高 13.1 px，按 1.791 px/pt 为 7.3 pt，按 SF 的 0.705 大写比为 10.4 pt（10 pt 为 12.6 px，11 pt 为 13.9 px） | 栏高多 2 pt，边距不同。收起行为两边都有。标签已与像素一致。 |
 | `components/TabStack.tsx`、`TabStack.ios.tsx` | `tab_bar.rs` TabBar（`tab_bar.rs:84`） | partial | iOS 分支用 expo-router 原生 `Stack`，根节点不含顶部安全区（`TabStack.ios.tsx:3-9`） | cohub 标题来自原生导航栏，nsh 自己绘制。 |
 | `components/TabRail.tsx`（宽屏布局） | 无 | missing | 侧栏宽 72，图标 24，项目 `py-1.5 gap-1`（`TabRail.tsx:9-10`） | 没有竖向侧栏。 |
 | `components/SplitStack.tsx` | 无 | missing | 分栏布局 | 没有分栏视图。 |
@@ -104,7 +104,7 @@
 - **卡片内边距（分组边距）。** cohub `ui.tsx:355` 用 `px-4`，即 16。nsh 自身前后不一致：Rust 组件读 `tokens.rs:579` SECTION_EDGE = 20（`list.rs:85`、`:101`、`:113`），而生成表 `theme_file.rs:59` 把 `section-edge` = 16px 写进 `theme/theme.json:41`。`theme_file.rs` 和 `theme/theme.json` 都是 nsh 自己的文件，不是 cohub 的。修法：让主题值从 `tokens.rs` 推导。
 - **分组标题。** cohub 代码是 17 pt headline（`ui.tsx:366`）。参考图像素读到约 13 pt。代码与像素不一致。
 - **强调色。** cohub 代码 `#bf3f00`（`tokens.ts:115`）。参考图像素 `#c03f00`。在误差内。
-- **玻璃。** Kotlin 模块没有 iOS 校准（见第 8 节）。nsh 的磨砂和栏模糊注释与数值不符（`tokens.rs:737`、`:758-760`）。
+- **玻璃。** Kotlin 模块没有 iOS 校准（见第 8 节）。nsh 的栏模糊与磨砂注释自 #26 起与数值一致（`tokens.rs:824-825`、`:846-849`）；早先说它们不一致的记录已过时。
 
 ## 8. 玻璃（cohub-glass-menu → glass.rs）
 
@@ -133,14 +133,14 @@
 | 边缘高光与斜面宽度 | `GlassShaders.kt:250-251` 高光带 1 dp（density），在 9 dp 内；`:127` 主描边 0.533 dp | `tokens.rs:726-727` BEVEL 10 pt；`glass.rs:254-257` | partial | Kotlin 高光是 1 dp 细线。nsh 斜面宽 10 pt。 |
 | 静止时菜单模糊 | `GlassMenuConfigRecord.kt:8` blur 16 dp；按 t³ 施加（`GlassRenderer.kt:125-126`） | `tokens.rs:733-734` BLUR 5 pt；`glass.rs:525-528` clear × 0.55，thick × 1.35 | partial | Kotlin 菜单模糊是 nsh 控件模糊的 3.2 倍。 |
 | 触发器与变形模糊 | `GlassTriggerConfigRecord.kt:8` blur 1 dp；`GlassRenderer.kt:242` MorphBlur 1.2 dp；基线 → config.blur（`:124-126`） | 无 | missing | 没有变形。 |
-| 栏模糊 | 无（没有栏） | `tokens.rs:736-737` BAR_BLUR 24 pt；注释写 "frosts at 18" | partial | 注释与数值不一致，18 对 24。 |
+| 栏模糊 | 无（没有栏） | `tokens.rs:824-825` BAR_BLUR 24 pt；注释写 "(24)" | partial | 静态图无法定论。栏的上缘下，文字只保留约 4% 的对比度（亮度 63 对外部的 244；栏内为 241–249）。填充与模糊同时起作用，静态图分不开。保持 24 pt；需要运动截图（motion-scroll-chats）。 |
 | 模糊滤波器 | `render/GlassRenderer.kt:188-190` 对背景做 RenderEffect 模糊 | `glass.rs:203-233` 圆盘采样，33 / 17 / 1 个 tap（`:367-372`），默认 Balanced 17（`:440`） | partial | 高斯 RenderEffect 对 圆盘 tap。 |
 | 内容模糊、传送模糊与缩放 | `GlassMotion.kt:336` 行模糊 18 dp × (1 − reveal)；`:338` 传送模糊 6 dp；`:345-348` 缩放 1.65 → 1.2（随高度）；`GlassRenderer.kt:244` PortalReach 28 dp | 无 | missing | 仅变形期间。 |
 | 饱和度 | `GlassRecipe.kt:13-16` 深色 1.3 / 浅色 1.2，乘 config（`GlassMenuConfigRecord.kt:12`，默认 1）；亮度权重 `GlassShaders.kt:187` | `tokens.rs:755` SATURATION 2.1 浅色；`:757` 1.4 深色；`glass.rs:194-196`、`:291` | partial | nsh 浅色 2.1 对 Kotlin 1.2。深色 1.4 对 1.3。 |
 | 色调映射：黑、白、滚降 | `GlassRecipe.kt:13-16`：深色 黑 .125、白 1.125、滚降 .4（控件）/ .65（菜单）；浅色 黑 .4、白 1.03、滚降 0；面部公式 `GlassShaders.kt:185-195` | `glass.rs:295` light_lift 0.10 向白色提亮（仅浅色）；`tokens.rs:767` BODY_SHADE .32（深色）；`glass.rs:829` | partial | Kotlin 把浅色模式的黑提到 0.4。nsh 提亮 10 %。nsh 没有滚降。 |
 | 白色填充 | `GlassRecipe.kt:15-16` fillAlpha 浅色 .2、深色 0；`GlassRenderer.kt:151` | `glass.rs:295`（同一提亮） | partial | nsh 一个提亮，Kotlin 两个参数。 |
 | 着色 | `GlassRecipe.kt:14` 菜单深色灰 .042，alpha .7；`:16` 菜单浅色白 .975，alpha .5；控件无（`:13`、`:15`）；按 t × 3 混合（`GlassRenderer.kt:152-167`） | `tokens.rs:773` TINTED_ALPHA .16；`glass.rs:288` alpha = tint.a + adapt × fight × .16，上限 .7；填充选择 `glass.rs:592-599` | partial | Kotlin 菜单着色为 70 %（深色）和 50 %（浅色）。nsh 着色填充为 16 %，加上最多 16 % 的自适应，上限 70 %。 |
-| 磨砂（幽灵模糊） | 无 | `tokens.rs:759-761` FROST 浅色 [.6, .40, 2.5]，深色 [.9, −.45, .5]；`glass.rs:203-233`、`:699-707` | missing | 只有 nsh 有。注释（`tokens.rs:758`、`:760`）写 0.73 / 0.40 / 2.0 与 0.85 / −0.45 / 0.5，与数值不符。 |
+| 磨砂（幽灵模糊） | 无 | `tokens.rs:846-849` FROST 浅色 [.6, .40, 2.5]，深色 [.9, −.45, .5]；`glass.rs:203-233`、`:699-707` | missing | 只有 nsh 有。自 #26 起注释与数值一致。与栏模糊同样的原因，未测量。 |
 | 色差 | 无 | `tokens.rs:747-748` CHROMA 0 | match | 都关闭。 |
 | 边缘高光 | `GlassShaders.kt:250-251` 1 dp 带；`GlassRenderer.kt:253-254` rimAlpha 深色 1.0 / 浅色 .55，乘 rim（1）；`:182` | `tokens.rs:739` SPECULAR .7，配 `glass.rs:319` 0.055 × along²；`tokens.rs:763-765` RIM [1, 1] / 深色 [1, 1.15]；`glass.rs:317` rim_light，核心约 1 pt，尾部约 7 pt | partial | 形状与强度不同。 |
 | 主描边与光晕 | `GlassShaders.kt:133-137` 光环：sigma 5 dp，偏移 4 dp，覆盖 × .06；`:210-212` 光环窗口 22 dp | `tokens.rs:744` EDGE .5 细线；`glass.rs:333-340` | partial | Kotlin 光晕离边缘 8 dp。nsh 边缘是细线。 |
