@@ -303,13 +303,13 @@ SEEN = {
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
             ((130, 388, 300, 421), "Notifications title: cap top 2 px high (1.1 pt), 9 px (5 %) wider: the face (Inter 177 px, reference 168 px)"),
             ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
-            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px): Inter's \"Mentions and…\" is 196 px, too wide beside the 177 px title"),
+            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px, 102 pt): Inter needs 109 pt for the same string, Inter vs SF width"),
         ],
         "dark": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
             ((130, 388, 300, 421), "Notifications title: cap top 2 px high (1.1 pt), 9 px (5 %) wider: the face (Inter 177 px, reference 168 px)"),
             ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
-            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px): Inter's \"Mentions and…\" is 196 px, too wide beside the 177 px title"),
+            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px, 102 pt): Inter needs 109 pt for the same string, Inter vs SF width"),
         ],
     },
 }
