@@ -30,6 +30,7 @@ import {
   FilterChip,
   Glass,
   GlassButton,
+  GlassMenu,
   GlassTabBar,
   Icon,
   List,
@@ -82,6 +83,7 @@ const PAGES: { id: string; title: string; blurb: string; icon: string; tint: str
   { id: "actionsheet", title: "Action sheet", blurb: "Destructive, cancel, 10 pt", icon: "list.bullet", tint: "system-orange" },
   { id: "alert", title: "Alert dialog", blurb: "Messages and text entry", icon: "info.circle", tint: "system-red" },
   { id: "contextmenu", title: "Context menu", blurb: "Long press, lifted preview", icon: "square.grid.2x2", tint: "system-purple" },
+  { id: "glassmenu", title: "Glass menu", blurb: "A glass button that grows into its menu", icon: "ellipsis", tint: "system-indigo" },
   { id: "picker", title: "Picker", blurb: "Wheel, snapping, haptics", icon: "slider.horizontal.3", tint: "system-indigo" },
   { id: "datepicker", title: "Date picker", blurb: "Calendar, compact, wheel", icon: "sun.max", tint: "system-blue" },
   { id: "segmented", title: "Segmented control", blurb: "Sliding thumb, 2–5 items", icon: "circle.lefthalf.filled", tint: "system-blue" },
@@ -98,6 +100,9 @@ const contrast = signal("normal");
 const preset = signal<string | null>(null);
 const appearance = signal("system");
 const overlaySeed = signal("");
+// Frame comparisons: the glass menu held this many ms into its opening.
+const menuFrame = signal<number | undefined>(undefined);
+const menuCloseFrame = signal<number | undefined>(undefined);
 const presses = new Count();
 const pressCount = signal(0);
 
@@ -990,6 +995,46 @@ function AlertPage() {
   );
 }
 
+// The iOS reference's menu page (`motion-menu.mp4`): a menu button over seven
+// coloured bars, so the glass has something to bend and blur.
+const MENU_BARS = ["#be3d00", "#1b7747", "#895e0f", "#bd293c", "#3867a5", "#be3d00", "#1b7747"];
+
+function GlassMenuPage() {
+  const open = signal(overlaySeed() === "glassmenu");
+  const chosen = signal("Nothing chosen yet.");
+  return (
+    <Page id="glassmenu">
+      <View style={{ paddingHorizontal: 16, paddingTop: 8, gap: 8 }}>
+        <Text class="text-secondary-label" style={{ fontSize: 13 }}>Menu</Text>
+        <GlassMenu
+          label="Sort"
+          actions={[
+            { id: "pin", title: "Pin", icon: "flag" },
+            { id: "share", title: "Share", icon: "square.and.arrow.up" },
+            { id: "copy", title: "Copy link", icon: "doc.on.doc" },
+            { id: "recent", title: "Recent", icon: "checkmark", section: "Sort by" },
+            { id: "name", title: "Name", icon: "list.bullet" },
+            { id: "archive", title: "Archive", icon: "archivebox", detail: "Hidden from the list, still in search", section: "" },
+          ]}
+          open={open()}
+          frameMs={menuFrame()}
+          closeFrameMs={menuCloseFrame()}
+          onOpenChange={(event: { open: boolean }) => open.set(event.open)}
+          onAction={(event: { id: string }) => chosen.set(`Chose ${event.id}.`)}
+        />
+        <Each of={MENU_BARS.map((color, index) => ({ color, index }))} key={(bar) => String(bar.index)}>
+          {(bar) => (
+            <View style={{ height: 36, borderRadius: 8, paddingHorizontal: 12, justifyContent: "center", backgroundColor: bar().color }}>
+              <Text style={{ fontSize: 17, fontWeight: 600, color: "#111111" }}>Glass backdrop</Text>
+            </View>
+          )}
+        </Each>
+        <Text class="text-secondary-label" style={{ fontSize: 15 }}>{chosen()}</Text>
+      </View>
+    </Page>
+  );
+}
+
 function ContextMenuPage() {
   const preview = signal("Long-press the card, or right-click it.");
   const open = signal(false);
@@ -1624,6 +1669,7 @@ function CurrentPage() {
   if (id === "actionsheet") return <ActionSheetPage />;
   if (id === "alert") return <AlertPage />;
   if (id === "contextmenu") return <ContextMenuPage />;
+  if (id === "glassmenu") return <GlassMenuPage />;
   if (id === "picker") return <PickerPage />;
   if (id === "datepicker") return <DatePickerPage />;
   if (id === "segmented") return <SegmentedPage />;
@@ -1648,6 +1694,10 @@ function App() {
     const seedGlass = await Storage.getItem("cupertino.glass");
     if (seedGlass) glassMode.set(seedGlass);
     if (seedOverlay) overlaySeed.set(seedOverlay);
+    const seedFrame = await Storage.getItem("cupertino.menuframe");
+    if (seedFrame) menuFrame.set(Number(seedFrame));
+    const seedCloseFrame = await Storage.getItem("cupertino.menuclose");
+    if (seedCloseFrame) menuCloseFrame.set(Number(seedCloseFrame));
     if (seedContrast === "high" || seedContrast === "normal") contrast.set(seedContrast);
     if (seedPreset === "cohub") preset.set("cohub");
     if (seedAppearance === "light" || seedAppearance === "dark" || seedAppearance === "system") {

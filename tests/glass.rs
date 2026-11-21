@@ -47,6 +47,10 @@ fn the_glass_shader_compiles_with_the_uniforms_the_components_set() {
         "margin",
         "shadow",
         "light_lift",
+        "roundness",
+        "body",
+        "shadow_offset",
+        "shadow_sigma",
     ] {
         assert!(
             declared.contains(&name),

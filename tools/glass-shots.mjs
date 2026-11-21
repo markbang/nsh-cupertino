@@ -76,6 +76,29 @@ const SHOTS = [
   // trigger); `context` is its point in CSS pixels.
   { name: "contextmenu-open-light", page: "contextmenu", scheme: "light", context: [195, 232] },
   { name: "contextmenu-open-dark", page: "contextmenu", scheme: "dark", context: [195, 232] },
+  // The glass menu held at the iOS clip's timestamps (`tools/compare-glass-menu.py`
+  // lays them beside the clip): ms after the press, then ms into the close.
+  // Taken only when `--only` names them or with `--menu-frames`.
+  ...[0, 107, 140, 174, 207, 240, 274, 307, 340, 374, 407, 507].flatMap((ms) =>
+    ["light", "dark"].map((scheme) => ({
+      name: `glassmenu-open-${ms}-${scheme}`,
+      page: "glassmenu",
+      scheme,
+      overlay: "glassmenu",
+      menuframe: ms,
+      frames: true,
+    })),
+  ),
+  ...[0, 33, 67, 100, 133].flatMap((ms) =>
+    ["light", "dark"].map((scheme) => ({
+      name: `glassmenu-close-${ms}-${scheme}`,
+      page: "glassmenu",
+      scheme,
+      overlay: "glassmenu",
+      menuclose: ms,
+      frames: true,
+    })),
+  ),
   ...["none", "material", "shader"].flatMap((mode) =>
     ["light", "dark"].map((scheme) => ({
       name: `glass-calibration-${mode}-${scheme}`,
@@ -233,6 +256,8 @@ async function shoot(page, base, shot) {
     "cupertino.contrast": shot.contrast ?? "normal",
     "cupertino.material": shot.material ?? "",
     "cupertino.overlay": shot.overlay ?? "",
+    "cupertino.menuframe": shot.menuframe === undefined ? "" : String(shot.menuframe),
+    "cupertino.menuclose": shot.menuclose === undefined ? "" : String(shot.menuclose),
   };
   const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
   await page.call("Emulation.setEmulatedMedia", {
@@ -343,7 +368,7 @@ async function main() {
     await page.call("Page.navigate", { url: `http://127.0.0.1:${port}/` });
     await new Promise((resolve) => setTimeout(resolve, 2500));
     for (const shot of SHOTS) {
-      if (ONLY && !ONLY.includes(shot.name)) continue;
+      if (ONLY ? !ONLY.includes(shot.name) : shot.frames && !args.includes("--menu-frames")) continue;
       console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
     }
   } finally {

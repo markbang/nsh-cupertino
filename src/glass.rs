@@ -70,9 +70,18 @@ struct Uniforms {
   margin: f32,
   shadow: f32,
   light_lift: f32,
-  pad: f32,
+  roundness: f32,
+  body: f32,
+  shadow_offset: f32,
+  shadow_sigma: f32,
   pad2: f32,
+  pad3: f32,
 }
+
+// A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
+// and tinted by `tint` at `tint.a * body`, flat, with the glass only at its
+// rim (`GlassSpec::menu_body`).
+const BODY_SATURATION: f32 = 1.5;
 
 const TAU: f32 = 6.283185307;
 const GOLDEN: f32 = 2.39996323;
@@ -141,7 +150,13 @@ fn settle(shape: vec4f) -> vec4f {
 
 fn sd_shape(p: vec2f) -> f32 {
   let a = mix(settle(uniforms.first[0]), settle(uniforms.second[0]), uniforms.progress);
-  var d = sd_one(p - a.xy, a.zw, uniforms.radii);
+  // A growing menu rounds its corners toward a capsule: `roundness` 1 is a
+  // capsule of the shape's size now, 0 its own radius.
+  var radii = uniforms.radii;
+  if (uniforms.roundness > 0.0) {
+    radii = mix(radii, vec4f(min(a.z, a.w)), clamp(uniforms.roundness, 0.0, 1.0));
+  }
+  var d = sd_one(p - a.xy, a.zw, radii);
   if (uniforms.count > 1.5) {
     let b = mix(settle(uniforms.first[1]), settle(uniforms.second[1]), uniforms.progress);
     d = smin(d, sd_one(p - b.xy, b.zw, uniforms.other_radii), uniforms.spacing);
@@ -228,7 +243,8 @@ fn sample(p: vec2f, jitter: f32) -> vec3f {
     min(lit, cloud - vec3f(uniforms.frost_clamp)),
     uniforms.frost_clamp > 0.0,
   );
-  return mix(held, cloud, uniforms.frost_opacity);
+  let frost = select(uniforms.frost_opacity, 1.0, uniforms.body >= 0.0);
+  return mix(held, cloud, frost);
 }
 
 fn shade(uv: vec2f) -> vec4f {
@@ -246,6 +262,15 @@ fn shade(uv: vec2f) -> vec4f {
     if (uniforms.shadow <= 0.0) {
       return vec4f(0.0);
     }
+    // A measured shadow: the shape lowered by `shadow_offset`, blurred by a
+    // Gaussian of `shadow_sigma` (a logistic stand-in for its CDF), fading
+    // with `reveal` as the shape does.
+    if (uniforms.shadow_sigma > 0.0) {
+      let lowered = sd_silhouette(p - vec2f(0.0, uniforms.shadow_offset));
+      let soft = uniforms.shadow * clamp(uniforms.reveal, 0.0, 1.0)
+        / (1.0 + exp(1.702 * lowered / uniforms.shadow_sigma));
+      return vec4f(vec3f(0.0), soft);
+    }
     let below = sd_silhouette(p - vec2f(0.0, 6.0));
     let soft = clamp(0.5 - below / 9.0, 0.0, 1.0) * uniforms.shadow;
     return vec4f(vec3f(0.0), soft);
@@ -259,7 +284,8 @@ fn shade(uv: vec2f) -> vec4f {
 
   // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
   // the rim by (n - 1) * thickness * slope; the sheet also magnifies a little.
-  let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * uniforms.lens;
+  let flat = uniforms.body >= 0.0;
+  let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * select(uniforms.lens, 0.0, flat);
   let jitter = hash_cell(floor(uv * size * nsh.scale)) * 0.5;
   var rgb = sample(p + shift, jitter);
 
@@ -276,7 +302,7 @@ fn shade(uv: vec2f) -> vec4f {
   // appearances lift toward white where the backdrop is dark: the frost's
   // clamp does that, and the tint adds its 12 % (dark) or 53 % (light).
   var luminance = dot(rgb, LUMA);
-  rgb = rgb * (1.0 - uniforms.body_shade * luminance);
+  rgb = rgb * (1.0 - select(uniforms.body_shade, 0.0, flat) * luminance);
 
   // The tint thickens only where the backdrop would fight a label, and never
   // past 70 %: it is a tint on glass, not an opaque slab.
@@ -285,14 +311,20 @@ fn shade(uv: vec2f) -> vec4f {
     smoothstep(0.32, 0.86, luminance),
     uniforms.dark > 0.5,
   );
-  let alpha = clamp(uniforms.tint.a + uniforms.adapt * fight * 0.16, 0.0, 0.7);
+  let adaptive = clamp(uniforms.tint.a + uniforms.adapt * fight * 0.16, 0.0, 0.7);
+  let alpha = select(adaptive, clamp(uniforms.tint.a * uniforms.body, 0.0, 1.0), flat);
+  if (flat) {
+    rgb = apply_saturation(rgb, mix(BODY_SATURATION, 1.0, uniforms.dark));
+  }
   rgb = mix(rgb, uniforms.tint.rgb, alpha);
 
-  rgb = apply_saturation(rgb, uniforms.saturation);
+  if (!flat) {
+    rgb = apply_saturation(rgb, uniforms.saturation);
+  }
   // iOS 27's light glass over a white page of dark rows reads almost white;
   // our 24 pt cloud still carries a little of the strokes, so the light
   // material lifts a further 10 % toward white.
-  rgb = mix(rgb, vec3f(1.0), uniforms.light_lift);
+  rgb = mix(rgb, vec3f(1.0), select(uniforms.light_lift, 0.0, flat));
   luminance = dot(rgb, LUMA);
 
   // The light, a direction the app may turn with `tilt` (iOS 27 lights the
@@ -316,7 +348,7 @@ fn shade(uv: vec2f) -> vec4f {
   let tail = exp(-max(inside - 0.7, 0.0) / 7.0);
   rgb = rgb + vec3f(1.0) * uniforms.rim_light * lobe * ease * (0.30 * core + 0.05 * tail);
   let along = clamp(0.5 + 0.5 * dot(p / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
-  rgb = rgb + vec3f(1.0) * uniforms.specular * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
+  rgb = rgb + vec3f(1.0) * select(uniforms.specular, 0.0, flat) * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
   // The inner shadow opposite the light: the sheet's thickness shows.
   rgb = rgb * (1.0 - uniforms.inner * pow(opposite, 2.0) * rim);
@@ -338,6 +370,69 @@ fn shade(uv: vec2f) -> vec4f {
 }
 "#;
 
+/// The clip of a growing glass shape: an effect that draws its children
+/// only inside the shape [`GlassSpec::grow`] draws, with the same rects,
+/// progress, radius and roundness, so a menu's items are cut by the round
+/// top of the shape they grow in.
+const CLIP_SOURCE: &str = r#"
+struct Uniforms {
+  first: vec4f,
+  second: vec4f,
+  radius: f32,
+  progress: f32,
+  roundness: f32,
+  pad: f32,
+}
+
+fn centred(shape: vec4f) -> vec4f {
+  let c = vec2f(shape.x + shape.z * 0.5, shape.y + shape.w * 0.5) - nsh.size * 0.5;
+  return vec4f(c.x, c.y, shape.z * 0.5, shape.w * 0.5);
+}
+
+fn shade(uv: vec2f) -> vec4f {
+  let p = uv * nsh.size - nsh.size * 0.5;
+  let a = mix(centred(uniforms.first), centred(uniforms.second), uniforms.progress);
+  let half = max(a.zw, vec2f(0.0));
+  let round = min(half.x, half.y);
+  let r = min(mix(uniforms.radius, round, clamp(uniforms.roundness, 0.0, 1.0)), round);
+  let q = abs(p - a.xy) - half + vec2f(r);
+  let d = length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0) - r;
+  let c = sample_content(uv);
+  return vec4f(c.rgb, c.a * clamp(0.5 - d, 0.0, 1.0));
+}
+"#;
+
+fn clip_program() -> Option<Shader> {
+    static PROGRAM: OnceLock<Option<Shader>> = OnceLock::new();
+    PROGRAM
+        .get_or_init(|| Shader::compile(CLIP_SOURCE).ok())
+        .clone()
+}
+
+/// An effect that shows its children only inside a shape growing from
+/// `from` to `to` (rects in points from its top-left corner) as `progress`
+/// runs, its corners a capsule's at `roundness` 1 and `radius` at 0. Without
+/// a shader program it draws them as they are.
+pub(crate) fn clip(
+    from: Signal<[f32; 4]>,
+    to: Signal<[f32; 4]>,
+    radius: f32,
+    progress: AnimatedNode,
+    roundness: AnimatedNode,
+) -> ShaderView {
+    let effect = shader_effect();
+    let Some(program) = clip_program() else {
+        return effect;
+    };
+    effect
+        .source(program)
+        .uniform("first", move || vector(from.get()))
+        .uniform("second", move || vector(to.get()))
+        .uniform("radius", radius)
+        .uniform("progress", &progress)
+        .uniform("roundness", &roundness)
+}
+
 /// The material's WGSL source. It is compiled on first use; this is here for
 /// tests that prove it still compiles.
 #[doc(hidden)]
@@ -349,6 +444,12 @@ pub fn source() -> &'static str {
 fn program() -> Option<Shader> {
     static PROGRAM: OnceLock<Option<Shader>> = OnceLock::new();
     PROGRAM.get_or_init(|| Shader::compile(SOURCE).ok()).clone()
+}
+
+/// Whether the material is the shader here (else the fill and blur of
+/// [`crate::tokens::materials`] stand in for it).
+pub(crate) fn shader_draws() -> bool {
+    shaders_available() && program().is_some()
 }
 
 /// How much GPU work the material does.
@@ -422,6 +523,25 @@ pub struct GlassSpec {
     margin: f32,
     shadow: f32,
     material_only: bool,
+    grow: Option<Grow>,
+    body: Option<Body>,
+    soft_shadow: Option<(f32, f32)>,
+}
+
+/// A menu's flat body ([`GlassSpec::menu_body`]).
+#[derive(Debug, Clone, PartialEq)]
+struct Body {
+    fill: [Hsla; 2],
+    amount: AnimatedNode,
+}
+
+/// One shape growing between two rects ([`GlassSpec::grow`]).
+#[derive(Debug, Clone, PartialEq)]
+struct Grow {
+    from: Signal<[f32; 4]>,
+    to: Signal<[f32; 4]>,
+    progress: AnimatedNode,
+    roundness: AnimatedNode,
 }
 
 impl Default for GlassSpec {
@@ -450,6 +570,9 @@ impl GlassSpec {
             margin: 0.0,
             shadow: 0.0,
             material_only: false,
+            grow: None,
+            body: None,
+            soft_shadow: None,
         }
     }
 
@@ -513,6 +636,47 @@ impl GlassSpec {
         self.radii = [radii[0], radii[1], 0.0, 0.0];
         self.merge = Some(progress);
         self.spacing = spacing;
+        self
+    }
+
+    /// One shape that grows from the rect `from` to the rect `to` (points
+    /// from the surface's top-left corner, as the signals hold them now) as
+    /// `progress` runs 0 to 1 (past 1 it overshoots), its corners a capsule's
+    /// while `roundness` is 1 and `radius` at 0: a glass control turning into
+    /// the menu it opens ([`crate::GlassMenu`]).
+    pub(crate) fn grow(
+        mut self,
+        from: Signal<[f32; 4]>,
+        to: Signal<[f32; 4]>,
+        radius: f32,
+        progress: AnimatedNode,
+        roundness: AnimatedNode,
+    ) -> Self {
+        self.radii = [radius; 4];
+        self.grow = Some(Grow {
+            from,
+            to,
+            progress,
+            roundness,
+        });
+        self
+    }
+
+    /// A flat body instead of the glass's: the backdrop blurred and tinted by
+    /// `fill` (light, dark) at its alpha times `amount`, the glass's lens,
+    /// hairline and rim light only at the edge. A menu's material.
+    pub(crate) fn menu_body(mut self, fill: [Hsla; 2], amount: AnimatedNode) -> Self {
+        self.body = Some(Body { fill, amount });
+        self
+    }
+
+    /// A Gaussian drop shadow in both appearances: black at `alpha`, the
+    /// shape lowered by `offset` and blurred by `sigma` points, in a margin
+    /// of `margin` points; it fades with [`GlassSpec::reveal`].
+    pub(crate) fn soft_shadow(mut self, margin: f32, alpha: f32, offset: f32, sigma: f32) -> Self {
+        self.margin = margin.max(0.0);
+        self.shadow = alpha;
+        self.soft_shadow = Some((offset, sigma));
         self
     }
 
@@ -667,7 +831,7 @@ impl Press {
     }
 
     /// The squash of the surface under the finger (none with Reduce Motion).
-    fn scale(&self) -> AnimatedNode {
+    pub(crate) fn scale(&self) -> AnimatedNode {
         self.value.interpolate(
             &[0.0, numbers::PRESS_HELD],
             &[
@@ -749,7 +913,7 @@ pub fn layer(spec: GlassSpec, press: Option<Press>) -> impl IntoElement {
     let shader_spec = spec.clone();
     let material_spec = spec;
     when(
-        move || !material_spec.material_only && shaders_available() && program().is_some(),
+        move || !material_spec.material_only && shader_draws(),
         move || shader_layer(shader_spec.clone(), press),
     )
     .otherwise(move || material_layer(&material_spec))
@@ -778,7 +942,10 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     };
     glass = glass
         .source(program)
-        .uniform("tint", move || tint.tint())
+        .uniform("tint", move || match &tint.body {
+            Some(body) => body.fill[usize::from(dark())],
+            None => tint.tint(),
+        })
         .uniform("radii", radii)
         .uniform("other_radii", other)
         .uniform("first", first)
@@ -829,11 +996,21 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
             move || if dark() { numbers::BODY_SHADE } else { 0.0 },
         )
         .uniform("reveal", 1.0_f32)
+        .uniform("roundness", 0.0_f32)
         .uniform("morph", 0.0_f32)
         .uniform("anchor", spec.anchor)
         .uniform("min_radius", numbers::MIN_RADIUS)
         .uniform("margin", spec.margin)
-        .uniform("shadow", move || if dark() { 0.0_f32 } else { spec.shadow })
+        .uniform("shadow", move || {
+            if dark() && spec.soft_shadow.is_none() {
+                0.0_f32
+            } else {
+                spec.shadow
+            }
+        })
+        .uniform("body", -1.0_f32)
+        .uniform("shadow_offset", spec.soft_shadow.map_or(0.0, |s| s.0))
+        .uniform("shadow_sigma", spec.soft_shadow.map_or(0.0, |s| s.1))
         .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 });
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
@@ -846,6 +1023,22 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     }
     if let Some(progress) = &spec.merge {
         glass = glass.uniform("progress", progress);
+    }
+    if let Some(grow) = spec.grow.clone() {
+        let (from, to) = (grow.from, grow.to);
+        glass = glass
+            .uniform("first", move || {
+                UniformValue::List(vec![vector(from.get()), vector([0.0; 4])])
+            })
+            .uniform("second", move || {
+                UniformValue::List(vec![vector(to.get()), vector([0.0; 4])])
+            })
+            .uniform("count", 1.0_f32)
+            .uniform("progress", &grow.progress)
+            .uniform("roundness", &grow.roundness);
+    }
+    if let Some(body) = &spec.body {
+        glass = glass.uniform("body", &body.amount);
     }
     if let Some(press) = press {
         glass = glass
@@ -1194,4 +1387,21 @@ pub(crate) fn material_spec(name: &str, corners: [f32; 4]) -> GlassSpec {
         _ => GlassVariant::Regular,
     };
     GlassSpec::corners(corners).variant(variant)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_clip_shader_compiles_and_reads_the_content() {
+        let shader = nsh_core::shader::Shader::compile(super::CLIP_SOURCE).expect("it compiles");
+        let declared: Vec<&str> = shader.uniforms().iter().map(|f| &*f.name).collect();
+        for name in ["first", "second", "radius", "progress", "roundness"] {
+            assert!(declared.contains(&name), "{name}: {declared:?}");
+        }
+        assert!(
+            shader
+                .inputs()
+                .contains(nsh_core::shader::ShaderInput::Content)
+        );
+    }
 }

@@ -93,3 +93,12 @@ test("a swipe reveals its actions and a full swipe fires one", async () => {
   await app.press("text:Flag");
   expect(app.texts()).toContain("Action flag.");
 });
+
+test("a glass menu opens from its button and chooses an item", async () => {
+  const app = await open("./App.tsx", { storage: { "cupertino.page": "glassmenu" } });
+  await app.press("role:button[Sort]");
+  expect(app.count("role:menu")).toBe(1);
+  await app.press("role:menuitem[Copy link]");
+  expect(app.texts()).toContain("Chose copy.");
+  await app.waitFor("role:menu", { state: "gone" });
+});
