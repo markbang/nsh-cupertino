@@ -113,6 +113,9 @@ pub(crate) mod motion {
         Items,
         /// The shrink to `CLOSE_SCALE`, 0 to 1.
         Shrink,
+        /// The shadow's share of its alpha: it goes at once as the close
+        /// starts (iOS drops it at frame 60, while the body is still there).
+        Shadow,
     }
 
     impl Part {
@@ -126,11 +129,17 @@ pub(crate) mod motion {
     /// at 1, the shrink at 0). Only the menu's opacity fades: the fill never
     /// drops out under the items, so the page never shows through the menu
     /// while its items still do.
-    pub(crate) fn close() -> [(Part, f32, Timing); 2] {
+    pub(crate) fn close() -> [(Part, f32, Timing); 3] {
         [
             (Part::Menu, 0.0, close_fade()),
             (Part::Shrink, 1.0, close_shrink()),
+            (Part::Shadow, 0.0, close_shadow()),
         ]
+    }
+
+    /// The shadow's drop: a step at the start of the close.
+    pub(crate) fn close_shadow() -> Timing {
+        Timing::new(0.0, Easing::Linear)
     }
 
     /// The close: it holds for 70 ms, then fades over 60 ms.
@@ -166,6 +175,30 @@ pub(crate) mod motion {
     /// Reduce Motion: a cross-fade of this long, in and out.
     pub(crate) fn fade() -> Timing {
         Timing::new(150.0, Easing::EaseOut)
+    }
+}
+
+/// A layer of the open menu drawn without the shader, which takes the close's
+/// opacity. A CSS `backdrop-filter` loses its backdrop under an ancestor whose
+/// opacity is below 1 (#36's round 2 double text), so the blurred fill
+/// carries the menu's fade itself and the menu carries none.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Layer {
+    /// The menu, the fill's parent.
+    Menu,
+    /// The blurred fill, its fill colour and its shadow.
+    Fill,
+    /// The items.
+    Items,
+}
+
+/// The parts whose opacities a fallback layer multiplies (none: opaque).
+fn fallback_parts(layer: Layer) -> &'static [motion::Part] {
+    use motion::Part;
+    match layer {
+        Layer::Menu => &[],
+        Layer::Fill => &[Part::Menu],
+        Layer::Items => &[Part::Menu, Part::Items],
     }
 }
 
@@ -320,6 +353,8 @@ struct Morph {
     fade: AnimatedValue,
     /// The close, 0 to 1.
     shrink: AnimatedValue,
+    /// The shadow's share of its alpha.
+    shadow: AnimatedValue,
     /// The button's centre from the panel's, and its size over the panel's
     /// less one, set at each opening: what the items and the fallback move
     /// and scale by.
@@ -342,6 +377,7 @@ impl Morph {
             body: animated_value(motion::BODY_FROM),
             fade: animated_value(0.0),
             shrink: animated_value(0.0),
+            shadow: animated_value(1.0),
             dx: animated_value(0.0),
             dy: animated_value(0.0),
             sx: animated_value(0.0),
@@ -378,7 +414,16 @@ impl Morph {
             motion::Part::Body => self.body,
             motion::Part::Items => self.items,
             motion::Part::Shrink => self.shrink,
+            motion::Part::Shadow => self.shadow,
         }
+    }
+
+    /// The opacity a fallback layer binds, or none when it is opaque.
+    fn opacity_of(&self, layer: Layer) -> Option<AnimatedNode> {
+        let (first, rest) = fallback_parts(layer).split_first()?;
+        Some(rest.iter().fold(*self.part(*first).node(), |node, part| {
+            node.mul(&self.part(*part))
+        }))
     }
 
     /// The panel's own move: the drop while it opens, the shift while it
@@ -411,6 +456,7 @@ impl Morph {
             return;
         }
         self.shrink.set(0.0);
+        self.shadow.set(1.0);
         self.button.set(0.0);
         if reduce_motion() {
             self.grow.set(1.0);
@@ -536,6 +582,7 @@ pub fn GlassMenu(props: GlassMenuProps, cx: Scope<GlassMenuEvent>) -> impl IntoE
                     // Opened again while it went: back as it is now.
                     closing.set(false);
                     morph.shrink.set(0.0);
+                    morph.shadow.set(1.0);
                     morph.fade.set(1.0);
                 } else if !mounted.get() {
                     started.replace(false);
@@ -675,7 +722,7 @@ pub fn GlassMenu(props: GlassMenuProps, cx: Scope<GlassMenuEvent>) -> impl IntoE
 /// clip's shadow, scaled from the button's box.
 fn fallback_fill(morph: Morph) -> View {
     let (alpha, offset, blur) = motion::SHADOW;
-    view()
+    let fill = view()
         .absolute()
         .inset_0()
         .rounded(px(RADIUS))
@@ -690,7 +737,15 @@ fn fallback_fill(morph: Morph) -> View {
         .bind_translate_x(&morph.follow_x())
         .bind_translate_y(&morph.follow_y())
         .bind_transform(TransformKind::ScaleX, &morph.scale_x())
-        .bind_transform(TransformKind::ScaleY, &morph.scale_y())
+        .bind_transform(TransformKind::ScaleY, &morph.scale_y());
+    bind_layer(fill, &morph, Layer::Fill)
+}
+
+fn bind_layer(view: View, morph: &Morph, layer: Layer) -> View {
+    match morph.opacity_of(layer) {
+        Some(opacity) => view.bind_opacity(&opacity),
+        None => view,
+    }
 }
 
 /// The rows' colour: red for a destructive item.
@@ -729,7 +784,8 @@ fn panel(
             RADIUS,
             morph.grow.animated_node(),
             morph.round.animated_node(),
-        );
+        )
+        .shadow_amount(*morph.shadow.node());
     // With the shader, one layer draws the growing shape, its fill, rim and
     // shadow, in a box with room around the panel. Without it, the fill is
     // all there is, scaled from the button's box: its corners scale with it.
@@ -745,14 +801,18 @@ fn panel(
         fallback_fill(morph)
     };
 
-    let mut items = view()
+    let items_view = view()
         .px(px(6.0))
         .py(px(10.0))
         .w(px(250.0))
-        .bind_opacity(&morph.items)
         .bind_translate_x(&morph.follow_x())
         .bind_translate_y(&morph.follow_y())
         .bind_scale(&morph.scale_x());
+    let mut items = if shader {
+        items_view.bind_opacity(&morph.items)
+    } else {
+        bind_layer(items_view, &morph, Layer::Items)
+    };
     let mut focus_set = false;
     for (index, action) in actions.into_iter().enumerate() {
         if let Some(header) = action.section.clone() {
@@ -854,16 +914,18 @@ fn panel(
         items.into_element()
     };
 
-    view()
+    let menu = view()
         .relative()
         .role(AccessibilityRole::Menu)
-        .bind_opacity(&morph.fade)
         .bind_translate_x(&morph.shift_x())
         .bind_translate_y(&morph.shift_y())
-        .bind_scale(&morph.scale())
-        .child(material)
-        .child(content)
-        .into_element()
+        .bind_scale(&morph.scale());
+    let menu = if shader {
+        menu.bind_opacity(&morph.fade)
+    } else {
+        bind_layer(menu, &morph, Layer::Menu)
+    };
+    menu.child(material).child(content).into_element()
 }
 
 #[cfg(test)]
@@ -873,7 +935,7 @@ mod tests {
     //! (`python3 tools/fit-glass-menu.py --rust` prints them), and the fit
     //! against the clip's own frames.
 
-    use super::{motion, spring_driver, timing_driver, value_at};
+    use super::{Layer, fallback_parts, motion, spring_driver, timing_driver, value_at};
 
     /// The fitted curves at 0, 30, … 600 ms after the press.
     const GROW: [f32; 21] = [
@@ -899,6 +961,8 @@ mod tests {
     /// The close at 0, 30, … 150 ms.
     const CLOSE_OPACITY: [f32; 6] = [1.0000, 1.0000, 1.0000, 0.8438, 0.2603, 0.0000];
     const CLOSE_SCALE: [f32; 6] = [1.0000, 1.0000, 1.0000, 0.9494, 0.9400, 0.9400];
+    /// The shadow's share at 0, 30, … 150 ms into the close: gone at once.
+    const CLOSE_SHADOW: [f32; 6] = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
     /// The clip's panel at rest and the 44 pt button it grows from, in pt.
     const REST: [f32; 4] = [250.1, 375.6, 139.6, 342.4];
@@ -1036,10 +1100,46 @@ mod tests {
             let shrink = value_at(timing_driver(motion::close_shrink(), 1.0), 0.0, ms);
             1.0 + (motion::CLOSE_SCALE - 1.0) * shrink
         });
+        check("the close's shadow", &CLOSE_SHADOW, 0.0, |ms| {
+            value_at(timing_driver(motion::close_shadow(), 0.0), 1.0, ms)
+        });
         let fade = motion::close_fade();
         let shrink = motion::close_shrink();
         assert!(fade.delay_ms + fade.duration_ms <= motion::CLOSE_MS);
         assert!(shrink.delay_ms + shrink.duration_ms <= motion::CLOSE_MS);
+    }
+
+    /// Without the shader, nothing above the blurred fill is under 1: the
+    /// menu carries no opacity, so the fill keeps its backdrop, and the fill
+    /// and the items show the close's curve at every 10 ms.
+    #[test]
+    fn the_blurred_fill_keeps_its_backdrop_through_the_close() {
+        use motion::Part;
+        assert!(
+            fallback_parts(Layer::Menu).is_empty(),
+            "the menu would carry an opacity above the blurred fill"
+        );
+        let shown = |layer: Layer, ms: f32| -> f32 {
+            fallback_parts(layer)
+                .iter()
+                .map(|part| closing(*part, ms))
+                .product()
+        };
+        for ms in (0..=150).step_by(10) {
+            let ms = ms as f32;
+            let fill = shown(Layer::Fill, ms);
+            assert!(
+                (fill - closing(Part::Menu, ms)).abs() < 1e-6,
+                "the fill at {ms} ms into the close: {fill:.3}, the menu's {:.3}",
+                closing(Part::Menu, ms)
+            );
+            let items = shown(Layer::Items, ms);
+            let want = closing(Part::Menu, ms) * closing(Part::Items, ms);
+            assert!(
+                (items - want).abs() < 1e-6,
+                "the items at {ms} ms into the close: {items:.3}, against {want:.3}"
+            );
+        }
     }
 
     /// The fit against the clip's frames that differ (`tools/fit-glass-menu.py`):

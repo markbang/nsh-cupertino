@@ -37,7 +37,7 @@ Notes
   the shape is still a blob (before 170 ms).
 - Without the shader, the fill is all there is, scaled from the button's box
   to the panel's: its corners scale with it, there is no round blob mid-way,
-  and the items are not cut.
+  the items are not cut, and its shadow fades with the fill on close.
 
 ## Accessibility
 
@@ -65,8 +65,8 @@ Fitted to the iOS clip `research/ios-reference/motion/motion-menu.mp4`
   from 110 ms).
 - **Close**: it holds 70 ms, then shrinks to 0.94 and moves 17 pt down and
   5 pt left within 30 ms (ease-out), and fades within 60 ms (ease-in). The
-  fill, the rim, the shadow and the items fade as one layer. It is gone at
-  130 ms, and the button fades back in.
+  fill, the rim and the items fade as one layer, and the shadow goes at once
+  as the close starts. It is gone at 130 ms, and the button fades back in.
 - Reduce Motion: a 150 ms cross-fade in and out, no shape change.
 
 The curves are pinned in Rust by sampling them every 30 ms
