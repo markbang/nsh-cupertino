@@ -286,7 +286,7 @@ SEEN = {
         "light": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
             ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
-            ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider at the same ink (Inter SemiBold 164 px, ink 0.602; reference 157 px, 0.594): the face"),
+            ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider at the same ink (Inter SemiBold 164 px, reference 157 px): the face"),
             ((130, 720, 452, 752), "banner title 1.3 % wider, ink +1 %: the face (FreeSans was 3.5 % wider, ink +16 %)"),
             ((120, 500, 612, 540), "description: ink +8 %, same width (Inter Regular against SF Regular): the face"),
             ((0, 1262, 720, 1565), "loader and toast: no iOS reference, from Cohub Mobile's code values"),
@@ -294,7 +294,7 @@ SEEN = {
         "dark": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
             ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
-            ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider at the same ink (Inter SemiBold 164 px, ink 0.602; reference 157 px, 0.594): the face"),
+            ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider at the same ink (Inter SemiBold 164 px, reference 157 px): the face"),
             ((130, 720, 452, 752), "banner title 1.3 % wider, ink +1 %: the face (FreeSans was 3.5 % wider, ink +16 %)"),
             ((120, 500, 612, 540), "description: ink +8 %, same width (Inter Regular against SF Regular): the face"),
             ((0, 1262, 720, 1565), "loader and toast: no iOS reference, from Cohub Mobile's code values"),
