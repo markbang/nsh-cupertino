@@ -2,6 +2,7 @@
 """Glass values measured from the iOS reference shots (research/ios-reference/shots).
 
     python3 tools/measure-glass-ios.py menu [light|dark]
+    python3 tools/measure-glass-ios.py frost [light|dark]
 
 The menu shot is UIKit's pull-down menu over the catalog's bars (`catalog-menu`,
 720 x 1565 px, 1.791 px per pt). Outside the panel the bars and the page are sharp;
@@ -106,8 +107,43 @@ def menu(scheme):
         print(f"  mix ch{c} (n={n}): white alpha {1 - k:.3f}, implied tint {t / max(1 - k, 1e-6):.0f}, rms {r:.1f}")
 
 
+def frost_residual(B, I, ys, opacity, held_mode, weight, sigma):
+    """The shader's frost: opacity * cloud + (1 - opacity) * held, held = max(ghost, cloud) (clamp 0)."""
+    luma = B @ np.array([0.2126, 0.7152, 0.0722]) / 255.0
+    w = 1 + weight * luma ** 2
+    cloud = gaussian_filter1d(B, sigma, axis=0, mode="nearest")
+    ghost = gaussian_filter1d(B * w[:, None], sigma, axis=0, mode="nearest") / gaussian_filter1d(w, sigma, mode="nearest")[:, None]
+    held = np.maximum(ghost, cloud) if held_mode == "max" else ghost
+    field = opacity * cloud + (1 - opacity) * held
+    rms = []
+    for c in range(3):
+        X = np.c_[field[ys, c], np.ones(len(ys))]
+        coef, *_ = np.linalg.lstsq(X, I[ys, c], rcond=None)
+        rms.append(np.sqrt(np.mean((X @ coef - I[ys, c]) ** 2)))
+    return float(np.mean(rms))
+
+
+def frost(scheme):
+    """The frost the shader can express, best sigma for each setting, against the plain blur."""
+    im = load(scheme)
+    B = im[:, OUTSIDE_X[0]:OUTSIDE_X[1]].mean(axis=1)
+    I = im[:, INSIDE_X[0]:INSIDE_X[1]].mean(axis=1)
+    ys = np.arange(*INSIDE_Y)
+    rows = []
+    for opacity in (1.0, 0.9, 0.6, 0.4, 0.0):
+        for held_mode, weight in (("max", 0.0), ("max", 2.5), ("max", 5.0), ("lit", 5.0)):
+            best = min((frost_residual(B, I, ys, opacity, held_mode, weight, s), s) for s in np.arange(6, 30, 1.0))
+            rows.append((best[0], opacity, held_mode, weight, best[1]))
+    rows.sort()
+    print(f"{scheme}: frost settings, best first (residual, opacity, held, weight, sigma px)")
+    for row in rows[:5]:
+        print(f"  {row[0]:.2f}  opacity {row[1]}  held {row[2]}  weight {row[3]}  sigma {row[4]} px")
+    plain = [r for r in rows if r[1] == 1.0 and r[3] == 0.0]
+    print(f"  plain blur (opacity 1): {plain[0][0]:.2f}")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] != "menu":
+    if len(sys.argv) < 2 or sys.argv[1] not in ("menu", "frost"):
         sys.exit(__doc__)
     for scheme in (sys.argv[2:] or ["light", "dark"]):
-        menu(scheme)
+        menu(scheme) if sys.argv[1] == "menu" else frost(scheme)
