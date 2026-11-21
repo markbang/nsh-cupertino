@@ -44,6 +44,7 @@ import {
   Sheet,
   Skeleton,
   Toast,
+  ToastLayer,
   Slider,
   StatusPill,
   SwipeRow,
@@ -403,6 +404,7 @@ function RowsPage() {
 // The catalog's states in the order of Cohub Mobile's `catalog-states` snapshot: an empty list, the failed
 // load under it, then the rows still loading. The spacing is the snapshot's, in points from the top of the frame.
 function StatesPage() {
+  const toastShown = signal(true);
   // One child under the header: the page puts 20 pt between its children, so the spacing below is set here.
   return (
     <NavPage title="UI Catalog">
@@ -425,16 +427,28 @@ function StatesPage() {
           </ErrorBanner>
         </View>
         <Skeleton rows={3} />
-        {/* No iOS reference: the loader's rest frame, and a toast, from Cohub Mobile's code values. */}
+        {/* No iOS reference: the loader's rest frame and the toast stack, from Cohub Mobile's code values. */}
         <View style={{ marginTop: 16, alignItems: "center", paddingTop: 5 }}>
           <Mascot size={72} />
         </View>
-        <View style={{ marginTop: 12, marginHorizontal: 12 }}>
-          <Toast title="Could not send" message="Check your connection and try again." tone="danger" action="Retry">
+      </View>
+      {toastShown() ? (
+        <ToastLayer>
+          <Toast depth={1} title="Saved to Files" message="Added to Design review." tone="success">
+            <Icon name="checkmark.circle" size={16} tint="system-green" />
+          </Toast>
+          <Toast
+            title="Could not send"
+            message="Check your connection and try again."
+            tone="danger"
+            action="Retry"
+            onAction={() => toastShown.set(false)}
+            onDismiss={() => toastShown.set(false)}
+          >
             <Mascot size={20} mood="worried" />
           </Toast>
-        </View>
-      </View>
+        </ToastLayer>
+      ) : null}
     </NavPage>
   );
 }

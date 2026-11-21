@@ -12,15 +12,28 @@
 | `message` | `.message(..)` | `string` | 无 | 其下的详情 |
 | `tone` | `.tone(..)` | `"neutral"` \| `"success"` \| `"danger"` | `neutral` | `danger` 画红色边框 |
 | `action` | `.action(..)` | `string` | 无 | 末端的文字操作，用主色 |
+| `depth` | `.depth(..)` | `number` | `0` | 在 `ToastLayer` 中的位置：0 为前面的卡片，1 及以上在其后 |
 | `onAction` | `Action` 事件 | 事件 | — | 操作被按下 |
+| `onDismiss` | `Dismiss` 事件 | 事件 | — | 向一侧滑过 56 pt，或以超过 800 pt/s 的速度轻扫 |
 | children | `.child(..)` | JSX | 无 | 前缘的图标或吉祥物，由调用方绘制 |
 
 说明
 
-- 提示条不设位置：由页面或图层安排。Cohub Mobile 的提示堆叠在底部安全区上方 84 pt、标签栏之上，并以弹簧滑入；
-  本组件只提供卡片本身。
+- 进入时上升 16 pt、从 96% 放大，弹簧约 400 ms 落定，不回弹（Cohub Mobile 的 `enterSpring`）。滑动不足时约 400 ms 弹回。
+- 其后的卡片每层高 10 pt、小 4%、淡 35%。它在前卡上方露出的一条会接收触摸。
 - 消息会换行。Cohub Mobile 限制为两行，本组件暂未限制。
 - 阴影与 `SHADOW_FLOAT` 相同：黑色、0 6 20、14%。
+- 提示条本身不设位置：请放进 `ToastLayer`。
+- 尚未实现：Cohub Mobile 的自动消失计时，以及手指停在卡片上时暂停计时。由应用在计时到期时移除提示。
+
+## ToastLayer
+
+提示条的位置：页面上的一层，距两侧 12 pt，距底部安全区 84 pt，与 Cohub Mobile 的做法一致，位于标签栏之上。
+子元素为 `Toast`；前面的一张（`depth` 0）在文档流中，决定堆叠的大小。
+
+| TSX | Rust | 类型 | 默认 | |
+| --- | --- | --- | --- | --- |
+| children | `.child(..)` | JSX | 无 | 提示条，前面的一张 depth 为 0 |
 
 ## 无障碍
 

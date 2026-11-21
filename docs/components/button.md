@@ -30,7 +30,7 @@ Looks
 - **tinted**: the tint at 18 % in light and 26 % in dark, blue text.
 - **plain**: blue text only.
 - **destructive**: red text (iOS's destructive style), same shape as plain.
-- `loading`: a spinner in place of the icon, the whole button at 55 % and not pressable.
+- `loading`: Cohub Mobile's small loader, the mascot's cheek turning in place (900 ms), in place of the icon; the whole button at 55 % and not pressable. With reduced motion it is still.
 
 Sizes
 

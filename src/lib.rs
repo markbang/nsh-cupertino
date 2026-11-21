@@ -106,8 +106,8 @@ pub use slider::{Slider, SliderElement, SliderEvent, SliderProps, slider};
 pub use state::{
     EmptyState, EmptyStateElement, EmptyStateEvent, EmptyStateProps, ErrorBanner,
     ErrorBannerElement, ErrorBannerEvent, ErrorBannerProps, Skeleton, SkeletonElement,
-    SkeletonProps, Toast, ToastElement, ToastEvent, ToastProps, empty_state, error_banner,
-    skeleton, toast,
+    SkeletonProps, Toast, ToastElement, ToastEvent, ToastLayer, ToastLayerElement, ToastLayerProps,
+    ToastProps, empty_state, error_banner, skeleton, toast, toast_layer,
 };
 pub use swipe::{SwipeAction, SwipeRow, SwipeRowElement, SwipeRowEvent, SwipeRowProps, swipe_row};
 pub use switch::{Switch, SwitchElement, SwitchEvent, SwitchProps, switch};
@@ -141,6 +141,7 @@ fn native(registry: &mut Registry) {
         .register::<ErrorBanner>()
         .register::<Skeleton>()
         .register::<Toast>()
+        .register::<ToastLayer>()
         .register::<ActivityIndicator>()
         .register::<ScrollView>()
         .register::<Sheet>()

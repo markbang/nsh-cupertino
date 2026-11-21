@@ -1,11 +1,13 @@
-//! [`EmptyState`], [`ErrorBanner`] and [`Skeleton`]: what a screen shows while
-//! it has nothing yet, has failed to load, or is loading.
+//! [`EmptyState`], [`ErrorBanner`], [`Skeleton`] and [`Toast`]: what a screen
+//! shows while it has nothing yet, has failed to load, is loading, or has
+//! something to say about what just happened.
 
 use nsh_core::{AccessibilityRole, element::Children, prelude::*};
 
 use crate::{
     button::button,
     icon::icon_stroke,
+    overlay::spring,
     tokens::{self, radius, type_default},
 };
 
@@ -290,6 +292,9 @@ pub struct ToastProps {
     pub tone: Prop<Option<SharedString>>,
     /// A text action at the trailing edge, by its title (none leaves it out).
     pub action: Prop<Option<SharedString>>,
+    /// Its place in a [`ToastLayer`]: 0 is the front card (the default); 1 and
+    /// up sit behind it, 10 pt higher, 4 % smaller and 35 % fainter per place.
+    pub depth: Prop<Option<f32>>,
     /// The icon or mascot at the leading edge, drawn by the caller.
     pub children: Prop<Children>,
 }
@@ -299,20 +304,82 @@ pub struct ToastProps {
 pub enum ToastEvent {
     /// The action was pressed.
     Action,
+    /// It was swiped away: the app takes it out of its layer.
+    Dismiss,
+}
+
+/// Cohub Mobile's `Toast` motion (`components/Toast.tsx`): the card rises 16 pt
+/// and grows from 96 % as it fades in, on a spring that settles in 400 ms
+/// without bouncing.
+const ENTER_RISE: f32 = 16.0;
+const ENTER_SCALE: f32 = 0.96;
+const STACK_OFFSET: f32 = 10.0;
+const STACK_SHRINK: f32 = 0.04;
+const STACK_FADE: f32 = 0.35;
+/// A swipe past 56 pt, or a flick faster than 800 pt/s, dismisses the card; a
+/// shorter one springs back in 400 ms.
+const DISMISS_DISTANCE: f32 = 56.0;
+const DISMISS_VELOCITY: f32 = 800.0;
+/// The layer's bottom edge: 84 pt above the bottom inset, over the tab bar.
+const BOTTOM_CLEARANCE: f32 = 84.0;
+
+/// The enter spring: unit mass, critically damped, settling in about 400 ms
+/// (the exit and the return use their own stiffness inline).
+fn enter_spring() -> Spring {
+    spring(1.0, 270.0)
 }
 
 /// A short confirmation or failure on the floating surface, 20 pt corners and
 /// a soft shadow: a leading icon, a title and an optional message and action.
 ///
-/// It takes no position: the screen or a layer places it, with the margins
-/// it needs above the tab bar.
+/// It enters rising and growing, and it is swiped away to either side: past
+/// 56 pt or on a fast flick, it leaves and emits `Dismiss`; short of that it
+/// springs back. It takes no position: a [`ToastLayer`] places it.
 #[component]
 pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
     let title = props.title;
     let message = props.message;
     let tone = props.tone;
     let danger = move || tone.get().as_deref() == Some("danger");
-    view()
+    let depth = props.depth.get_untracked().unwrap_or(0.0).max(0.0);
+    let front = depth == 0.0;
+
+    let fade = animated_value(0.0);
+    let rise = animated_value(ENTER_RISE);
+    let grow = animated_value(ENTER_SCALE);
+    let swipe = animated_value(0.0);
+    if nsh_core::element::reduce_motion() {
+        fade.set(1.0);
+        rise.set(0.0);
+        grow.set(1.0);
+    } else {
+        fade.spring(1.0, enter_spring());
+        rise.spring(0.0, enter_spring());
+        grow.spring(1.0, enter_spring());
+    }
+
+    let release = move |event: &PanEvent| {
+        let moved = event.value_x.unwrap_or(0.0);
+        let flung = event.velocity_x.abs() > DISMISS_VELOCITY;
+        if !flung && moved.abs() <= DISMISS_DISTANCE {
+            swipe.spring(0.0, spring(0.8, 200.0));
+            return;
+        }
+        let away = if moved < 0.0 || (moved == 0.0 && event.velocity_x < 0.0) {
+            -1.0
+        } else {
+            1.0
+        };
+        swipe.spring(
+            away * nsh_core::element::window().width.0,
+            spring(1.0, 480.0),
+        );
+        set_timeout(std::time::Duration::from_millis(300), move || {
+            cx.emit(ToastEvent::Dismiss)
+        });
+    };
+
+    let card = view()
         .flex_row()
         .items_center()
         .gap(px(12.0))
@@ -327,6 +394,13 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
             ..nsh_core::BoxShadow::default()
         }])
         .when(danger(), |v| v.border(px(1.0)).border_color(tokens::danger))
+        .bind_opacity(&fade)
+        .bind_translate_y(&rise)
+        .bind_scale(&grow)
+        .bind_translate_x(&swipe)
+        .when(front, |v| {
+            v.pan_values(Some(&swipe), None).on_pan_end(release)
+        })
         .child(props.children)
         .child(
             view()
@@ -370,5 +444,41 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
                             .text_color(tokens::system_blue),
                     ),
             )
-        })
+        });
+
+    // Behind the front card, a card sits over its edge; the sliver it shows above takes touches.
+    let lift = animated_value(0.0);
+    let shrink = animated_value(1.0);
+    lift.set(-STACK_OFFSET * depth);
+    shrink.set(1.0 - STACK_SHRINK * depth);
+    view()
+        .w_full()
+        .z_index((10.0 - depth) as i32)
+        .when(!front, |v| v.absolute().left_0().right_0().bottom_0())
+        .opacity(1.0 - STACK_FADE * depth)
+        .bind_translate_y(&lift)
+        .bind_scale(&shrink)
+        .child(card)
+}
+
+/// The props of [`ToastLayer`].
+#[derive(Debug, Clone, PartialEq, Props)]
+pub struct ToastLayerProps {
+    /// The toasts, the front one at depth 0.
+    pub children: Prop<Children>,
+}
+
+/// Where toasts show: a layer over the page, 12 pt from the sides and 84 pt
+/// above the bottom inset, over the tab bar as Cohub Mobile places them. The
+/// front toast is in flow and sizes the stack; the others stack behind it.
+/// The layer takes no touches except on its toasts.
+#[component]
+pub fn ToastLayer(props: ToastLayerProps) -> impl IntoElement {
+    crate::overlay::layer()
+        .pointer_events(PointerEvents::BoxNone)
+        .flex_col()
+        .justify_end()
+        .px(px(12.0))
+        .pb_safe_area_plus(px(BOTTOM_CLEARANCE))
+        .child(view().relative().w_full().child(props.children))
 }

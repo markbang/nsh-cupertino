@@ -2,7 +2,11 @@
 //! settings and detail screens with.
 
 use nsh_base::button;
-use nsh_core::{AccessibilityRole, element::Children, prelude::*};
+use nsh_core::{
+    AccessibilityRole,
+    element::{Children, ImageSrc},
+    prelude::*,
+};
 
 use crate::{
     icon::icon_stroke,
@@ -365,10 +369,20 @@ fn accessory_view(
         ))
         .child(when(
             move || !matches!(chevron.get().as_deref(), Some("checkmark") | Some("none")),
-            move || {
-                // Cohub Mobile's row chevron: a 1.5 pt line. Its ink matches the reference at the secondary
-                // label; the tertiary label reads about half as dark.
-                icon_stroke("chevron.right", 20.0, 1.5).text_color(tokens::secondary_label)
-            },
+            row_chevron,
         ))
+}
+
+/// Cohub Mobile's row chevron: a 1.5 pt line in the secondary label. Its glyph is 13.5 units tall (the
+/// reference's 24 px at 1.79 px/pt; the table's `chevron.right` is 15) and sits 2.2 pt right and 1.1 pt
+/// down of the centred box, where the reference draws it.
+fn row_chevron() -> impl IntoElement {
+    svg(ImageSrc::svg_markup(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.2 16.5 12 9 18.8"/></svg>"#,
+    ))
+    .size(px(20.0))
+    .flex_none()
+    .mr(px(-2.2))
+    .mt(px(2.2))
+    .text_color(tokens::secondary_label)
 }

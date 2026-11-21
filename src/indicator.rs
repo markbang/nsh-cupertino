@@ -1,6 +1,12 @@
-//! [`ActivityIndicator`]: iOS's spinner, eight blades fading in turn.
+//! [`ActivityIndicator`]: iOS's spinner, eight blades fading in turn, and the
+//! small crescent a button shows while it loads.
 
-use nsh_core::{AccessibilityRole, element::KeyframeTiming, geometry::deg, prelude::*};
+use nsh_core::{
+    AccessibilityRole,
+    element::{ImageSrc, KeyframeTiming},
+    geometry::deg,
+    prelude::*,
+};
 
 use crate::tokens;
 
@@ -81,4 +87,38 @@ pub fn ActivityIndicator(props: ActivityIndicatorProps) -> impl IntoElement {
             .infinite(),
     );
     blades.bind_rotate(&turn).into_element()
+}
+
+/// Cohub Mobile's small loader (`ui/Loader.tsx`, `sm`): the mascot's cheek, an
+/// open arc, turning in place once every 900 ms.
+const CHEEK: &str = "M 685 574 C 671 577, 656 590, 649 603 C 633 636, 649 672, 681 678 C 704 682, 736 663, 733 647 C 730 636, 718 633, 707 641 C 699 648, 689 648, 681 642 C 663 626, 686 595, 707 607 C 721 614, 735 603, 731 588 C 728 576, 703 568, 685 574";
+/// The square the cheek is centred in, so the turn is about its middle.
+const CHEEK_VIEW: &str = "626 567 117 117";
+const CRESCENT_SPIN_MS: f32 = 900.0;
+
+/// A button's crescent: the cheek in `currentColor`, so it takes the label's
+/// colour. Still with reduced motion, as the blades are.
+pub(crate) fn crescent(size: f32) -> impl IntoElement {
+    let glyph = svg(ImageSrc::svg_markup(&format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="{CHEEK_VIEW}"><path d="{CHEEK}" fill="currentColor"/></svg>"#
+    )))
+    .size(px(size))
+    .flex_none()
+    .text_color(tokens::on_tint);
+    let root = view()
+        .size(px(size))
+        .flex_none()
+        .role(AccessibilityRole::Progressbar)
+        .child(glyph);
+    if nsh_core::element::reduce_motion() {
+        return root.into_element();
+    }
+    let turn = animated_value(0.0);
+    let _ = turn.keyframes(
+        [Keyframe::new(0.0), Keyframe::new(360.0)],
+        KeyframeTiming::new(CRESCENT_SPIN_MS)
+            .easing(Easing::Linear)
+            .infinite(),
+    );
+    root.bind_rotate(&turn).into_element()
 }

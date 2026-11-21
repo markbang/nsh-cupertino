@@ -1565,6 +1565,13 @@ export const API: Record<string, ApiGroup[]> = {
           "note": "A text action at the trailing edge, in the tint"
         },
         {
+          "tsx": "`depth`",
+          "rust": "`.depth(..)`",
+          "type": "`number`",
+          "default": "`0`",
+          "note": "Its place in a `ToastLayer`: 0 is the front card, 1 and up sit behind it"
+        },
+        {
           "tsx": "`onAction`",
           "rust": "`Action` event",
           "type": "event",
@@ -1572,11 +1579,32 @@ export const API: Record<string, ApiGroup[]> = {
           "note": "The action was pressed"
         },
         {
+          "tsx": "`onDismiss`",
+          "rust": "`Dismiss` event",
+          "type": "event",
+          "default": "—",
+          "note": "It was swiped away past 56 pt, or flicked faster than 800 pt/s"
+        },
+        {
           "tsx": "children",
           "rust": "`.child(..)`",
           "type": "JSX",
           "default": "none",
           "note": "The icon or mascot at the leading edge, drawn by the caller"
+        }
+      ]
+    },
+    {
+      "title": "ToastLayer",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "children",
+          "rust": "`.child(..)`",
+          "type": "JSX",
+          "default": "none",
+          "note": "The toasts, the front one at depth 0"
         }
       ]
     }
