@@ -4,7 +4,7 @@
 
 mod mascot;
 
-pub use mascot::{Mascot, MascotProps};
+pub use mascot::{Mascot, MascotLoader, MascotLoaderProps, MascotProps};
 
 use nsh_core::prelude::*;
 use nsh_cupertino::list_tile;
@@ -15,6 +15,7 @@ fn native(registry: &mut Registry) {
     registry
         .register::<DemoTile>()
         .register::<Mascot>()
+        .register::<MascotLoader>()
         .class::<Count>();
 }
 
