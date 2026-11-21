@@ -14,16 +14,33 @@ its message 13 pt in the secondary label.
 | `message` | `.message(..)` | `string` | none | A detail under it |
 | `tone` | `.tone(..)` | `"neutral"` \| `"success"` \| `"danger"` | `neutral` | `danger` draws a red border |
 | `action` | `.action(..)` | `string` | none | A text action at the trailing edge, in the tint |
+| `depth` | `.depth(..)` | `number` | `0` | Its place in a `ToastLayer`: 0 is the front card, 1 and up sit behind it |
 | `onAction` | `Action` event | event | — | The action was pressed |
+| `onDismiss` | `Dismiss` event | event | — | It was swiped away past 56 pt, or flicked faster than 800 pt/s |
 | children | `.child(..)` | JSX | none | The icon or mascot at the leading edge, drawn by the caller |
 
 Notes
 
-- The toast takes no position: a screen or a layer places it. Cohub Mobile's
-  stack sits 84 pt above the bottom inset, over the tab bar, and slides in on a
-  spring; this component is the card only.
+- It enters rising 16 pt and growing from 96 %, on a spring that settles in about
+  400 ms without bouncing (Cohub Mobile's `enterSpring`). A shorter swipe springs
+  back in about 400 ms.
+- A card behind the front one sits 10 pt higher, 4 % smaller and 35 % fainter per
+  place. Its sliver above the front card takes touches.
 - The message wraps. Cohub Mobile clamps it at two lines; this does not yet.
 - The shadow is `0 6 20` black at 14 %, as `SHADOW_FLOAT`.
+- The toast takes no position on its own: put it in a `ToastLayer`.
+- Not in this component yet: Cohub Mobile's auto-dismiss timers and the pause while
+  a finger rests on the card. The app removes a toast when its timer says so.
+
+## ToastLayer
+
+The place toasts show: a layer over the page, 12 pt from the sides and 84 pt above
+the bottom inset, over the tab bar as Cohub Mobile places them. Its children are
+`Toast`s; the front one (`depth` 0) is in flow and sizes the stack.
+
+| TSX | Rust | Type | Default | |
+| --- | --- | --- | --- | --- |
+| children | `.child(..)` | JSX | none | The toasts, the front one at depth 0 |
 
 ## Accessibility
 

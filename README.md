@@ -148,7 +148,7 @@ pub fn Settings() -> impl IntoElement {
 | [`EmptyState`](docs/components/empty-state.md) | An illustration, a badge, a headline, a description and a plain action |
 | [`ErrorBanner`](docs/components/error-banner.md) | An inline failure on a soft danger fill, with a retry button |
 | [`Skeleton`](docs/components/skeleton.md) | Grey rows that hold a list's place while it loads |
-| [`Toast`](docs/components/toast.md) | A short confirmation or failure on a floating card, with an optional action |
+| [`Toast`](docs/components/toast.md) | A short confirmation or failure on a floating card, with an optional action, swiped away and stacked in a `ToastLayer` |
 | [`ActivityIndicator`](docs/components/activity-indicator.md) | Eight blades fading in turn, drawn natively |
 | [`ScrollView`](docs/components/scroll-view.md) | Bouncing scroll with the platform's indicator and keyboard behavior |
 | [`Sheet`](docs/components/sheet.md) | A bottom panel with medium and large detents and a grabber |

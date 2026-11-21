@@ -130,7 +130,7 @@ pub fn Settings() -> impl IntoElement {
 | [`EmptyState`](docs/components/empty-state.zh-CN.md) | 插图、角标、标题、说明与纯文字操作 |
 | [`ErrorBanner`](docs/components/error-banner.zh-CN.md) | 软红色底上的行内错误，带重试按钮 |
 | [`Skeleton`](docs/components/skeleton.zh-CN.md) | 列表加载时占位的灰色行 |
-| [`Toast`](docs/components/toast.zh-CN.md) | 浮动卡片上的简短确认或失败提示，可带一个操作 |
+| [`Toast`](docs/components/toast.zh-CN.md) | 浮动卡片上的简短确认或失败提示，可带一个操作，可滑走，并在 `ToastLayer` 中堆叠 |
 | [`ActivityIndicator`](docs/components/activity-indicator.zh-CN.md) | 八片叶片依次淡出，原生绘制 |
 | [`ScrollView`](docs/components/scroll-view.zh-CN.md) | 带回弹的滚动视图，平台滚动条与键盘行为 |
 | [`Sheet`](docs/components/sheet.zh-CN.md) | 底部面板，中/大两档与把手 |
