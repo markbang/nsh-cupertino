@@ -86,6 +86,23 @@ pub fn merged(base: &Tokens) -> Tokens {
     tokens
 }
 
+/// Sets the preset's roles, and the aliases (`bg-primary`, `border-border`,
+/// ...) that name one of them, so a class and a component read one value.
+fn preset_tokens(tokens: &mut Tokens, roles: &[tokens::Role]) {
+    let value = |name: &str| roles.iter().find(|role| role.name == name);
+    for role in roles {
+        tokens.set_color(role.name, role.adaptive());
+    }
+    for (alias, target) in ALIASES {
+        if let Some(role) = value(target) {
+            tokens.set_color(alias, role.adaptive());
+        }
+    }
+    if let Some(role) = value("on-tint") {
+        tokens.set_color("primary-foreground", role.adaptive());
+    }
+}
+
 /// The props of [`Theme`].
 #[derive(Debug, Clone, PartialEq, Props)]
 pub struct ThemeProps {
@@ -118,9 +135,7 @@ pub fn Theme(props: ThemeProps) -> impl IntoElement {
             _ => merged,
         };
         if let Some(roles) = props.preset.get().as_deref().and_then(tokens::preset) {
-            for role in roles {
-                tokens.set_color(role.name, role.adaptive());
-            }
+            preset_tokens(&mut tokens, roles);
         }
         set_tokens(tokens);
     });
@@ -131,4 +146,39 @@ pub fn Theme(props: ThemeProps) -> impl IntoElement {
             view.font_family(family)
         })
         .child(props.children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::preset_tokens;
+    use crate::tokens::{ALIASES, COHUB_PRESET, ROLES, role};
+    use nsh_core::element::{AdaptiveColor, Tokens};
+
+    #[test]
+    fn a_preset_sets_the_aliases_of_its_roles() {
+        let mut tokens = Tokens::default();
+        for role in ROLES {
+            tokens.set_color(role.name, role.adaptive());
+        }
+        for (alias, target) in ALIASES {
+            let color = tokens.color(target).unwrap_or(AdaptiveColor::TRANSPARENT);
+            tokens.set_color(alias, color);
+        }
+        preset_tokens(&mut tokens, COHUB_PRESET);
+        for (alias, target) in ALIASES {
+            let Some(preset) = COHUB_PRESET.iter().find(|r| r.name == *target) else {
+                continue;
+            };
+            assert_eq!(
+                tokens.color(alias),
+                Some(preset.adaptive()),
+                "{alias} names {target}, which the preset sets"
+            );
+        }
+        assert_ne!(
+            tokens.color("primary"),
+            role("system-blue").map(|r| r.adaptive()),
+            "bg-primary follows the preset"
+        );
+    }
 }

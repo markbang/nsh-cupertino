@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Renders the catalog pages at the scale of Cohub Mobile's iOS reference:
 # 402 × 874 pt at 720 × 1565 px, so 1.791 px per point. Light and dark for
-# `controls` and `rows` land in docs/screenshots/ (not committed). Run from the
+# `controls`, `rows` and `states` land in docs/screenshots/ (not committed). Run from the
 # repository root.
 #
 # The web host draws at the browser's device scale, so the script starts
@@ -28,7 +28,7 @@ from pathlib import Path
 from PIL import Image
 
 scale = float(sys.argv[1])
-for page in ("controls", "rows"):
+for page in ("controls", "rows", "states"):
     for scheme in ("light", "dark"):
         path = Path("docs/screenshots") / f"catalog-{page}-{scheme}.png"
         image = Image.open(path)

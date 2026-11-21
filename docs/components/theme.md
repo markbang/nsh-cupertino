@@ -27,7 +27,7 @@ high-contrast values when the app asks for them. `tokens` is the data behind it.
 | Fills | `fill`, `secondary-fill`, `tertiary-fill`, `quaternary-fill` |
 | Greys | `system-gray`, `system-gray2` … `system-gray6` |
 | `cupertino_ui`'s own | `section-header-footer`, `clear-button`, `text-field-disabled-background`, `activity-tick` |
-| Controls and status | `on-tint`, `switch-on`, `switch-off`, `success`, `success-soft`, `warning`, `warning-soft`, `info`, `info-soft`, `danger-soft` |
+| Controls and status | `on-tint`, `switch-on`, `switch-off`, `success`, `success-soft`, `warning`, `warning-soft`, `info`, `info-soft`, `danger`, `danger-soft` |
 | System colors | `system-blue`, `system-green`, `system-red`, `system-orange`, `system-yellow`, `system-purple`, `system-pink`, `system-teal`, `system-indigo`, `system-gray`, `link` |
 | shadcn aliases | `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `selection` |
 
@@ -41,9 +41,13 @@ The defaults are the system's colors. `Theme`'s `preset` prop swaps in a palette
 over the roles it names: `preset="cohub"` is Cohub Mobile's (`src/design/tokens.ts`):
 warm paper `#f6f3ee` and `#121214`, the accent `#bf3f00` and `#ff8a3d`, a white or
 `#1c1c1e` surface, the warm greys and the status colors. Increased contrast keeps the
-system values, as it does for every role. The generated theme file
-(`theme/theme.json`) still holds the system values, so a class such as
-`bg-system-blue` does not follow the preset yet; Rust components do.
+system values, as it does for every role. Classes follow the preset as components do:
+`bg-system-blue` and `text-secondary-label` take the preset's values, and so does an
+alias that names a preset role (`bg-primary`, `bg-background`, `border-border`). The
+`danger` role is the red of destructive rows and the `destructive` alias; the preset sets
+it to `#bf2b3c` (dark `#f2787f`).
+generated theme file (`theme/theme.json`) holds the system values; the preset is applied
+on top of it at run time.
 
 ## Materials
 

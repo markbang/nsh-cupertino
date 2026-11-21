@@ -266,7 +266,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                     .justify_center()
                                     .bg(move || {
                                         if destructive() {
-                                            tokens::system_red()
+                                            tokens::danger()
                                         } else {
                                             tokens::system_gray5()
                                         }
@@ -307,7 +307,7 @@ pub fn ListTile(props: ListTileProps, cx: Scope<ListTileEvent>) -> impl IntoElem
                                             if disabled() {
                                                 tokens::tertiary_label()
                                             } else if destructive() {
-                                                tokens::system_red()
+                                                tokens::danger()
                                             } else if accent() {
                                                 tokens::system_blue()
                                             } else {
@@ -366,8 +366,9 @@ fn accessory_view(
         .child(when(
             move || !matches!(chevron.get().as_deref(), Some("checkmark") | Some("none")),
             move || {
-                // Cohub Mobile's row chevron: a thin line in the secondary label.
-                icon_stroke("chevron.right", 20.0, 1.9).text_color(tokens::secondary_label)
+                // Cohub Mobile's row chevron: a 1.5 pt line. Its ink matches the reference at the secondary
+                // label; the tertiary label reads about half as dark.
+                icon_stroke("chevron.right", 20.0, 1.5).text_color(tokens::secondary_label)
             },
         ))
 }

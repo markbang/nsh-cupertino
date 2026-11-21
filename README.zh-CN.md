@@ -127,6 +127,10 @@ pub fn Settings() -> impl IntoElement {
 | [`Switch`](docs/components/switch.zh-CN.md) | 63 × 28，开启为绿色，37 × 24 滑块，200 ms |
 | [`FilterChip`](docs/components/filter-chip.zh-CN.md) | 列表筛选用的胶囊：标签、计数，选中时着色 |
 | [`StatusPill`](docs/components/status-pill.zh-CN.md) | 圆点加标签，浅色底：中性、成功、警告、危险、信息 |
+| [`EmptyState`](docs/components/empty-state.zh-CN.md) | 插图、角标、标题、说明与纯文字操作 |
+| [`ErrorBanner`](docs/components/error-banner.zh-CN.md) | 软红色底上的行内错误，带重试按钮 |
+| [`Skeleton`](docs/components/skeleton.zh-CN.md) | 列表加载时占位的灰色行 |
+| [`Toast`](docs/components/toast.zh-CN.md) | 浮动卡片上的简短确认或失败提示，可带一个操作 |
 | [`ActivityIndicator`](docs/components/activity-indicator.zh-CN.md) | 八片叶片依次淡出，原生绘制 |
 | [`ScrollView`](docs/components/scroll-view.zh-CN.md) | 带回弹的滚动视图，平台滚动条与键盘行为 |
 | [`Sheet`](docs/components/sheet.zh-CN.md) | 底部面板，中/大两档与把手 |

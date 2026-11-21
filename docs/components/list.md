@@ -84,7 +84,9 @@ Notes
 - The pressed highlight is `systemGrey4`, as `CupertinoListTile` fills it, not a
   scale.
 - A row with no `accessory` shows a chevron: pass `accessory="none"` for a row
-  that opens nothing.
+  that opens nothing. The chevron is a 1.5 pt line in the secondary label.
+- A destructive row is red in the `danger` role: the system red, or the preset's
+  when `Theme` sets one.
 
 ## Accessibility
 

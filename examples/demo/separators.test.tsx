@@ -91,9 +91,9 @@ function decode(bytes: Uint8Array): Picture | null {
   return { width, height, rgba };
 }
 
-/** Runs of separator gray down a column inside the rows, past their chevrons. */
+/** Runs of separator gray down a column inside the rows, right of their chevrons (the chevrons end near 0.91 of the width). */
 function separatorRuns(picture: Picture, dark: boolean): number {
-  const x = Math.min(picture.width - 1, Math.round(picture.width * 0.90));
+  const x = Math.min(picture.width - 1, Math.round(picture.width * 0.94));
   let runs = 0;
   let inside = false;
   for (let y = 0; y < picture.height; y++) {
@@ -125,7 +125,7 @@ for (const scheme of ["light", "dark"] as const) {
     }
     const picture = decode(bytes);
     if (!picture) return;
-    // Four rows, two icon rows and two option rows have a row under them.
-    expect(separatorRuns(picture, scheme === "dark")).toBeGreaterThanOrEqual(8);
+    // Four rows and two icon rows have a hairline on screen; the two option rows sit below the fold.
+    expect(separatorRuns(picture, scheme === "dark")).toBeGreaterThanOrEqual(6);
   });
 }

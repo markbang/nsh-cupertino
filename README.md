@@ -145,6 +145,10 @@ pub fn Settings() -> impl IntoElement {
 | [`Switch`](docs/components/switch.md) | 63 × 28, green when on, a 37 × 24 thumb, 200 ms |
 | [`FilterChip`](docs/components/filter-chip.md) | A capsule a list filters by: a label, a count, the tint when chosen |
 | [`StatusPill`](docs/components/status-pill.md) | A dot and a label on a soft tone: neutral, success, warning, danger, info |
+| [`EmptyState`](docs/components/empty-state.md) | An illustration, a badge, a headline, a description and a plain action |
+| [`ErrorBanner`](docs/components/error-banner.md) | An inline failure on a soft danger fill, with a retry button |
+| [`Skeleton`](docs/components/skeleton.md) | Grey rows that hold a list's place while it loads |
+| [`Toast`](docs/components/toast.md) | A short confirmation or failure on a floating card, with an optional action |
 | [`ActivityIndicator`](docs/components/activity-indicator.md) | Eight blades fading in turn, drawn natively |
 | [`ScrollView`](docs/components/scroll-view.md) | Bouncing scroll with the platform's indicator and keyboard behavior |
 | [`Sheet`](docs/components/sheet.md) | A bottom panel with medium and large detents and a grabber |
