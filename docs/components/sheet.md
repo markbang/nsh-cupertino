@@ -54,3 +54,7 @@ The entrance is the design system's sheet spring (critical damping, 1.0; stiffne
 280), fitted to iOS's sheet recording; between detents the release velocity feeds
 the same spring. Reduce Motion removes the
 entrance and exit.
+
+On iOS, Cohub Mobile presents the native SwiftUI sheet (`AdaptiveSheet.ios.tsx:2`), so
+its Reanimated sheet springs (`motion.ts:36-47`) run only on the non-iOS branch. Do not
+align this spring to Cohub's values: it is fitted to the iOS recording.

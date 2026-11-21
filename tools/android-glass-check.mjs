@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readPng } from "./png.mjs";
-import { describeBar } from "./android-bar.mjs";
+import { barRimRow, barRimSpan, describeBar, rimStep } from "./android-bar.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -269,45 +269,29 @@ function bottomBand(image) {
   return { y0: Math.round(image.height * 0.865), y1: Math.round(image.height * 0.955) };
 }
 
-/**
- * The bar's top rim: the row in the bottom of the screen whose longest unbroken
- * run of vertical luminance step is longest, and where that run lies. The rim
- * is one straight edge across the bar; a card's edges and its text are short
- * steps or split by the text, so the rim wins without assuming an inset. The
- * run's ends curve with the capsule, so its width is a lower bound on the bar.
- */
-function barEdge(image) {
-  let best = { row: 0, count: 0, first: 0, last: 0 };
-  const from = Math.round(image.height * 0.82);
-  for (let y = from; y < image.height - 4; y += 2) {
-    let run = 0;
-    let start = 0;
-    for (let x = 0; x < image.width; x += 2) {
-      if (Math.abs(image.luminance(x, y - 3) - image.luminance(x, y + 3)) > 0.02) {
-        if (run === 0) start = x;
-        run += 1;
-        if (run > best.count) best = { row: y, count: run, first: start, last: x };
-      } else {
-        run = 0;
-      }
-    }
-  }
-  const scale = image.width / 411;
-  return { ...best, width: (best.last - best.first) / scale, inset: best.first / scale, centre: (best.first + best.last) / 2 / image.width };
+// The bar's top rim is one row for both schemes, found in the expanded captures
+// together: the dark capture carries it, so a card's edge that steps across the
+// bar in one capture cannot stand in for it. If no row steps across the bar in
+// the dark capture, the bar is not where the probe looks, and the check says so.
+const expandedFrames = SCHEMES.map((scheme) => must(`scrolled-${scheme}`));
+const located = expandedFrames.every(Boolean) ? barRimRow(expandedFrames) : null;
+const darkIndex = SCHEMES.indexOf("dark");
+if (located && located.steps[darkIndex] < 0.03) {
+  fail(`no bar rim in the expanded captures: the strongest row (${located.row}) steps ${located.steps.map((step) => step.toFixed(3)).join(" / ")} (light / dark), so the bar is not where the probe looks`);
 }
 
-for (const scheme of SCHEMES) {
+SCHEMES.forEach((scheme, index) => {
   // The bar is expanded after a drag back up (a downward scroll minimises it by
   // design; `mid-` is taken while the bar is still minimising, so it is not used),
   // and minimised after scrolling on: the two states the behaviour has.
-  const expanded = must(`scrolled-${scheme}`);
+  const expanded = expandedFrames[index];
   const minimized = must(`tabmin-${scheme}`);
-  if (!expanded || !minimized) continue;
-  const wide = barEdge(expanded);
-  if (wide.width < 300 || Math.abs(wide.centre - 0.5) > 0.03) {
-    fail(`scrolled-${scheme}.png's tab bar rim spans ${wide.width.toFixed(0)} pt, centred at ${(wide.centre * 100).toFixed(0)} %: it is not the floating capsule (about 350 pt, centred)`);
+  if (!expanded || !minimized || !located || located.steps[darkIndex] < 0.03) return;
+  const span = barRimSpan(expanded, located.row);
+  if (span.width < 300 || Math.abs(span.centre - 0.5) > 0.03) {
+    fail(`scrolled-${scheme}.png's tab bar rim spans ${span.width.toFixed(0)} pt, centred at ${(span.centre * 100).toFixed(0)} %: it is not the floating capsule (about 350 pt, centred)`);
   } else {
-    report(`${scheme}: the tab bar's rim spans ${wide.width.toFixed(0)} pt, centred on the screen`);
+    report(`${scheme}: the tab bar's rim spans ${span.width.toFixed(0)} pt, centred on the screen`);
   }
   // Minimised, the bar is a 50 pt pill at the chosen tab: three quarters of the
   // way across the row it is content again, where the expanded bar's glass was.
@@ -317,20 +301,17 @@ for (const scheme of SCHEMES) {
   // expanded, and absent in the middle of the screen when it is a pill at the
   // chosen tab. Edges, not colours: the glass and the row behind it can share a
   // luminance.
-  const x = Math.round(expanded.width * 0.5);
-  const y = wide.row;
-  const edge = (image) =>
-    Math.abs(image.luminance(x, y - 3) - image.luminance(x, y + 3));
-  const rim = edge(expanded);
-  const gone = edge(minimized);
+  const rim = rimStep(expanded, located.row);
+  const gone = rimStep(minimized, located.row);
   if (rim < 0.03) {
-    fail(`${scheme}: no rim at the middle of the expanded bar (${rim.toFixed(3)})`);
+    if (scheme === "dark") fail(`${scheme}: no rim at the middle of the expanded bar (${rim.toFixed(3)})`);
+    else report(`${scheme}: the rim is ${rim.toFixed(3)} at row ${located.row}, too faint on this frame to judge the minimise (the dark frame carries it)`);
   } else if (gone > 0.02) {
     fail(`tabmin-${scheme}.png still has the bar's rim at its middle (${gone.toFixed(3)} against ${rim.toFixed(3)}): it did not minimize`);
   } else {
     report(`${scheme}: minimised, the bar's rim is gone from the middle of the screen (${rim.toFixed(2)} → ${gone.toFixed(2)})`);
   }
-}
+});
 
 // The material, on the calibration page: dark glass is lighter than its
 // backdrop, and the rim refracts (the existing blue-field check above).
@@ -440,6 +421,18 @@ for (const scheme of SCHEMES) {
     }
     return median(values);
   };
+  // The page at the pill's own height, just left of it: a row of the list at a
+  // fixed height can be a separator or a grey card, and then the reference is wrong.
+  const pageBeside = (image, cx, cy) => {
+    const scale = scaleOf(image);
+    const values = [];
+    for (let y = Math.round(cy - 40 * scale); y <= Math.round(cy + 40 * scale); y += 3) {
+      for (let x = Math.round(8 * scale); x <= Math.round(28 * scale); x += 3) {
+        values.push(image.luminance(x, y));
+      }
+    }
+    return median(values);
+  };
   for (const scheme of SCHEMES) {
     const image = must(`rows-scrolled-${scheme}`);
     if (!image) continue;
@@ -499,12 +492,12 @@ for (const scheme of SCHEMES) {
       }
     }
     if (count < 40) {
-      fail(`rows-tabmin-${scheme}.png has no pill icon to measure`);
+      fail(`rows-tabmin-${scheme}.png has no pill icon to measure: no blue mail icon in the bottom 12 % of the frame, left of centre (${count} pixels)`);
       continue;
     }
     const cx = sumX / count;
     const cy = sumY / count;
-    const page = pageAt(image);
+    const page = pageBeside(image, cx, cy);
     const ring = [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]].map(
       ([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)),
     );

@@ -8,6 +8,10 @@ use crate::{
     tokens::{self, type_default},
 };
 
+/// The tab label's size, in points. The reference's "Me" and "Activity" caps are 13.1 px tall at 1.791 px/pt
+/// (7.3 pt; 10.4 pt on SF's 0.705 cap ratio): 10 pt gives 12.6 px and 11 pt gives 13.9 px, so 10 is the size.
+const TAB_LABEL_SIZE: f32 = 10.0;
+
 /// One tab of a [`TabBar`].
 #[derive(Debug, Clone, Default, PartialEq, JsObject)]
 pub struct TabItem {
@@ -186,7 +190,7 @@ pub fn TabBar(props: TabBarProps, cx: Scope<TabBarEvent>) -> impl IntoElement {
                 )
                 .child(
                     text(title)
-                        .text_size(type_default::CAPTION2.size)
+                        .text_size(px(TAB_LABEL_SIZE))
                         .line_height(type_default::CAPTION2.line_height)
                         .letter_spacing(tokens::tracking(type_default::CAPTION2))
                         .font_weight(FontWeight(500))
@@ -492,7 +496,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 )
                 .child(
                     text(title)
-                        .text_size(type_default::CAPTION2.size)
+                        .text_size(px(TAB_LABEL_SIZE))
                         .line_height(type_default::CAPTION2.line_height)
                         .letter_spacing(tokens::tracking(type_default::CAPTION2))
                         .font_weight(FontWeight(500))

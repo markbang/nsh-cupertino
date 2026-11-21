@@ -32,9 +32,12 @@ Notes
 - The preview is a separate card lifted over a dimmed page; it follows the
   trigger's content but its own copy is drawn (a `<ContextMenu>` cannot copy
   a subtree, so pass the preview explicitly).
-- The menu's shadow is 0 4 pt offset, 40 pt blur, black at 13 %, fitted to the
-  iOS reference's falloff on a light page; the preview keeps its own, deeper shadow.
-- The menu and the preview are the `thick` material: its fill over a 30 pt blur.
+- The menu's shadow is 0 4 pt offset, 40 pt blur, black at 13 %, fitted to the falloff of the
+  UIKit system menu in the iOS reference shot (`catalog-menu`, light), a pull-down `UIMenu`
+  (cohub-mobile `NativeMenu.ios.tsx:10`, `nativeMenus = true`; `app/debug/ui.tsx:300-302`). It is
+  not a drawn glass control's shadow. This popup draws no glass shader, only its fill, so
+  the shadow is the only one and nothing is counted twice. The preview keeps its own, deeper shadow.
+- The menu's fill is measured from the same pull-down menu: white at 60 % over a light page, a grey of about 80 at 44 % in dark, over an 11 pt blur (σ 10–12 pt measured). The preview keeps the `thick` material over a 30 pt blur. On a phone the menu is a bottom sheet; its UIKit counterpart, the action sheet, was not measured, so that fill is an inference from the pull-down.
 - Items are 44 pt, 17 pt, with a leading icon and hairline separators.
 
 ## Accessibility

@@ -25,7 +25,7 @@ iOS 的警告框：暗色页面中央的 270 pt 卡片，包含标题、正文�
 
 说明
 
-- 卡片阴影为向下 8 pt 偏移、32 pt 模糊、3 pt 扩散、20% 黑色，按 iOS 参考画面在浅色页面上的衰减拟合；深色页面上看不出阴影，与参考画面一致。
+- 卡片阴影为向下 8 pt 偏移、32 pt 模糊、3 pt 扩散、20% 黑色，按 iOS 参考画面（`catalog-confirm`）中 UIKit 系统弹窗在浅色页面上的衰减拟合；深色页面上看不出阴影，与参考画面一致。它不是 cohub 的 `shadow-glass`：iOS 上 cohub-mobile 的弹窗是 UIKit 的（`SystemDialogs.ios.tsx:2`、`:58`、`:75`）。
 - 卡片使用 `thick` 材质：填充叠加 30 pt 模糊。次要文字沿用 Apple 的对比度（[issue #3](https://github.com/markbang/nsh-cupertino/issues/3)）。
 - 文本输入变体就是标准的单输入框警告框；输入内容随动作一起返回，应用不必自己保存草稿。
 - 按钮之间的分隔线是一台设备像素（`separatorThickness`）。
