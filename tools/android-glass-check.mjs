@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readPng } from "./png.mjs";
-import { describeBar } from "./android-bar.mjs";
+import { barRim, describeBar } from "./android-bar.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -269,33 +269,6 @@ function bottomBand(image) {
   return { y0: Math.round(image.height * 0.865), y1: Math.round(image.height * 0.955) };
 }
 
-/**
- * The bar's top rim: the row in the bottom of the screen whose longest unbroken
- * run of vertical luminance step is longest, and where that run lies. The rim
- * is one straight edge across the bar; a card's edges and its text are short
- * steps or split by the text, so the rim wins without assuming an inset. The
- * run's ends curve with the capsule, so its width is a lower bound on the bar.
- */
-function barEdge(image) {
-  let best = { row: 0, count: 0, first: 0, last: 0 };
-  const from = Math.round(image.height * 0.82);
-  for (let y = from; y < image.height - 4; y += 2) {
-    let run = 0;
-    let start = 0;
-    for (let x = 0; x < image.width; x += 2) {
-      if (Math.abs(image.luminance(x, y - 3) - image.luminance(x, y + 3)) > 0.02) {
-        if (run === 0) start = x;
-        run += 1;
-        if (run > best.count) best = { row: y, count: run, first: start, last: x };
-      } else {
-        run = 0;
-      }
-    }
-  }
-  const scale = image.width / 411;
-  return { ...best, width: (best.last - best.first) / scale, inset: best.first / scale, centre: (best.first + best.last) / 2 / image.width };
-}
-
 for (const scheme of SCHEMES) {
   // The bar is expanded after a drag back up (a downward scroll minimises it by
   // design; `mid-` is taken while the bar is still minimising, so it is not used),
@@ -303,7 +276,7 @@ for (const scheme of SCHEMES) {
   const expanded = must(`scrolled-${scheme}`);
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized) continue;
-  const wide = barEdge(expanded);
+  const wide = barRim(expanded);
   if (wide.width < 300 || Math.abs(wide.centre - 0.5) > 0.03) {
     fail(`scrolled-${scheme}.png's tab bar rim spans ${wide.width.toFixed(0)} pt, centred at ${(wide.centre * 100).toFixed(0)} %: it is not the floating capsule (about 350 pt, centred)`);
   } else {
