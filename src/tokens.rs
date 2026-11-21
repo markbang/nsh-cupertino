@@ -636,7 +636,7 @@ pub mod metrics {
     pub const ROW_HEIGHT: f32 = 52.0;
     /// A list row's smallest height, with a subtitle: the iOS reference's
     /// two-line row, 57.5 pt.
-    pub const ROW_HEIGHT_SUBTITLE: f32 = 57.0;
+    pub const ROW_HEIGHT_SUBTITLE: f32 = 57.5;
     /// A top-aligned row's height (`ListTile`'s `align="top"`): 60 pt in the
     /// iOS reference's Notifications row.
     pub const ROW_HEIGHT_TOP: f32 = 60.0;
