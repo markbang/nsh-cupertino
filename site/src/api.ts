@@ -435,7 +435,7 @@ export const API: Record<string, ApiGroup[]> = {
         {
           "tsx": "`actions`",
           "rust": "`.actions(..)`",
-          "type": "`ContextAction[]`",
+          "type": "`GlassMenuAction[]`",
           "default": "`[]`",
           "note": "The items"
         },

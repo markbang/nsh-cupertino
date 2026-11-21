@@ -344,6 +344,69 @@ fn shade(uv: vec2f) -> vec4f {
 }
 "#;
 
+/// The clip of a growing glass shape: an effect that draws its children
+/// only inside the shape [`GlassSpec::grow`] draws, with the same rects,
+/// progress, radius and roundness, so a menu's items are cut by the round
+/// top of the shape they grow in.
+const CLIP_SOURCE: &str = r#"
+struct Uniforms {
+  first: vec4f,
+  second: vec4f,
+  radius: f32,
+  progress: f32,
+  roundness: f32,
+  pad: f32,
+}
+
+fn centred(shape: vec4f) -> vec4f {
+  let c = vec2f(shape.x + shape.z * 0.5, shape.y + shape.w * 0.5) - nsh.size * 0.5;
+  return vec4f(c.x, c.y, shape.z * 0.5, shape.w * 0.5);
+}
+
+fn shade(uv: vec2f) -> vec4f {
+  let p = uv * nsh.size - nsh.size * 0.5;
+  let a = mix(centred(uniforms.first), centred(uniforms.second), uniforms.progress);
+  let half = max(a.zw, vec2f(0.0));
+  let round = min(half.x, half.y);
+  let r = min(mix(uniforms.radius, round, clamp(uniforms.roundness, 0.0, 1.0)), round);
+  let q = abs(p - a.xy) - half + vec2f(r);
+  let d = length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0) - r;
+  let c = sample_content(uv);
+  return vec4f(c.rgb, c.a * clamp(0.5 - d, 0.0, 1.0));
+}
+"#;
+
+fn clip_program() -> Option<Shader> {
+    static PROGRAM: OnceLock<Option<Shader>> = OnceLock::new();
+    PROGRAM
+        .get_or_init(|| Shader::compile(CLIP_SOURCE).ok())
+        .clone()
+}
+
+/// An effect that shows its children only inside a shape growing from
+/// `from` to `to` (rects in points from its top-left corner) as `progress`
+/// runs, its corners a capsule's at `roundness` 1 and `radius` at 0. Without
+/// a shader program it draws them as they are.
+pub(crate) fn clip(
+    from: Signal<[f32; 4]>,
+    to: Signal<[f32; 4]>,
+    radius: f32,
+    progress: AnimatedNode,
+    roundness: AnimatedNode,
+) -> ShaderView {
+    let effect = shader_effect();
+    let Some(program) = clip_program() else {
+        return effect;
+    };
+    effect
+        .source(program)
+        .uniform("first", move || vector(from.get()))
+        .uniform("second", move || vector(to.get()))
+        .uniform("radius", radius)
+        .uniform("progress", &progress)
+        .uniform("roundness", &roundness)
+}
+
 /// The material's WGSL source. It is compiled on first use; this is here for
 /// tests that prove it still compiles.
 #[doc(hidden)]
@@ -1254,4 +1317,21 @@ pub(crate) fn material_spec(name: &str, corners: [f32; 4]) -> GlassSpec {
         _ => GlassVariant::Regular,
     };
     GlassSpec::corners(corners).variant(variant)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_clip_shader_compiles_and_reads_the_content() {
+        let shader = nsh_core::shader::Shader::compile(super::CLIP_SOURCE).expect("it compiles");
+        let declared: Vec<&str> = shader.uniforms().iter().map(|f| &*f.name).collect();
+        for name in ["first", "second", "radius", "progress", "roundness"] {
+            assert!(declared.contains(&name), "{name}: {declared:?}");
+        }
+        assert!(
+            shader
+                .inputs()
+                .contains(nsh_core::shader::ShaderInput::Content)
+        );
+    }
 }

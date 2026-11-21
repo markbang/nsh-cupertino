@@ -36,11 +36,15 @@ START_MS = 107.0  # the fitted press, before frame 0
 SHAPE = (0.76, 380.0)            # zeta, stiffness: width, height, centre x
 DROP = (380.0, 540.0, 270.0)     # pt x (critical k 540 - critical k 270)
 CORNERS = (180.0, 230.0)         # delay, duration, ease-in-out: capsule -> 28 pt
-ITEMS = (110.0, 140.0)           # delay, duration, ease-out
+ITEMS = (170.0, 90.0)            # delay, duration, ease-out: none in the blob phase
+SETTLE = (290.0, 100.0)          # delay, duration, ease-in-out: glass -> the menu's fill
 CLOSE_FADE = (70.0, 60.0)        # delay, duration, ease-in
 CLOSE_SHRINK = (70.0, 30.0)      # delay, duration, ease-out
 CLOSE_SCALE, CLOSE_SHIFT = 0.94, (-5.0, 17.0)
 RADIUS = 28.0
+FILL_ALPHA = 0.60                # the menu's white fill (ContextMenu's, from the catalog-menu still)
+SHADOW = (0.115, 9.0, 18.0)      # alpha, offset y, sigma (pt): GlassMenu's settled shadow
+TOKEN_SHADOW = (0.13, 4.0, 20.0)  # ContextMenu's 0 4 40 black 13 %
 
 
 def frames(path, wanted):
@@ -121,6 +125,43 @@ def opacity(f, closed, rest):
     return float((d * s).sum() / (s * s).sum())
 
 
+def settled_fill(rest, closed):
+    """White over the blurred bars inside the settled panel (x 215-280 px, clear of
+    text): rest = (1 - a) blur(closed) + a 255, a per bar, sigma 11 px (10 pt)."""
+    xs = np.arange(215, 280)
+    blurred = np.stack([ndimage.gaussian_filter(closed[..., k], 11) for k in range(3)], -1)
+    alphas = []
+    for a, b in BARS:
+        ys = np.arange(a + 8, b - 8)
+        under = blurred[np.ix_(ys, xs)].ravel()
+        over = rest[np.ix_(ys, xs)].ravel()
+        alphas.append(float((over - under) @ (255 - under) / ((255 - under) @ (255 - under))))
+    every = np.concatenate([np.arange(a + 8, b - 8) for a, b in BARS])
+    under = blurred[np.ix_(every, xs)].ravel()
+    over = rest[np.ix_(every, xs)].ravel()
+    mean = float((over - under) @ (255 - under) / ((255 - under) @ (255 - under)))
+    return mean, min(alphas), max(alphas)
+
+
+def shadow_profile(rest, closed, right, top, bottom):
+    """The darkening of the page beside the settled panel: (side, pt, levels)."""
+    c, s = closed.mean(2), rest.mean(2)
+    out = [("below", (y - bottom) / PX, (c[y, 60:250] - s[y, 60:250]).mean())
+           for y in range(int(bottom) + 4, int(bottom) + 57, 2)]
+    out += [("right", (x - right) / PX, (c[528:578, x] - s[528:578, x]).mean())
+            for x in range(int(right) + 4, int(right) + 39, 2)]
+    out += [("above", (top - y) / PX, (c[y, 60:250] - s[y, 60:250]).mean())
+            for y in range(int(top) - 40, int(top) - 3, 2)]
+    return out
+
+
+def shadow_model(side, d, alpha, offset, sigma, page=240.0):
+    from math import erf, sqrt
+    cdf = lambda x: 0.5 * (1 + erf(x / sqrt(2)))
+    reach = {"below": offset - d, "above": -offset - d, "right": -d}[side]
+    return alpha * page * cdf(reach / sigma)
+
+
 def spring(ms, zeta, k):
     w, t = np.sqrt(k), np.maximum(np.asarray(ms, float), 0) / 1000
     if abs(zeta - 1) < 1e-3:
@@ -156,6 +197,7 @@ def model(ms):
         drop=float(d * (spring(ms, 1, kf) - spring(ms, 1, ks))),
         roundness=1 - timing(ms, *CORNERS, "ease_in_out"),
         items=timing(ms, *ITEMS, "ease_out"),
+        settle=timing(ms, *SETTLE, "ease_in_out"),
     )
 
 
@@ -173,7 +215,7 @@ def main():
     args = parser.parse_args()
     if args.rust:
         grid = range(0, 601, 30)
-        for name in ("grow", "drop", "roundness", "items"):
+        for name in ("grow", "drop", "roundness", "items", "settle"):
             print(f"{name}: [{', '.join(f'{model(t)[name]:.4f}' for t in grid)}]")
         for name in ("opacity", "scale", "shift_y"):
             print(f"close {name}: [{', '.join(f'{close(t)[name]:.4f}' for t in range(0, 151, 30))}]")
@@ -206,6 +248,14 @@ def main():
             half = min(shape["w"], shape["h"]) / 2
             model_r = RADIUS + (half - RADIUS) * m["roundness"]
             print(f"| {index} | {ms:.0f} | corner (pt) | {radius:.1f} | {model_r:.1f} | {model_r - radius:+.1f} |")
+    mean, low, high = settled_fill(rest, closed)
+    print(f"Settled fill (frame 12, white over the blurred bars): alpha {mean:.3f}, per bar "
+          f"{low:.2f}-{high:.2f}; GlassMenu uses {FILL_ALPHA:.2f}")
+    profile = shadow_profile(rest, closed, r_right, r_top, r_bottom)
+    for name, params in (("GlassMenu", SHADOW), ("ContextMenu token", TOKEN_SHADOW)):
+        error = np.sqrt(np.mean([(shadow_model(side, d, *params) - v) ** 2 for side, d, v in profile]))
+        print(f"Shadow {name} (alpha {params[0]}, offset {params[1]} pt, blur {2 * params[2]:.0f} pt): "
+              f"rms {error:.2f} levels over {len(profile)} samples")
     print("Close (ms from frame 60, where the shadow goes; +-17 ms):")
     for index in (61, 63, 64):
         ms = (index - 60) * 1000 / 30

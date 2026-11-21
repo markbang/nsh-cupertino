@@ -9,11 +9,11 @@ menus do. The menu is anchored to the button on phones and desktops alike.
 | --- | --- | --- | --- | --- |
 | `icon` | `.icon(..)` | `string` | `"ellipsis"` | The button's icon |
 | `label` | `.label(..)` | `string` | `"More"` | What screen readers call the button |
-| `actions` | `.actions(..)` | `ContextAction[]` | `[]` | The items |
+| `actions` | `.actions(..)` | `GlassMenuAction[]` | `[]` | The items |
 | `align` | `.align(..)` | `"start"` \| `"end"` | `"start"` | Which edge of the button the menu lines up with |
 | `open` | `.open(..)` | `boolean` | — | Controlled |
 
-`ContextAction`: `{ id, title, icon?, destructive?, disabled? }`, as `ContextMenu` takes them.
+`GlassMenuAction`: `{ id, title, icon?, detail?, section?, destructive?, disabled? }`. `detail` is a second, smaller line under the title. `section` starts a new group above the item, under that header (`""`: a group with no header).
 
 Events: `onOpenChange(open)`, `onAction(id)`.
 
@@ -26,11 +26,16 @@ Notes
   bottom edge, where the iOS menu opens.
 - With the glass shader, one glass shape grows from the button's rect to the
   panel's (`GlassSpec`'s single-shape growth; its corners go from a capsule's
-  to 28 pt through the shader's `roundness`). Without the shader, the
-  material's fill is scaled from the button's box to the panel's: the
-  corners scale with it, and there is no round blob mid-way.
-- The items are not clipped to the growing shape: they fade in once the
-  shape is nearly the panel, and scale and move with its width and centre.
+  to 28 pt through the shader's `roundness`). Once it is the panel, the glass
+  settles into the menu's fill: white at 60 % in light, a grey of about 80 at
+  44 % in dark, over an 11 pt blur (`ContextMenu`'s measured fill). The
+  shadow is black at 11.5 %, 9 pt down, 36 pt blur, fitted to the iOS clip.
+- The items are drawn through a second shader that cuts them to the growing
+  shape, so the round top hides what lies outside it. They do not show while
+  the shape is still a blob (before 170 ms).
+- Without the shader, the fill is all there is, scaled from the button's box
+  to the panel's: its corners scale with it, there is no round blob mid-way,
+  and the items are not cut.
 
 ## Accessibility
 
@@ -52,7 +57,9 @@ Fitted to the iOS clip `research/ios-reference/motion/motion-menu.mp4`
   damped spring of stiffness 540 − one of 270). It peaks at 69 pt at about
   100 ms and is under 1 pt after 500 ms.
 - **Corners**: a capsule's until 180 ms, then ease-in-out to 28 pt by 410 ms.
-- **Items**: they fade in over 110–250 ms, ease-out.
+- **Items**: none before 170 ms, then they fade in by 260 ms, ease-out.
+- **Settle**: from 290 ms the fill comes in over the glass, then the glass goes
+  under it, by 390 ms (ease-in-out).
 - **Close**: it holds 70 ms, then shrinks to 0.94 and moves 17 pt down and
   5 pt left within 30 ms (ease-out), and fades within 60 ms (ease-in). It is
   gone at 130 ms, and the button fades back in.

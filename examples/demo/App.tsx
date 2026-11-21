@@ -1012,9 +1012,9 @@ function GlassMenuPage() {
             { id: "pin", title: "Pin", icon: "flag" },
             { id: "share", title: "Share", icon: "square.and.arrow.up" },
             { id: "copy", title: "Copy link", icon: "doc.on.doc" },
-            { id: "recent", title: "Recent", icon: "checkmark" },
+            { id: "recent", title: "Recent", icon: "checkmark", section: "Sort by" },
             { id: "name", title: "Name", icon: "list.bullet" },
-            { id: "archive", title: "Archive", icon: "archivebox" },
+            { id: "archive", title: "Archive", icon: "archivebox", detail: "Hidden from the list, still in search", section: "" },
           ]}
           open={open()}
           frameMs={menuFrame()}

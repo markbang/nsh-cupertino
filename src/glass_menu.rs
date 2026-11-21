@@ -5,7 +5,8 @@
 //! `research/ios-reference/motion/motion-menu.mp4` (`tools/fit-glass-menu.py`):
 //! the shape's size and horizontal place on one spring, a separate drop that
 //! carries it down and back, corners that stay round until late, the items
-//! fading in once the shape is nearly there, and a close that holds, then
+//! fading in once the blob has become a panel and cut by its shape, the glass
+//! settling into the menu's measured fill, and a close that holds, then
 //! shrinks to 0.94 and fades.
 
 use std::time::Duration;
@@ -19,7 +20,7 @@ use nsh_core::{
 };
 
 use crate::{
-    context_menu::ContextAction,
+    context_menu::{MENU_BLUR, menu_fill},
     glass::{self, GlassSpec, GlassVariant, Press},
     icon::icon,
     tokens::{self, type_default},
@@ -34,6 +35,9 @@ const PAD: f32 = 24.0;
 /// The panel's top sits this far up from the button's bottom: on the
 /// button's centre line, where the iOS menu opens (a 44 pt button).
 const OVERLAP: f32 = 22.0;
+
+/// How far into the settle the fill is all there and the glass starts to go.
+const SETTLE_SPLIT: f32 = 0.7;
 
 /// The timing of the morph, all fitted to the iOS clip; times in ms from the
 /// press.
@@ -65,12 +69,25 @@ pub(crate) mod motion {
         }
     }
 
-    /// The items fade in once the shape is nearly there: none at 107 ms in
-    /// the clip, all of them by 274 ms.
+    /// The blob phase: no item shows before this, in ms from the press (the
+    /// clip has none at 107 ms and its items in at 274).
+    pub(crate) const BLOB_MS: f32 = 170.0;
+
+    /// The items fade in after the blob phase, in by 260 ms.
     pub(crate) fn items() -> Timing {
         Timing {
-            delay_ms: 110.0,
-            ..Timing::new(140.0, Easing::EaseOut)
+            delay_ms: BLOB_MS,
+            ..Timing::new(90.0, Easing::EaseOut)
+        }
+    }
+
+    /// The glass settles into the menu's fill: still glass at 274 ms (the
+    /// clip's frame 5, refracting at its rim), the flat fill by 407 ms
+    /// (frame 9).
+    pub(crate) fn settle() -> Timing {
+        Timing {
+            delay_ms: 290.0,
+            ..Timing::new(100.0, Easing::EaseInOut)
         }
     }
 
@@ -97,6 +114,12 @@ pub(crate) mod motion {
     pub(crate) const CLOSE_SHIFT: [f32; 2] = [-5.0, 17.0];
     /// The whole close, in ms: then the menu is gone.
     pub(crate) const CLOSE_MS: f32 = 130.0;
+
+    /// The settled menu's shadow, fitted to the clip's frame 12 below, beside
+    /// and above the panel over the page (`tools/fit-glass-menu.py`): black at
+    /// this alpha, offset down and blurred by these points (CSS blur, twice
+    /// the Gaussian's σ of 18 pt).
+    pub(crate) const SHADOW: (f32, f32, f32) = (0.115, 9.0, 36.0);
 
     /// Reduce Motion: a cross-fade of this long, in and out.
     pub(crate) fn fade() -> Timing {
@@ -135,6 +158,72 @@ pub(crate) fn timing_driver(timing: Timing, to: f32) -> Driver {
     }
 }
 
+/// One item of a [`GlassMenu`].
+#[derive(Debug, Clone, Default, PartialEq, JsObject)]
+pub struct GlassMenuAction {
+    /// Reported with `onAction` when it is chosen.
+    pub id: SharedString,
+    /// What the row says.
+    pub title: SharedString,
+    /// An icon before the title, by name ([`crate::icon::NAMES`]).
+    #[prop(skip_none)]
+    pub icon: Option<SharedString>,
+    /// A second, smaller line under the title.
+    #[prop(skip_none)]
+    pub detail: Option<SharedString>,
+    /// Starts a new group with this header above the item; `""` starts one
+    /// without a header.
+    #[prop(skip_none)]
+    pub section: Option<SharedString>,
+    /// Red text: it destroys something.
+    #[prop(default)]
+    pub destructive: bool,
+    /// Dimmed and not choosable.
+    #[prop(default)]
+    pub disabled: bool,
+}
+
+impl GlassMenuAction {
+    /// An item of `id`, titled `title`.
+    pub fn new(id: impl Into<SharedString>, title: impl Into<SharedString>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
+            ..Self::default()
+        }
+    }
+
+    /// An icon before its title.
+    pub fn icon(mut self, icon: impl Into<SharedString>) -> Self {
+        self.icon = Some(icon.into());
+        self
+    }
+
+    /// A second line under its title.
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(detail.into());
+        self
+    }
+
+    /// Starts a group, under `header` (`""`: no header).
+    pub fn section(mut self, header: impl Into<SharedString>) -> Self {
+        self.section = Some(header.into());
+        self
+    }
+
+    /// Red: it destroys something.
+    pub fn destructive(mut self, destructive: bool) -> Self {
+        self.destructive = destructive;
+        self
+    }
+
+    /// Dimmed and not choosable.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+}
+
 /// The props of [`GlassMenu`].
 #[derive(Debug, Clone, PartialEq, Props)]
 pub struct GlassMenuProps {
@@ -143,9 +232,9 @@ pub struct GlassMenuProps {
     pub icon: Prop<Option<SharedString>>,
     /// What screen readers call the button (`More` unless set).
     pub label: Prop<Option<SharedString>>,
-    /// Its items, in one group.
+    /// Its items; an item with a `section` starts a new group.
     #[prop(default)]
-    pub actions: Prop<Vec<ContextAction>>,
+    pub actions: Prop<Vec<GlassMenuAction>>,
     /// `"start"` (the default) lines the menu up with the button's leading
     /// edge, `"end"` with its trailing one.
     pub align: Prop<Option<SharedString>>,
@@ -183,6 +272,8 @@ struct Morph {
     round: AnimatedValue,
     /// The items' opacity.
     items: AnimatedValue,
+    /// 0: the glass, 1: the menu's settled fill.
+    settle: AnimatedValue,
     /// The whole menu's opacity.
     fade: AnimatedValue,
     /// The close, 0 to 1.
@@ -206,6 +297,7 @@ impl Morph {
             slow: animated_value(0.0),
             round: animated_value(1.0),
             items: animated_value(0.0),
+            settle: animated_value(0.0),
             fade: animated_value(0.0),
             shrink: animated_value(0.0),
             dx: animated_value(0.0),
@@ -236,6 +328,19 @@ impl Morph {
 
     fn scale_y(&self) -> AnimatedNode {
         self.left().mul(&self.sy).add(1.0)
+    }
+
+    /// The fill comes in over the glass first, then the glass goes under
+    /// it: two translucent layers fading across would let the sharp page
+    /// show through between them.
+    fn fill_shown(&self) -> AnimatedNode {
+        self.settle
+            .interpolate(&[0.0, SETTLE_SPLIT, 1.0], &[0.0, 1.0, 1.0])
+    }
+
+    fn glass_shown(&self) -> AnimatedNode {
+        self.settle
+            .interpolate(&[0.0, SETTLE_SPLIT, 1.0], &[1.0, 1.0, 0.0])
     }
 
     /// The panel's own move: the drop while it opens, the shift while it
@@ -273,6 +378,7 @@ impl Morph {
             self.grow.set(1.0);
             self.round.set(0.0);
             self.items.set(1.0);
+            self.settle.set(1.0);
             self.fast.set(0.0);
             self.slow.set(0.0);
             self.fade.set(0.0);
@@ -287,6 +393,7 @@ impl Morph {
             (self.slow, 0.0, 1.0, Move::Spring(slow)),
             (self.round, 1.0, 0.0, Move::Timing(motion::corners())),
             (self.items, 0.0, 1.0, Move::Timing(motion::items())),
+            (self.settle, 0.0, 1.0, Move::Timing(motion::settle())),
         ];
         for (value, from, to, how) in moves {
             match (frame, how) {
@@ -519,16 +626,50 @@ pub fn GlassMenu(props: GlassMenuProps, cx: Scope<GlassMenuEvent>) -> impl IntoE
         )])
 }
 
-/// The open menu: its glass, growing out of the button's, and its items.
+/// The settled menu's fill and shadow: the measured fill of the iOS menu
+/// (`ContextMenu`'s, re-checked on the clip), its blur, and the clip's shadow.
+fn settled_fill(morph: Morph, shown: AnimatedNode) -> View {
+    let (alpha, offset, blur) = motion::SHADOW;
+    view()
+        .absolute()
+        .inset_0()
+        .rounded(px(RADIUS))
+        .bg(move || menu_fill(nsh_core::element::dark()))
+        .backdrop_blur(px(MENU_BLUR))
+        .shadow([nsh_core::BoxShadow {
+            offset_y: px(offset),
+            blur: px(blur),
+            color: Hsla::black().opacity(alpha).into(),
+            ..nsh_core::BoxShadow::default()
+        }])
+        .bind_opacity(&shown)
+        .bind_translate_x(&morph.follow_x())
+        .bind_translate_y(&morph.follow_y())
+        .bind_transform(TransformKind::ScaleX, &morph.scale_x())
+        .bind_transform(TransformKind::ScaleY, &morph.scale_y())
+}
+
+/// The rows' colour: red for a destructive item.
+fn row_color(destructive: bool) -> Hsla {
+    if destructive {
+        tokens::system_red()
+    } else {
+        tokens::label()
+    }
+}
+
+/// The open menu: its glass, growing out of the button's and settling into
+/// the menu's fill, and its items, cut by the growing shape.
 fn panel(
     morph: Morph,
     from: Signal<[f32; 4]>,
     to: Signal<[f32; 4]>,
     first_item: ElementRef,
-    actions: Vec<ContextAction>,
+    actions: Vec<GlassMenuAction>,
     closing: Signal<bool>,
     chosen: impl Fn(SharedString) + Clone + 'static,
 ) -> AnyElement {
+    let shader = glass::shader_draws();
     let spec = GlassSpec::rounded(RADIUS)
         .blur(tokens::glass::BAR_BLUR)
         .shadow(PAD, 0.12)
@@ -540,50 +681,85 @@ fn panel(
             morph.round.animated_node(),
         );
     // With the shader, the glass draws the growing shape in a box with room
-    // around the panel. Without it, the material's fill is scaled from the
-    // button's box instead: its corners scale with it.
-    let material = when(glass::shader_draws, move || {
-        view()
-            .absolute()
-            .top(px(-PAD))
-            .left(px(-PAD))
-            .right(px(-PAD))
-            .bottom(px(-PAD))
-            .child(glass::layer(spec.clone(), None))
-    })
-    .otherwise(move || {
+    // around the panel, then gives way to the settled fill. Without it, the
+    // fill is all there is, scaled from the button's box: its corners scale
+    // with it.
+    let material = if shader {
         view()
             .absolute()
             .inset_0()
-            .rounded(px(RADIUS))
-            .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
-            .backdrop_blur(tokens::materials::blur("regular"))
-            .bind_translate_x(&morph.follow_x())
-            .bind_translate_y(&morph.follow_y())
-            .bind_transform(TransformKind::ScaleX, &morph.scale_x())
-            .bind_transform(TransformKind::ScaleY, &morph.scale_y())
-    });
+            .child(
+                view()
+                    .absolute()
+                    .top(px(-PAD))
+                    .left(px(-PAD))
+                    .right(px(-PAD))
+                    .bottom(px(-PAD))
+                    .bind_opacity(&morph.glass_shown())
+                    .child(glass::layer(spec, None)),
+            )
+            .child(settled_fill(morph, morph.fill_shown()))
+    } else {
+        view()
+            .absolute()
+            .inset_0()
+            .child(settled_fill(morph, animated_value(1.0).animated_node()))
+    };
 
     let mut items = view()
-        .p(px(6.0))
-        .min_w(px(250.0))
+        .px(px(6.0))
+        .py(px(10.0))
+        .w(px(250.0))
         .bind_opacity(&morph.items)
         .bind_translate_x(&morph.follow_x())
         .bind_translate_y(&morph.follow_y())
         .bind_scale(&morph.scale_x());
-    let count = actions.len();
     let mut focus_set = false;
     for (index, action) in actions.into_iter().enumerate() {
-        let id = action.id.clone();
-        let destructive = action.destructive;
-        let color = move || {
-            if destructive {
-                tokens::system_red()
-            } else {
-                tokens::label()
+        if let Some(header) = action.section.clone() {
+            if index > 0 {
+                items = items.child(
+                    view()
+                        .h(tokens::separator_thickness)
+                        .my(px(8.5))
+                        .mx(px(14.0))
+                        .bg(tokens::separator),
+                );
             }
-        };
+            if !header.is_empty() {
+                items = items.child(
+                    view()
+                        .h(px(32.0))
+                        .pb(px(6.0))
+                        .px(px(22.0))
+                        .justify_center()
+                        .child(
+                            text(header)
+                                .text_size(type_default::FOOTNOTE.size)
+                                .line_height(type_default::FOOTNOTE.line_height)
+                                .text_color(tokens::secondary_label),
+                        ),
+                );
+            }
+        }
+        let id = action.id.clone();
+        let color = row_color(action.destructive);
         let chosen = chosen.clone();
+        let mut label = view().flex_1().child(
+            text(action.title.clone())
+                .text_size(type_default::BODY.size)
+                .line_height(px(22.0))
+                .text_color(color),
+        );
+        let detailed = action.detail.is_some();
+        if let Some(detail) = action.detail.clone() {
+            label = label.child(
+                text(detail)
+                    .text_size(type_default::FOOTNOTE.size)
+                    .line_height(px(18.0))
+                    .text_color(tokens::secondary_label),
+            );
+        }
         let mut row = nsh_base::button()
             .role(AccessibilityRole::Menuitem)
             .accessibility_label(action.title.clone())
@@ -591,8 +767,8 @@ fn panel(
             .flex_row()
             .items_center()
             .gap(px(12.0))
-            .min_h(px(44.0))
-            .px(px(14.0))
+            .min_h(px(42.0))
+            .px(px(20.0))
             .rounded(px(RADIUS - 6.0))
             .active(|s| s.bg(tokens::fill))
             .pointer_events(move || {
@@ -605,35 +781,39 @@ fn panel(
             .on_press(move || chosen(id.clone()))
             .child(
                 view()
-                    .w(px(22.0))
+                    .w(px(26.0))
                     .items_center()
                     .child(match action.icon.clone() {
-                        Some(name) => icon(&name, 20.0).text_color(color()).into_element(),
+                        Some(name) => icon(&name, 20.0).text_color(color).into_element(),
                         None => view().into_element(),
                     }),
             )
-            .child(
-                text(action.title.clone())
-                    .flex_1()
-                    .text_size(type_default::BODY.size)
-                    .line_height(type_default::BODY.line_height)
-                    .text_color(color()),
-            );
+            .child(label);
+        if detailed {
+            row = row.pt(px(14.0)).pb(px(7.0));
+        }
         if !focus_set && !action.disabled {
             row = row.element_ref(&first_item);
             focus_set = true;
         }
         items = items.child(row);
-        if index + 1 < count {
-            items = items.child(
-                view()
-                    .h(tokens::separator_thickness)
-                    .my(px(4.0))
-                    .mx(px(14.0))
-                    .bg(tokens::separator),
-            );
-        }
     }
+    // The items are cut by the growing shape, drawn in the glass's box.
+    let content = if shader {
+        glass::clip(
+            from,
+            to,
+            RADIUS,
+            morph.grow.animated_node(),
+            morph.round.animated_node(),
+        )
+        .m(px(-PAD))
+        .p(px(PAD))
+        .child(items)
+        .into_element()
+    } else {
+        items.into_element()
+    };
 
     view()
         .relative()
@@ -643,7 +823,7 @@ fn panel(
         .bind_translate_y(&morph.shift_y())
         .bind_scale(&morph.scale())
         .child(material)
-        .child(items)
+        .child(content)
         .into_element()
 }
 
@@ -670,8 +850,12 @@ mod tests {
         0.2523, 0.0969, 0.0148, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
     ];
     const ITEMS: [f32; 21] = [
-        0.0000, 0.0000, 0.0000, 0.0000, 0.1162, 0.4263, 0.6846, 0.8812, 0.9911, 1.0000, 1.0000,
+        0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.1776, 0.6230, 0.9245, 1.0000, 1.0000,
         1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000,
+    ];
+    const SETTLE: [f32; 21] = [
+        0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0197,
+        0.3319, 0.8126, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000,
     ];
     /// The close at 0, 30, … 150 ms.
     const CLOSE_OPACITY: [f32; 6] = [1.0000, 1.0000, 1.0000, 0.8438, 0.2603, 0.0000];
@@ -719,9 +903,46 @@ mod tests {
         check("the roundness", &ROUNDNESS, 0.01, |ms| {
             value_at(timing_driver(motion::corners(), 0.0), 1.0, ms)
         });
-        check("the items' opacity", &ITEMS, 0.01, |ms| {
-            value_at(timing_driver(motion::items(), 1.0), 0.0, ms)
-        });
+        check("the items' opacity", &ITEMS, 0.01, items);
+        check("the settle into the fill", &SETTLE, 0.01, settle);
+    }
+
+    fn items(ms: f32) -> f32 {
+        value_at(timing_driver(motion::items(), 1.0), 0.0, ms)
+    }
+
+    fn settle(ms: f32) -> f32 {
+        value_at(timing_driver(motion::settle(), 1.0), 0.0, ms)
+    }
+
+    /// No item shows while the shape is a blob: none before 170 ms, as the
+    /// clip has none at 107 ms; all of them by its frame 5 (274 ms).
+    #[test]
+    fn no_item_shows_before_the_blob_phase_ends() {
+        for ms in (0..=170).step_by(10) {
+            let shown = items(ms as f32);
+            assert!(shown == 0.0, "items at {ms} ms: {shown}");
+        }
+        assert!(items(274.0) >= 0.999, "items at 274 ms: {}", items(274.0));
+    }
+
+    /// The settled menu is the measured fill: glass at the clip's frame 5
+    /// (274 ms), all fill by its frame 9 (407 ms); the fill's white within
+    /// the clip's per-bar range (0.54-0.63, mean 0.567, frame 12) and the
+    /// shadow the clip's fit (`tools/fit-glass-menu.py`).
+    #[test]
+    fn the_menu_settles_into_the_measured_fill_and_shadow() {
+        assert_eq!(settle(274.0), 0.0, "still glass at frame 5");
+        assert!(settle(407.0) >= 0.999, "fill at frame 9: {}", settle(407.0));
+        let light = crate::context_menu::menu_fill(false);
+        let white = nsh_core::Rgba::from(light);
+        assert!(
+            white.r > 0.99 && white.g > 0.99 && white.b > 0.99,
+            "{white:?}"
+        );
+        assert!((0.54..=0.63).contains(&white.a), "fill alpha {}", white.a);
+        assert_eq!(motion::SHADOW, (0.115, 9.0, 36.0));
+        assert_eq!(crate::context_menu::MENU_BLUR, 11.0);
     }
 
     #[test]

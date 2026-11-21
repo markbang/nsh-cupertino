@@ -6,7 +6,7 @@
 use std::time::{Duration, SystemTime};
 
 use nsh_core::{Command, Size, element::Root, geometry::px, platform::Os, prelude::*, time::Clock};
-use nsh_cupertino::{ContextAction, glass_menu, theme};
+use nsh_cupertino::{GlassMenuAction, glass_menu, theme};
 use nsh_engine::EngineConfig;
 use nsh_testing::Headless;
 
@@ -23,9 +23,11 @@ fn Page() -> impl IntoElement {
                 glass_menu()
                     .label("Sort")
                     .actions(vec![
-                        ContextAction::new("pin", "Pin").icon("pin"),
-                        ContextAction::new("share", "Share"),
-                        ContextAction::new("delete", "Delete").destructive(true),
+                        GlassMenuAction::new("pin", "Pin").icon("pin"),
+                        GlassMenuAction::new("share", "Share").detail("With a link"),
+                        GlassMenuAction::new("delete", "Delete")
+                            .section("Danger")
+                            .destructive(true),
                     ])
                     .on_action(move |id: &String| chosen.set(id.clone())),
             )
@@ -153,4 +155,13 @@ fn the_menu_stays_until_its_close_has_run() {
     );
     app.run_for(Duration::from_millis(100)).unwrap();
     assert_eq!(app.screen().count("role:menu").unwrap(), 0);
+}
+
+#[test]
+fn a_section_header_and_a_detail_line_show_and_are_not_items() {
+    let mut app = start(Os::Ios);
+    open(&mut app);
+    assert!(app.shows("Danger"), "the section's header shows");
+    assert!(app.shows("With a link"), "the detail line shows");
+    assert_eq!(app.screen().count("role:menuitem").unwrap(), 3);
 }

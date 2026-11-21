@@ -15,11 +15,11 @@ use crate::{
 
 /// The menu's blur, in points: the iOS pull-down menu's measured blur, σ 10 pt in
 /// light and 12 pt in dark (`tools/measure-glass-ios.py`), rounded to 11.
-const MENU_BLUR: f32 = 11.0;
+pub(crate) const MENU_BLUR: f32 = 11.0;
 
 /// The menu's fill: the iOS pull-down menu's measured fill, white at 60 % over the
 /// light page and a grey of about 80 at 44 % over the dark one (`tools/measure-glass-ios.py`).
-fn menu_fill(dark: bool) -> nsh_core::Hsla {
+pub(crate) fn menu_fill(dark: bool) -> nsh_core::Hsla {
     if dark {
         rgba(0x50505070).into()
     } else {
