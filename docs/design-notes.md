@@ -89,7 +89,7 @@ none: SF Pro and PingFang are the design's own faces.
 | What | Value | Source |
 | --- | --- | --- |
 | Page push | spring, damping 0.86, stiffness 300 | NSH's navigation stack spring, matched to iOS's `kTransitionDuration` 500 ms feel (`route.dart`, `CupertinoPageRoute.kTransitionDuration`) |
-| Sheet | spring, damping 0.8, stiffness 400 | `sheet.dart` (`_kDroppedSheetDragAnimationDuration` 300 ms, 500 ms transition) |
+| Sheet | spring, damping 1.0 (critical), stiffness 280, fitted to iOS's sheet recording (`motion-sheet.mp4`) | `sheet.dart` (`_kDroppedSheetDragAnimationDuration` 300 ms, 500 ms transition) |
 | Press | opacity 0.4 over 150 ms | `button.dart`, `constants.dart` |
 | Switch thumb | 200 ms | `switch.dart` (position controller duration) |
 | Card press | scale 0.97 | this crate's convention, for tiles that are not rows |

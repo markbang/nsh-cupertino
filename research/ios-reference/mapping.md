@@ -21,7 +21,7 @@ Paths: `cohub:` is relative to `src/` in cohub-mobile unless it starts with `mod
 | cohub-mobile (file) | nsh-cupertino (file) | Status | Key values and source | Gap |
 |---|---|---|---|---|
 | `motion.ts` press | `tokens.rs:535-537` | partial | cohub press scale `.985`, compact `.92` (`motion.ts:89-91`). nsh `PRESS_SCALE .97`, `PRESS_OPACITY .4` | Different press model: cohub scales, nsh also fades. |
-| `motion.ts` sheet | `overlay.rs` `sheet_spring`, `tokens.rs:531-533` | partial | cohub sheet spring mass 3, stiffness 1000, critical damping (`motion.ts:38-44`); present spring 700/65 (`motion.ts:47`). nsh damping `.8`, stiffness `400` | Spring feel differs. Fix: match stiffness and damping. |
+| `motion.ts` sheet | `overlay.rs` `sheet_spring`, `tokens.rs:531-533` | match | cohub sheet spring mass 3, stiffness 1000, critical damping (`motion.ts:38-44`); present spring 700/65 (`motion.ts:47`). nsh now critical damping 1.0, stiffness 280, for the entrance and the detents (was `.8` / `400`) | Fitted to `motion-sheet.mp4` (ζ 1.0, ω ≈ 16.8 rad/s, 284.5 pt travel); cohub's 1000/3 is 7 % stiffer and misses the clip by about 4 pt at 30 ms. Pinned by `overlay.rs` tests. |
 | `motion.ts` fade and settle | `tokens.rs:539-551` | partial | cohub fade 150, fadeOut 120, settle 240, glide 280 (`motion.ts`). nsh `QUICK_MS 150`, `BASE_MS 300`, `PRESS_FADE_OUT_MS 180` | Durations partly differ. |
 | `motion.ts` dialog enter | none | missing | 240 ms, `fromScale 1.125` with settle curve (`motion.ts:145-147`) | No scale-in dialog motion. |
 | `motion.ts` continuity | none | missing | `imageWait 300` (`motion.ts:21`) | No shared-element continuity. |

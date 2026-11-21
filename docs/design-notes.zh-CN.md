@@ -76,7 +76,7 @@ SF Pro 与苹方就是这套设计自己的字体。
 | 项目 | 取值 | 来源 |
 | --- | --- | --- |
 | 页面推入 | 弹簧，阻尼 0.86，刚度 300 | NSH 导航栈的弹簧，对齐 iOS `kTransitionDuration` 500 ms 的手感（`route.dart`、`CupertinoPageRoute.kTransitionDuration`） |
-| Sheet | 弹簧，阻尼 0.8，刚度 400 | `sheet.dart`（`_kDroppedSheetDragAnimationDuration` 300 ms，过渡 500 ms） |
+| Sheet | 弹簧，阻尼 1.0（临界），刚度 280，按 iOS 的 sheet 录屏（`motion-sheet.mp4`）拟合 | `sheet.dart`（`_kDroppedSheetDragAnimationDuration` 300 ms，过渡 500 ms） |
 | 按压 | 透明度 0.4，150 ms | `button.dart`、`constants.dart` |
 | 开关滑块 | 200 ms | `switch.dart`（位置控制器的时长） |
 | 卡片按压 | 缩放 0.97 | 本 crate 的约定，用于不是行的卡片 |

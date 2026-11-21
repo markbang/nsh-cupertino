@@ -183,7 +183,7 @@ and are attached to each release.
   `footnote` 13/18, `caption1` 12/16, `caption2` 11/13.
 - **Layout** — 4/8/12/16/20/24 spacing, 44 pt touch target, 10/14/12/9 pt radii,
   a 0.33 pt hairline, the navigation bar's 44 + 52 pt.
-- **Motion** — page push spring 0.86 damping / 300 stiffness, sheet 0.8 / 400,
+- **Motion** — page push spring 0.86 damping / 300 stiffness, sheet 1.0 / 280 (critical),
   pressed opacity 0.4, pressed scale 0.97, 120 / 180 / 200 / 300 / 500 ms
   durations, and the spinner's one turn per second in eight steps.
 - **Materials** — `ultra-thin`, `thin`, `regular`, `thick` and `chrome`: a fill

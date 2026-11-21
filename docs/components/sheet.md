@@ -50,6 +50,7 @@ Notes
 
 ## Motion
 
-The entrance is the design system's sheet spring (0.8 damping, 400 stiffness);
-between detents the release velocity feeds the spring. Reduce Motion removes the
+The entrance is the design system's sheet spring (critical damping, 1.0; stiffness
+280), fitted to iOS's sheet recording; between detents the release velocity feeds
+the same spring. Reduce Motion removes the
 entrance and exit.

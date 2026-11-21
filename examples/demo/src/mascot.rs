@@ -244,6 +244,7 @@ fn loader_art(body: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nsh_core::element::sample_easing;
 
     /// The value of the keyframe that sits at `ms` into a cycle of `cycle` ms.
     fn value_at(frames: &[Keyframe], cycle: f32, ms: f32) -> f32 {
@@ -271,6 +272,37 @@ mod tests {
         assert_eq!(timing.duration_ms, 900.0);
         assert_eq!(timing.easing, Easing::EaseInOut);
         assert_eq!(timing.iterations, None);
+    }
+
+    /// The bob sampled every 30 ms over one breath: each keyframe segment
+    /// runs the timing's easing over its half of the breath.
+    fn sampled_breath(frames: &[Keyframe], timing: &KeyframeTiming) -> Vec<f32> {
+        let curve = sample_easing(timing.easing, 16);
+        let mut out = vec![frames[0].value];
+        for pair in frames.windows(2) {
+            let (from, to) = (pair[0].value, pair[1].value);
+            out.extend(curve.iter().skip(1).map(|e| from + (to - from) * e));
+        }
+        out
+    }
+
+    #[test]
+    fn the_bob_sampled_every_30_ms_has_at_least_8_samples_a_breath() {
+        let trace = sampled_breath(&bob_frames(5.0), &bob_timing());
+        assert_eq!(trace.len(), 31);
+        assert!(trace.len() > 8);
+        assert_eq!(trace[0], 0.0);
+        assert_eq!(trace[15], -5.0);
+        assert_eq!(trace[30], 0.0);
+        // CSS ease-in-out at 60, 150 and 210 ms, times the 5 pt lift.
+        for (index, expected) in [(2, -0.177), (5, -1.159), (7, -2.213)] {
+            assert!(
+                (trace[index] - expected).abs() < 0.005,
+                "{} ms: {} vs {expected}",
+                index * 30,
+                trace[index]
+            );
+        }
     }
 
     #[test]

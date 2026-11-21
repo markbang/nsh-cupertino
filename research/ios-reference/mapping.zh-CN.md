@@ -21,7 +21,7 @@
 | cohub-mobile（文件） | nsh-cupertino（文件） | 状态 | 关键值与来源 | 差距 |
 |---|---|---|---|---|
 | `motion.ts` 按压 | `tokens.rs:535-537` | partial | cohub 按压缩放 `.985`，紧凑型 `.92`（`motion.ts:89-91`）。nsh `PRESS_SCALE .97`、`PRESS_OPACITY .4` | 按压模型不同：cohub 只缩放，nsh 还会淡化。 |
-| `motion.ts` sheet | `overlay.rs` `sheet_spring`、`tokens.rs:531-533` | partial | cohub sheet 弹簧 mass 3、stiffness 1000、临界阻尼（`motion.ts:38-44`）；出现弹簧 700/65（`motion.ts:47`）。nsh damping `.8`、stiffness `400` | 弹性手感不同。修法：对齐 stiffness 和 damping。 |
+| `motion.ts` sheet | `overlay.rs` `sheet_spring`、`tokens.rs:531-533` | match | cohub sheet 弹簧 mass 3、stiffness 1000、临界阻尼（`motion.ts:38-44`）；出现弹簧 700/65（`motion.ts:47`）。nsh 现为临界阻尼 1.0、stiffness 280，进场和档位共用（原为 `.8` / `400`） | 按 `motion-sheet.mp4` 拟合（ζ 1.0，ω ≈ 16.8 rad/s，行程 284.5 pt）；cohub 的 1000/3 刚度高 7%，30 ms 处偏差约 4 pt。由 `overlay.rs` 的测试固定。 |
 | `motion.ts` 淡入与 settle | `tokens.rs:539-551` | partial | cohub fade 150、fadeOut 120、settle 240、glide 280（`motion.ts`）。nsh `QUICK_MS 150`、`BASE_MS 300`、`PRESS_FADE_OUT_MS 180` | 时长部分不同。 |
 | `motion.ts` dialog 进入 | 无 | missing | 240 ms，`fromScale 1.125` 加 settle 曲线（`motion.ts:145-147`） | 没有缩放进入的对话框动效。 |
 | `motion.ts` continuity | 无 | missing | `imageWait 300`（`motion.ts:21`） | 没有共享元素过渡。 |
