@@ -526,6 +526,7 @@ pub struct GlassSpec {
     grow: Option<Grow>,
     body: Option<Body>,
     soft_shadow: Option<(f32, f32)>,
+    shadow_amount: Option<AnimatedNode>,
 }
 
 /// A menu's flat body ([`GlassSpec::menu_body`]).
@@ -573,6 +574,7 @@ impl GlassSpec {
             grow: None,
             body: None,
             soft_shadow: None,
+            shadow_amount: None,
         }
     }
 
@@ -677,6 +679,13 @@ impl GlassSpec {
         self.margin = margin.max(0.0);
         self.shadow = alpha;
         self.soft_shadow = Some((offset, sigma));
+        self
+    }
+
+    /// The soft shadow at `amount` times its alpha: 1 shows it, 0 drops it at
+    /// once (a menu drops its shadow as it closes).
+    pub(crate) fn shadow_amount(mut self, amount: AnimatedNode) -> Self {
+        self.shadow_amount = Some(amount);
         self
     }
 
@@ -921,6 +930,10 @@ pub fn layer(spec: GlassSpec, press: Option<Press>) -> impl IntoElement {
 
 fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     let (thickness, blur) = spec.thickness_and_blur();
+    let shadow = spec
+        .shadow_amount
+        .as_ref()
+        .map(|amount| amount.mul(spec.shadow));
     let mut glass = shader_effect().max_sample_offset(px(spec.overflow()));
     let Some(program) = program() else {
         return glass.absolute().inset_0();
@@ -1001,13 +1014,6 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("anchor", spec.anchor)
         .uniform("min_radius", numbers::MIN_RADIUS)
         .uniform("margin", spec.margin)
-        .uniform("shadow", move || {
-            if dark() && spec.soft_shadow.is_none() {
-                0.0_f32
-            } else {
-                spec.shadow
-            }
-        })
         .uniform("body", -1.0_f32)
         .uniform("shadow_offset", spec.soft_shadow.map_or(0.0, |s| s.0))
         .uniform("shadow_sigma", spec.soft_shadow.map_or(0.0, |s| s.1))
@@ -1015,6 +1021,18 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
+    // A bound shadow replaces the reactive one: a binding that runs later
+    // would overwrite the animated value with a number.
+    glass = match &shadow {
+        Some(shadow) => glass.uniform("shadow", shadow),
+        None => glass.uniform("shadow", move || {
+            if spec.soft_shadow.is_none() && dark() {
+                0.0_f32
+            } else {
+                spec.shadow
+            }
+        }),
+    };
     if let Some(morph) = &spec.morph {
         glass = glass.uniform("morph", morph);
     }
