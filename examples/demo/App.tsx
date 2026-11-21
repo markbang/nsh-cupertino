@@ -53,6 +53,13 @@ import {
   Theme,
 } from "cupertino";
 import { Count, DemoTile, Mascot } from "cupertino-demo/native";
+// The demo's face is Inter (OFL, fonts/OFL.txt), the stand-in for the iOS
+// reference's SF Pro, which is not shipped: `font-sans` is Inter in nsh.json,
+// and the four weights are registered by import (they share one family).
+import "./fonts/Inter-Regular.ttf";
+import "./fonts/Inter-Medium.ttf";
+import "./fonts/Inter-SemiBold.ttf";
+import "./fonts/Inter-Bold.ttf";
 
 const PAGES: { id: string; title: string; blurb: string; icon: string; tint: string }[] = [
   { id: "navigation", title: "Navigation bar", blurb: "Large title, back, trailing action", icon: "arrow.up.right", tint: "system-blue" },
@@ -1628,9 +1635,11 @@ function App() {
 
   return (
     <Theme contrast={contrast()} preset={preset()}>
-      <Each of={[page()]} key={(id) => id}>
-        {(_id) => <CurrentPage />}
-      </Each>
+      <View class="flex-1 font-sans">
+        <Each of={[page()]} key={(id) => id}>
+          {(_id) => <CurrentPage />}
+        </Each>
+      </View>
     </Theme>
   );
 }
