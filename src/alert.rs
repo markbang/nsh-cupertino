@@ -230,6 +230,7 @@ fn alert_panel(
             crate::glass::material_spec("thick", [14.0; 4]),
             None,
         ))
+        // Fitted to the UIKit system alert in the iOS reference shot (catalog-confirm), not to cohub's shadow-glass.
         .shadow([nsh_core::BoxShadow {
             offset_y: px(8.0),
             blur: px(32.0),

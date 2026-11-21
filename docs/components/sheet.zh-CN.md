@@ -39,3 +39,5 @@
 ## 动效
 
 进场使用设计系统的面板弹簧（临界阻尼 1.0、刚度 280），按 iOS 的 sheet 录屏拟合；档位间使用释放速度驱动同一弹簧。开启"减弱动态效果"时去掉进出场。
+
+在 iOS 上，Cohub Mobile 使用原生 SwiftUI 面板（`AdaptiveSheet.ios.tsx:2`），其 Reanimated 面板弹簧（`motion.ts:36-47`）只在非 iOS 分支运行。不要把本库的弹簧对齐到 Cohub 的数值：它是按 iOS 录屏拟合的。
