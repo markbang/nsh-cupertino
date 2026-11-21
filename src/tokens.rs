@@ -821,7 +821,9 @@ pub mod glass {
     /// The blur radius of the material, in points: small, so the detail under
     /// a control survives (the scroll edge effect carries the dissolve).
     pub const BLUR: f32 = 5.0;
-    /// The blur of a floating bar, in points (24).
+    /// The blur of a floating bar, in points (24). The shader samples a disc of
+    /// this radius, so its σ is 0.456 × 24 ≈ 11 pt: the iOS pull-down menu's
+    /// measured σ, 10 pt in light and 12 pt in dark (`tools/measure-glass-ios.py`).
     pub const BAR_BLUR: f32 = 24.0;
     /// The strength of the specular rim.
     pub const SPECULAR: f32 = 0.7;
@@ -843,10 +845,13 @@ pub mod glass {
     pub const SATURATION: f32 = 2.1;
     /// See [`SATURATION`].
     pub const SATURATION_DARK: f32 = 1.4;
-    /// The frost in light: opacity, clamp and weight, [0.6, 0.40, 2.5].
-    pub const FROST: [f32; 3] = [0.6, 0.40, 2.5];
-    /// The frost in dark: opacity, clamp and weight, [0.9, −0.45, 0.5].
-    pub const FROST_DARK: [f32; 3] = [0.9, -0.45, 0.5];
+    /// The frost in light: opacity, clamp and weight, [1.0, 0.0, 0.0], a plain
+    /// blur. The iOS menu's light glass fits a plain blur best: no luminance-weighted ghost.
+    pub const FROST: [f32; 3] = [1.0, 0.0, 0.0];
+    /// The frost in dark: opacity, clamp and weight, [0.4, 0.0, 5.0]. The iOS
+    /// menu's dark glass fits a ghost weighted 5 toward bright texels, held at the
+    /// brighter of ghost and blur: 10 % less residual than a plain blur.
+    pub const FROST_DARK: [f32; 3] = [0.4, 0.0, 5.0];
     /// The hairline's darkening, and the rim light's strength.
     pub const RIM: [f32; 2] = [1.0, 1.0];
     /// See [`RIM`], dark (the rim light is a little stronger).

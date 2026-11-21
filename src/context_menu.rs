@@ -13,6 +13,20 @@ use crate::{
     tokens::{self, radius, type_default},
 };
 
+/// The menu's blur, in points: the iOS pull-down menu's measured blur, σ 10 pt in
+/// light and 12 pt in dark (`tools/measure-glass-ios.py`), rounded to 11.
+const MENU_BLUR: f32 = 11.0;
+
+/// The menu's fill: the iOS pull-down menu's measured fill, white at 60 % over the
+/// light page and a grey of about 80 at 44 % over the dark one (`tools/measure-glass-ios.py`).
+fn menu_fill(dark: bool) -> nsh_core::Hsla {
+    if dark {
+        rgba(0x50505070).into()
+    } else {
+        rgba(0xffffff99).into()
+    }
+}
+
 /// One item of a [`ContextMenu`].
 #[derive(Debug, Clone, Default, PartialEq, JsObject)]
 pub struct ContextAction {
@@ -188,12 +202,8 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
             s.p(px(6.0))
                 .min_w(px(250.0))
                 .rounded(px(radius::SHEET.0))
-                .bg(tokens::materials::fill(
-                    "thick",
-                    nsh_core::element::dark(),
-                    false,
-                ))
-                .backdrop_blur(tokens::materials::blur("thick"))
+                .bg(menu_fill(nsh_core::element::dark()))
+                .backdrop_blur(px(MENU_BLUR))
                 // Fitted to the UIKit system menu in the iOS reference shot (catalog-menu), not to a drawn glass control.
                 .shadow([nsh_core::BoxShadow {
                     offset_y: px(4.0),

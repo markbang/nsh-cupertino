@@ -37,6 +37,7 @@ const arg = (name, fallback) => {
 const root = join(fileURLToPath(import.meta.url), "..", "..");
 const OUT = arg("out", join(root, "docs", "screenshots"));
 const CHROME = arg("chrome", process.env.CHROME ?? "google-chrome");
+const ONLY = arg("only", null)?.split(",");
 const WIDTH = 390;
 const HEIGHT = 844;
 const SCALE = 3;
@@ -71,6 +72,10 @@ const SHOTS = [
   { name: "glass-material-dark", page: "glass", scheme: "dark", scroll: 640, up: 70, material: "material" },
   { name: "glass-sheet-light", page: "glass", scheme: "light", overlay: "glass" },
   { name: "glass-sheet-dark", page: "glass", scheme: "dark", overlay: "glass" },
+  // The context menu, opened by the secondary button on the first card (the
+  // trigger); `context` is its point in CSS pixels.
+  { name: "contextmenu-open-light", page: "contextmenu", scheme: "light", context: [195, 232] },
+  { name: "contextmenu-open-dark", page: "contextmenu", scheme: "dark", context: [195, 232] },
   ...["none", "material", "shader"].flatMap((mode) =>
     ["light", "dark"].map((scheme) => ({
       name: `glass-calibration-${mode}-${scheme}`,
@@ -255,6 +260,13 @@ async function shoot(page, base, shot) {
     await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
+  if (shot.context) {
+    // The secondary button over the trigger: the context menu opens.
+    const [x, y] = shot.context;
+    await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "right", clickCount: 1 });
+    await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "right", clickCount: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+  }
   if (shot.scroll) {
     // A wheel over the page: the rows go under the bar and the material redraws.
     // Several small steps, so the minimize state machine sees a scroll rather
@@ -330,7 +342,10 @@ async function main() {
     });
     await page.call("Page.navigate", { url: `http://127.0.0.1:${port}/` });
     await new Promise((resolve) => setTimeout(resolve, 2500));
-    for (const shot of SHOTS) console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
+    for (const shot of SHOTS) {
+      if (ONLY && !ONLY.includes(shot.name)) continue;
+      console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
+    }
   } finally {
     child.kill();
     server.close();

@@ -266,7 +266,7 @@ vendored, since Apple's are Apple's):
 | Glass colour | `#87F8F8F8` (53 % white) | `#1FFFFFFF` (12 % white) | the `glass-regular` token, same values |
 | Backdrop saturation | 2.1 | 1.4 | `SATURATION` / `SATURATION_DARK` |
 | Blur | small; detail survives | small | 8 pt (`BLUR`), the top of the 3–8 pt band |
-| Frost: opacity / clamp / weight | 0.73 / +0.40 / 2.0 | 0.85 / −0.45 / 0.5 | `FROST` / `FROST_DARK` |
+| Frost: opacity / clamp / weight | plain blur: no weighted ghost (measured on the iOS pull-down menu) | ghost weight 5, opacity 0.4 (measured, dark) | `FROST` [1, 0, 0] / `FROST_DARK` [0.4, 0, 5] |
 | Thickness, refractive index | 32 pt, 1.24 (paraxial) | same | 8 pt of rim shift (0.24 × 32) |
 | Light angle | +π/2 (from below) | −π/2 (from above) | `LIGHT` / `LIGHT_DARK` |
 | Rim: shade / light | 1 / 1 | 1 / 1.15 | `RIM` / `RIM_DARK` |
