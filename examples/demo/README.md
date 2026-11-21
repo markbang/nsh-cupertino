@@ -16,6 +16,8 @@ The demo's face is Inter, the stand-in for the iOS reference's SF Pro (not shipp
 `fonts/` holds four weights of Inter 4.001 (SIL Open Font License, `fonts/OFL.txt`),
 subset to Latin and punctuation with `pyftsubset --unicodes=U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2190-2193,U+2212,U+2215,U+FEFF,U+FFFD --layout-features='*' --name-IDs='*'`
 from Cohub Mobile's `assets/fonts/Inter-*.ttf`. `nsh.json` maps `font-sans` to Inter.
+When subsetting a font, keep name IDs 16 and 17 (the typographic family and subfamily, as `--name-IDs='*'` does): without them, medium and semibold silently render as regular and bold.
+The command above reproduces the four files byte for byte from Cohub Mobile's assets (fontTools 4.68.0).
 
 Deep links: seed the app's storage with `cupertino.page` (`gallery`,
 `navigation`, `lists`, `buttons`, `textfields`, `search`, `switches`,
