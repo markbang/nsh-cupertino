@@ -129,7 +129,7 @@ export const API: Record<string, ApiGroup[]> = {
           "rust": "`.message(..)`",
           "type": "`string`",
           "default": "none",
-          "note": "13 pt, centered"
+          "note": "15 pt, centered"
         },
         {
           "tsx": "`actions`",
