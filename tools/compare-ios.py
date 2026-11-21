@@ -259,7 +259,6 @@ SEEN = {
             ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
             ((31, 223, 145, 247), "\"Buttons\" label: 7 px high"),
             ((30, 960, 162, 996), "\"Selection\" label: 17 px high"),
-            ((277, 764, 312, 794), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
             ((53, 871, 83, 906), "share icon: 17×20 pt, ref 15×18 pt"),
             ((120, 847, 204, 931), "copy button: ring added, 1 px thinner than ref"),
             ((425, 872, 455, 906), "trash icon: a touch heavier than ref"),
@@ -273,7 +272,6 @@ SEEN = {
             ((27, 110, 109, 197), "back button: no ring, heavier chevron"),
             ((31, 223, 145, 247), "\"Buttons\" label: 7 px high"),
             ((30, 960, 162, 996), "\"Selection\" label: 17 px high"),
-            ((277, 764, 314, 798), "loading glyph: 8 blades, ref is a crescent (19 pt)"),
             ((53, 871, 83, 906), "share icon: 17×20 pt, ref 15×18 pt"),
             ((120, 847, 204, 931), "copy button: ring added, 1 px thinner than ref"),
             ((425, 872, 455, 906), "trash icon: a touch heavier than ref"),
@@ -303,15 +301,15 @@ SEEN = {
     "rows": {
         "light": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
-            ((130, 388, 300, 421), "Notifications title: 4 px high (cap and baseline), 3 px (1.8 %) narrower: the face's line metrics (FreeSans was 2.4 % narrower)"),
+            ((130, 388, 300, 421), "Notifications title: cap top 2 px high (1.1 pt), 9 px (5 %) wider: the face (Inter 177 px, reference 168 px)"),
             ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
-            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px): 5 px short on the left, 3 px on the right; the switch gap is 27 px against 24 px"),
+            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px): Inter's \"Mentions and…\" is 196 px, too wide beside the 177 px title"),
         ],
         "dark": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
-            ((130, 388, 300, 421), "Notifications title: 4 px high (cap and baseline), 3 px (1.8 %) narrower: the face's line metrics (FreeSans was 2.4 % narrower)"),
+            ((130, 388, 300, 421), "Notifications title: cap top 2 px high (1.1 pt), 9 px (5 %) wider: the face (Inter 177 px, reference 168 px)"),
             ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
-            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px): 5 px short on the left, 3 px on the right; the switch gap is 27 px against 24 px"),
+            ((262, 395, 530, 445), "Notifications detail: \"Mentions an…\" (175 px) against \"Mentions and…\" (183 px): Inter's \"Mentions and…\" is 196 px, too wide beside the 177 px title"),
         ],
     },
 }
