@@ -109,6 +109,7 @@ roles! {
     "info" = 0x007a_ffff, 0x0a84_ffff, 0x0040_ddff, 0x409c_ffff;
     "info-soft" = 0x007a_ff1f, 0x0a84_ff1f, 0x0040_dd1f, 0x409c_ff1f;
     "danger-soft" = 0xff3b_301f, 0xff45_3a1f, 0xd700_151f, 0xff69_611f;
+    "danger" = 0xff3b_30ff, 0xff45_3aff, 0xd700_15ff, 0xff69_61ff;
     // System colors.
     "system-blue" = 0x007a_ffff, 0x0a84_ffff, 0x0040_ddff, 0x409c_ffff;
     "system-green" = 0x34c7_59ff, 0x30d1_58ff, 0x248a_3dff, 0x30db_5bff;
@@ -160,6 +161,7 @@ pub const COHUB_PRESET: &[Role] = &[
     preset_role("info", 0x3a68_a8ff, 0x83a9_e8ff),
     preset_role("info-soft", 0xe9f0_fbff, 0x1f2b_3fff),
     preset_role("danger-soft", 0xfdea_ecff, 0x3a20_24ff),
+    preset_role("danger", 0xbf2b_3cff, 0xf278_7fff),
 ];
 
 const fn preset_role(name: &'static str, light: u32, dark: u32) -> Role {
@@ -196,7 +198,7 @@ pub const ALIASES: &[(&str, &str)] = &[
     ("muted-foreground", "secondary-label"),
     ("accent", "fill"),
     ("accent-foreground", "label"),
-    ("destructive", "system-red"),
+    ("destructive", "danger"),
     ("border", "separator"),
     ("input", "separator"),
     ("ring", "system-blue"),
@@ -278,6 +280,8 @@ tokens! {
     system_green => "system-green";
     /// Red: destructive actions and errors.
     system_red => "system-red";
+    /// The red of a destructive row, its tile and its title; the cohub preset sets it.
+    danger => "danger";
     /// Orange: warnings.
     system_orange => "system-orange";
     /// Yellow: attention.

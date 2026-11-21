@@ -70,7 +70,8 @@ thickness = round(max(configured * pixelRatio, 1)) / pixelRatio
 - 行自己绘制细线；分组最后一行传 `separator={false}`。
 - 细线从文字开始处起：有前置图块时距卡片边缘 58 pt，否则 16 pt。
 - 按压高亮是 `systemGrey4`（与 `CupertinoListTile` 一致），不是缩放。
-- 没传 `accessory` 的行会显示右箭头：不打开任何东西的行传 `accessory="none"`。
+- 没传 `accessory` 的行会显示右箭头：不打开任何东西的行传 `accessory="none"`。箭头是 1.5 pt 的线，颜色为 `secondary-label`。
+- 破坏性行的红色取自 `danger` 角色：系统红色，或 `Theme` 设定的预设值。
 
 ## 无障碍
 
