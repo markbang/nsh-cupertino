@@ -95,9 +95,11 @@ const CHEEK: &str = "M 685 574 C 671 577, 656 590, 649 603 C 633 636, 649 672, 6
 /// The square the cheek is centred in, so the turn is about its middle.
 const CHEEK_VIEW: &str = "626 567 117 117";
 const CRESCENT_SPIN_MS: f32 = 900.0;
+/// Reduce Motion's pulse of the same loader (`Loader.tsx` `PULSE`, 1200 ms).
+const CRESCENT_PULSE_MS: f32 = 1200.0;
 
 /// A button's crescent: the cheek in `currentColor`, so it takes the label's
-/// colour. Still with reduced motion, as the blades are.
+/// colour. Under reduced motion it pulses in opacity instead of turning.
 pub(crate) fn crescent(size: f32) -> impl IntoElement {
     let glyph = svg(ImageSrc::svg_markup(&format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="{CHEEK_VIEW}"><path d="{CHEEK}" fill="currentColor"/></svg>"#
@@ -111,7 +113,10 @@ pub(crate) fn crescent(size: f32) -> impl IntoElement {
         .role(AccessibilityRole::Progressbar)
         .child(glyph);
     if nsh_core::element::reduce_motion() {
-        return root.into_element();
+        let (frames, timing) = crescent_pulse();
+        let opacity = animated_value(0.35);
+        let _ = opacity.keyframes(frames, timing);
+        return root.bind_opacity(&opacity).into_element();
     }
     let turn = animated_value(0.0);
     let _ = turn.keyframes(
@@ -121,4 +126,39 @@ pub(crate) fn crescent(size: f32) -> impl IntoElement {
             .infinite(),
     );
     root.bind_rotate(&turn).into_element()
+}
+
+/// The pulse's keyframes and timing: opacity 0.35, 1 at the middle, 0.35 again.
+fn crescent_pulse() -> (Vec<Keyframe>, KeyframeTiming) {
+    (
+        vec![
+            Keyframe::at(0.0, 0.35),
+            Keyframe::at(0.5, 1.0),
+            Keyframe::at(1.0, 0.35),
+        ],
+        KeyframeTiming::new(CRESCENT_PULSE_MS)
+            .easing(Easing::EaseInOut)
+            .infinite(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reduced_motion_pulses_the_crescent_over_1_2_s() {
+        let (frames, timing) = crescent_pulse();
+        assert_eq!(timing.duration_ms, 1200.0);
+        assert_eq!(timing.easing, Easing::EaseInOut);
+        assert_eq!(timing.iterations, None);
+        assert_eq!(
+            frames,
+            [
+                Keyframe::at(0.0, 0.35),
+                Keyframe::at(0.5, 1.0),
+                Keyframe::at(1.0, 0.35),
+            ]
+        );
+    }
 }

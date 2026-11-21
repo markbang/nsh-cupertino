@@ -53,7 +53,7 @@ import {
   TextField,
   Theme,
 } from "cupertino";
-import { Count, DemoTile, Mascot } from "cupertino-demo/native";
+import { Count, DemoTile, Mascot, MascotLoader } from "cupertino-demo/native";
 // The demo's face is Inter (OFL, fonts/OFL.txt), the stand-in for the iOS
 // reference's SF Pro, which is not shipped: `font-sans` is Inter in nsh.json,
 // and the four weights are registered by import (they share one family).
@@ -428,9 +428,9 @@ function StatesPage() {
           </ErrorBanner>
         </View>
         <Skeleton rows={3} />
-        {/* No iOS reference: the loader's rest frame and the toast stack, from Cohub Mobile's code values. */}
+        {/* No iOS reference: the mascot loader and the toast stack, from Cohub Mobile's code values. */}
         <View style={{ marginTop: 16, alignItems: "center", paddingTop: 5 }}>
-          <Mascot size={72} />
+          <MascotLoader size={72} label="Loading" />
         </View>
       </View>
       {toastShown() ? (
