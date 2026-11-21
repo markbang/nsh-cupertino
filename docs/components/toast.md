@@ -30,6 +30,7 @@ Notes
 - A card behind the front one sits 10 pt higher, 4 % smaller and 35 % fainter per
   place. Touches pass through it to the page, as Cohub Mobile's stack does.
 - The message wraps. Cohub Mobile clamps it at two lines; this does not yet.
+- A stacked card once disappeared in a render with `PointerEvents::None` (#30). It did not reproduce in #31 (0 differing pixels, same render path; nsh-core 0.5.1 maps `none` to hit-testing only), so stacked cards use `None`.
 - The shadow is `0 6 20` black at 14 %, as `SHADOW_FLOAT`.
 - The toast takes no position on its own: put it in a `ToastLayer`.
 
