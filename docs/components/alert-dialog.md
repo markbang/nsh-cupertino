@@ -15,7 +15,7 @@ message, an optional text field and a row of buttons.
 | `open` | `.open(..)` | `boolean` | — | Controlled; follow `onOpenChange` |
 | `defaultOpen` | `.default_open(..)` | `boolean` | `false` | Open at first |
 | `title` | `.title(..)` | `string` | none | 17 pt semibold, centered |
-| `message` | `.message(..)` | `string` | none | 13 pt, centered |
+| `message` | `.message(..)` | `string` | none | 15 pt, centered |
 | `actions` | `.actions(..)` | `DialogAction[]` | `[]` | Two side by side, three or more stacked |
 | `input` | `.input(..)` | `string` | none | Placeholder of the text field |
 | `value` | `.value(..)` | `string` | `""` | The field's text at first |
@@ -27,6 +27,8 @@ Events: `onOpenChange(open)`, `onAction(id, text)`, `onCancel()`.
 
 Notes
 
+- The card's shadow is 0 8 pt offset, 32 pt blur, 3 pt spread, black at 20 %,
+  fitted to the iOS reference's falloff on a light page; it does not show on a dark page, as in the reference.
 - The card is the `thick` material: its fill over a 30 pt blur. Secondary text
   keeps Apple's contrast ([issue #3](https://github.com/markbang/nsh-cupertino/issues/3)).
 - The text-entry variant is the standard iOS alert with one field; the field's

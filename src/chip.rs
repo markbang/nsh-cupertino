@@ -81,8 +81,8 @@ pub fn FilterChip(props: FilterChipProps, cx: Scope<FilterChipEvent>) -> impl In
         .when_some(suffix_text.get_untracked(), |v, _| {
             v.child(
                 text(move || suffix_text.get().unwrap_or_default())
-                    .text_size(px(12.0))
-                    .line_height(px(16.0))
+                    .text_size(px(13.0))
+                    .line_height(px(18.0))
                     .text_color(move || {
                         if selected.get().unwrap_or(false) {
                             tokens::on_tint()
