@@ -2,7 +2,13 @@
 //! shows while it has nothing yet, has failed to load, is loading, or has
 //! something to say about what just happened.
 
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashSet,
+    rc::{Rc, Weak},
+    sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
+};
 
 use nsh_core::{
     AccessibilityRole,
@@ -360,58 +366,120 @@ pub fn default_duration_ms(tone: &str, action: bool) -> f32 {
     }
 }
 
-/// A toast's time (Cohub Mobile's `ToastClock`): it runs from when the toast
-/// shows, and stops while a finger presses it or swipes it. Release resumes it
-/// with the time left, at least [`RELEASE_GRACE_MS`].
-struct Clock {
-    timed: bool,
+/// The toasts of one layer share a hold: a finger on the front card pauses
+/// every toast's time, as Cohub Mobile's `ToastClock` does. The layer provides
+/// it; a toast outside a layer holds only itself.
+#[derive(Default)]
+struct Group {
+    holders: HashSet<u64>,
+    timers: Vec<Weak<RefCell<Timer>>>,
+}
+
+type SharedGroup = Rc<RefCell<Group>>;
+
+/// One toast's time: what is left of it, and the task that ends it.
+struct Timer {
+    me: Weak<RefCell<Timer>>,
     left_ms: f32,
     started: Option<Instant>,
     task: Option<Spawned<()>>,
-    pressed: bool,
-    panning: bool,
+    on_expire: Rc<dyn Fn()>,
 }
 
-impl Clock {
-    fn held(&self) -> bool {
-        self.pressed || self.panning
-    }
+fn new_timer(ms: f32, on_expire: Rc<dyn Fn()>) -> Rc<RefCell<Timer>> {
+    Rc::new_cyclic(|me| {
+        RefCell::new(Timer {
+            me: me.clone(),
+            left_ms: ms,
+            started: None,
+            task: None,
+            on_expire,
+        })
+    })
+}
 
-    fn pause(&mut self) {
-        if let Some(task) = self.task.take() {
-            task.cancel();
-            if let Some(started) = self.started.take() {
-                let ran = (now() - started).as_secs_f32() * 1000.0;
-                self.left_ms = (self.left_ms - ran).max(0.0);
+fn next_holder() -> u64 {
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Adds `timer` to the group; it starts at once unless the group is held.
+fn join(group: &SharedGroup, timer: &Rc<RefCell<Timer>>) {
+    let paused = {
+        let mut g = group.borrow_mut();
+        g.timers.retain(|t| t.strong_count() > 0);
+        g.timers.push(Rc::downgrade(timer));
+        !g.holders.is_empty()
+    };
+    if !paused {
+        start(&mut timer.borrow_mut());
+    }
+}
+
+/// Holds or releases the group for `holder`. The first hold pauses every
+/// timer; the last release resumes them, each with at least
+/// [`RELEASE_GRACE_MS`] left.
+fn set_hold(group: &SharedGroup, holder: u64, holding: bool) {
+    let (paused, timers) = {
+        let mut g = group.borrow_mut();
+        let was = !g.holders.is_empty();
+        if holding {
+            g.holders.insert(holder);
+        } else {
+            g.holders.remove(&holder);
+        }
+        let paused = !g.holders.is_empty();
+        if paused == was {
+            return;
+        }
+        g.timers.retain(|t| t.strong_count() > 0);
+        (
+            paused,
+            g.timers
+                .iter()
+                .filter_map(Weak::upgrade)
+                .collect::<Vec<_>>(),
+        )
+    };
+    for timer in timers {
+        let mut t = timer.borrow_mut();
+        if paused {
+            pause(&mut t);
+        } else {
+            if t.left_ms > 0.0 {
+                t.left_ms = t.left_ms.max(RELEASE_GRACE_MS);
             }
+            start(&mut t);
         }
     }
 }
 
-/// Changes what holds the toast, then pauses or resumes its time. `on_expire`
-/// runs when the time is up.
-fn hold(clock: &Rc<RefCell<Clock>>, on_expire: &Rc<dyn Fn()>, change: impl FnOnce(&mut Clock)) {
-    let mut c = clock.borrow_mut();
-    let was_held = c.held();
-    change(&mut c);
-    if c.held() {
-        c.pause();
-    } else if was_held {
-        c.left_ms = c.left_ms.max(RELEASE_GRACE_MS);
-        resume(clock, on_expire, &mut c);
+fn pause(t: &mut Timer) {
+    if let Some(task) = t.task.take() {
+        task.cancel();
+        if let Some(started) = t.started.take() {
+            t.left_ms = (t.left_ms - (now() - started).as_secs_f32() * 1000.0).max(0.0);
+        }
     }
 }
 
-fn resume(clock: &Rc<RefCell<Clock>>, on_expire: &Rc<dyn Fn()>, c: &mut Clock) {
-    if !c.timed || c.task.is_some() || c.held() || c.left_ms <= 0.0 {
+fn start(t: &mut Timer) {
+    if t.task.is_some() || t.left_ms <= 0.0 {
         return;
     }
-    c.started = Some(now());
-    let (clock, on_expire) = (clock.clone(), on_expire.clone());
-    c.task = Some(set_timeout(
-        Duration::from_secs_f32(c.left_ms / 1000.0),
+    t.started = Some(now());
+    let me = t.me.clone();
+    t.task = Some(set_timeout(
+        Duration::from_secs_f32(t.left_ms / 1000.0),
         move || {
-            clock.borrow_mut().task = None;
+            let Some(timer) = me.upgrade() else { return };
+            let on_expire = {
+                let mut t = timer.borrow_mut();
+                t.task = None;
+                t.started = None;
+                t.left_ms = 0.0;
+                t.on_expire.clone()
+            };
             on_expire();
         },
     ));
@@ -460,14 +528,6 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
         grow.spring(1.0, enter_spring());
     }
 
-    let clock = Rc::new(RefCell::new(Clock {
-        timed,
-        left_ms: duration,
-        started: None,
-        task: None,
-        pressed: false,
-        panning: false,
-    }));
     let on_expire: Rc<dyn Fn()> = Rc::new(move || {
         if nsh_core::element::reduce_motion() {
             fade.set(0.0);
@@ -479,26 +539,52 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
             });
         }
     });
-    resume(&clock, &on_expire, &mut clock.borrow_mut());
+    let group = use_context::<SharedGroup>().unwrap_or_default();
+    let holder = next_holder();
+    let timer = timed.then(|| new_timer(duration, on_expire));
+    if let Some(timer) = &timer {
+        join(&group, timer);
+    }
+    {
+        let group = group.clone();
+        cleanup(move || {
+            set_hold(&group, holder, false);
+            drop(timer);
+        });
+    }
+    // (pressed, panning): the card holds while either is true.
+    let holds = Rc::new(Cell::new((false, false)));
+    let hold_by = {
+        let (group, holds) = (group.clone(), holds.clone());
+        Rc::new(move |pressed: Option<bool>, panning: Option<bool>| {
+            if !front {
+                return;
+            }
+            let (p, n) = holds.get();
+            let next = (pressed.unwrap_or(p), panning.unwrap_or(n));
+            holds.set(next);
+            set_hold(&group, holder, next.0 || next.1);
+        })
+    };
     let on_press_down = {
-        let (clock, on_expire) = (clock.clone(), on_expire.clone());
-        move || hold(&clock, &on_expire, |c| c.pressed = true)
+        let hold_by = hold_by.clone();
+        move || hold_by(Some(true), None)
     };
     let on_press_up = {
-        let (clock, on_expire) = (clock.clone(), on_expire.clone());
-        move || hold(&clock, &on_expire, |c| c.pressed = false)
+        let hold_by = hold_by.clone();
+        move || hold_by(Some(false), None)
     };
     let on_pan_start = {
-        let (clock, on_expire) = (clock.clone(), on_expire.clone());
-        move |_: &PanEvent| hold(&clock, &on_expire, |c| c.panning = true)
+        let hold_by = hold_by.clone();
+        move |_: &PanEvent| hold_by(None, Some(true))
     };
-    let pan_end_clock = {
-        let (clock, on_expire) = (clock.clone(), on_expire.clone());
-        move || hold(&clock, &on_expire, |c| c.panning = false)
+    let pan_end_hold = {
+        let hold_by = hold_by.clone();
+        move || hold_by(None, Some(false))
     };
 
     let release = move |event: &PanEvent| {
-        pan_end_clock();
+        pan_end_hold();
         let moved = event.value_x.unwrap_or(0.0);
         let flung = event.velocity_x.abs() > DISMISS_VELOCITY;
         if !flung && moved.abs() <= DISMISS_DISTANCE {
@@ -590,7 +676,7 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
             )
         });
 
-    // Behind the front card, a card sits over its edge; the sliver it shows above takes touches.
+    // Behind the front card, a card sits over its edge; the sliver it shows above lets touches through.
     let lift = animated_value(0.0);
     let shrink = animated_value(1.0);
     lift.set(-STACK_OFFSET * depth);
@@ -598,7 +684,13 @@ pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
     view()
         .w_full()
         .z_index((10.0 - depth) as i32)
-        .when(!front, |v| v.absolute().left_0().right_0().bottom_0())
+        .when(!front, |v| {
+            v.absolute()
+                .left_0()
+                .right_0()
+                .bottom_0()
+                .pointer_events(PointerEvents::None)
+        })
         .opacity(1.0 - STACK_FADE * depth)
         .bind_translate_y(&lift)
         .bind_scale(&shrink)
@@ -618,6 +710,7 @@ pub struct ToastLayerProps {
 /// The layer takes no touches except on its toasts.
 #[component]
 pub fn ToastLayer(props: ToastLayerProps) -> impl IntoElement {
+    provide_context(SharedGroup::default());
     crate::overlay::layer()
         .pointer_events(PointerEvents::BoxNone)
         .flex_col()

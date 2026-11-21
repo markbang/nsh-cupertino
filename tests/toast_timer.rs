@@ -54,11 +54,19 @@ fn start<T: Component>() -> Headless
 where
     T::Props: Default,
 {
+    start_showing::<T>("Saved")
+}
+
+fn start_showing<T: Component>(text: &str) -> Headless
+where
+    T::Props: Default,
+{
     let mut config = EngineConfig::new(Root::of::<T>());
     config.viewport = Size::new(px(390.0), px(844.0));
     config.clock = Clock::manual(SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000));
     let mut app = Headless::start(config).expect("the page starts");
-    app.wait_for("text:Saved").expect("the toast shows");
+    app.wait_for(&format!("text:{text}"))
+        .expect("the toast shows");
     app
 }
 
@@ -131,4 +139,55 @@ fn release_gives_at_least_one_and_a_half_seconds() {
     );
     app.run_for(ms(800)).unwrap();
     assert!(!app.shows("Saved"), "then it leaves");
+}
+
+/// Two toasts in one layer: the back one is `Behind`, the front one `Front`.
+fn two_toasts() -> impl IntoElement {
+    let behind = signal(true);
+    let front = signal(true);
+    theme().child(view().w_full().h_full().justify_end().child(when(
+        move || behind.get() || front.get(),
+        move || {
+            toast_layer()
+                .child(when(
+                    move || behind.get(),
+                    move || {
+                        toast()
+                            .title("Behind")
+                            .depth(1.0)
+                            .on_expire(move || behind.set(false))
+                    },
+                ))
+                .child(when(
+                    move || front.get(),
+                    move || toast().title("Front").on_expire(move || front.set(false)),
+                ))
+        },
+    )))
+}
+
+#[component]
+fn Stack() -> impl IntoElement {
+    two_toasts()
+}
+
+#[test]
+fn holding_the_front_card_pauses_the_toast_behind_it() {
+    let mut app = start_showing::<Stack>("Front");
+    app.run_for(ms(1000)).unwrap();
+    app.drag_and_hold("text:Front", Point::new(px(0.0), px(0.0)))
+        .unwrap();
+    app.run_for(ms(10_000)).unwrap();
+    assert!(
+        app.shows("Behind"),
+        "the back toast keeps its time while the front is held"
+    );
+    app.drop_held().unwrap();
+    app.run_for(ms(1500)).unwrap();
+    assert!(app.shows("Behind"), "released with 2.2 s left: still shown");
+    app.run_for(ms(1000)).unwrap();
+    assert!(
+        !app.shows("Behind"),
+        "then it leaves, with the time it had left"
+    );
 }

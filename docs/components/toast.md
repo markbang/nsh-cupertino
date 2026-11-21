@@ -28,7 +28,7 @@ Notes
   400 ms without bouncing (Cohub Mobile's `enterSpring`). A shorter swipe springs
   back in about 400 ms.
 - A card behind the front one sits 10 pt higher, 4 % smaller and 35 % fainter per
-  place. Its sliver above the front card takes touches.
+  place. Touches pass through it to the page, as Cohub Mobile's stack does.
 - The message wraps. Cohub Mobile clamps it at two lines; this does not yet.
 - The shadow is `0 6 20` black at 14 %, as `SHADOW_FLOAT`.
 - The toast takes no position on its own: put it in a `ToastLayer`.
@@ -47,11 +47,10 @@ the text (the reference has no length rule):
 `duration` replaces the table; `sticky` turns the timer off. The time starts when
 the toast shows. When it runs out, the toast fades (240 ms) and emits `Expire`.
 
-- Pressing and holding the card pauses its time. Releasing resumes it with the time
-  left, and at least 1.5 s (Cohub Mobile's `RELEASE_GRACE_MS`). A swipe in progress
-  pauses it too.
-- Cohub Mobile pauses every toast in the stack while a finger is on the front one;
-  here each card pauses on its own, so a card behind the front one keeps its time.
+- Pressing and holding the front card pauses every toast in the layer, as Cohub
+  Mobile's `ToastClock` does. Releasing resumes each one with the time it had left,
+  and at least 1.5 s (`RELEASE_GRACE_MS`). A swipe in progress pauses them too.
+- A card behind the front one cannot be held: its sliver lets touches through.
 
 ### Dismiss reasons
 
