@@ -1572,18 +1572,39 @@ export const API: Record<string, ApiGroup[]> = {
           "note": "Its place in a `ToastLayer`: 0 is the front card, 1 and up sit behind it"
         },
         {
+          "tsx": "`duration`",
+          "rust": "`.duration(..)`",
+          "type": "`number` (ms)",
+          "default": "by tone and action, see below",
+          "note": "How long it stays from when it shows"
+        },
+        {
+          "tsx": "`sticky`",
+          "rust": "`.sticky(..)`",
+          "type": "`boolean`",
+          "default": "`false`",
+          "note": "No timer: it stays until it is swiped away or the app removes it"
+        },
+        {
           "tsx": "`onAction`",
           "rust": "`Action` event",
           "type": "event",
           "default": "—",
-          "note": "The action was pressed"
+          "note": "The action was pressed; the app removes the toast"
         },
         {
           "tsx": "`onDismiss`",
           "rust": "`Dismiss` event",
           "type": "event",
           "default": "—",
-          "note": "It was swiped away past 56 pt, or flicked faster than 800 pt/s"
+          "note": "Swiped away past 56 pt, or flicked faster than 800 pt/s"
+        },
+        {
+          "tsx": "`onExpire`",
+          "rust": "`Expire` event",
+          "type": "event",
+          "default": "—",
+          "note": "Its time ran out and it has faded; the app removes the toast"
         },
         {
           "tsx": "children",

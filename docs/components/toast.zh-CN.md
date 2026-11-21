@@ -13,8 +13,11 @@
 | `tone` | `.tone(..)` | `"neutral"` \| `"success"` \| `"danger"` | `neutral` | `danger` 画红色边框 |
 | `action` | `.action(..)` | `string` | 无 | 末端的文字操作，用主色 |
 | `depth` | `.depth(..)` | `number` | `0` | 在 `ToastLayer` 中的位置：0 为前面的卡片，1 及以上在其后 |
-| `onAction` | `Action` 事件 | 事件 | — | 操作被按下 |
+| `duration` | `.duration(..)` | `number`（毫秒） | 按色调与操作，见下 | 从显示起停留的时间 |
+| `sticky` | `.sticky(..)` | `boolean` | `false` | 没有计时：直到被滑走或被应用移除 |
+| `onAction` | `Action` 事件 | 事件 | — | 操作被按下；由应用移除提示条 |
 | `onDismiss` | `Dismiss` 事件 | 事件 | — | 向一侧滑过 56 pt，或以超过 800 pt/s 的速度轻扫 |
+| `onExpire` | `Expire` 事件 | 事件 | — | 时间到，已淡出；由应用移除提示条 |
 | children | `.child(..)` | JSX | 无 | 前缘的图标或吉祥物，由调用方绘制 |
 
 说明
@@ -24,7 +27,29 @@
 - 消息会换行。Cohub Mobile 限制为两行，本组件暂未限制。
 - 阴影与 `SHADOW_FLOAT` 相同：黑色、0 6 20、14%。
 - 提示条本身不设位置：请放进 `ToastLayer`。
-- 尚未实现：Cohub Mobile 的自动消失计时，以及手指停在卡片上时暂停计时。由应用在计时到期时移除提示。
+
+### 停留时间
+
+提示条因时间、滑动或应用而离开。停留时间依据 Cohub Mobile 的 `toast-queue.ts`，按色调与操作设定，不随文字长度变化（参考实现没有按长度的规则）：
+
+| 色调 | 无操作 | 有操作 |
+| --- | --- | --- |
+| `neutral`、`success` | 3.2 秒 | 5 秒 |
+| `danger` | 5 秒 | 5 秒 |
+
+`duration` 替代上表，`sticky` 关闭计时。计时从提示条显示时开始。时间到时，提示条淡出（240 毫秒）并发出 `Expire`。
+
+- 手指按住卡片时计时暂停；松开后从剩余时间继续，且至少 1.5 秒（Cohub Mobile 的 `RELEASE_GRACE_MS`）。滑动过程中同样暂停。
+- Cohub Mobile 在手指按着前面一张时会暂停堆叠中的全部提示；这里每张卡片各自暂停，因此其后的卡片仍按自己的时间走。
+
+### 离开的原因
+
+| 事件 | 离开的原因 | 由谁移除 |
+| --- | --- | --- |
+| `Dismiss` | 向一侧滑过 56 pt，或以超过 800 pt/s 轻扫 | 应用在 `Dismiss` 时移除；卡片已离开屏幕 |
+| `Expire` | 时间到，已淡出 | 应用在 `Expire` 时移除 |
+| `Action` | 操作被按下 | 应用在 `Action` 时移除 |
+
 
 ## ToastLayer
 

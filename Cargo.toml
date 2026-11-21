@@ -39,6 +39,10 @@ path = "tests/theme_files.rs"
 name = "glass"
 path = "tests/glass.rs"
 
+[[test]]
+name = "toast_timer"
+path = "tests/toast_timer.rs"
+
 # The separator test opens a page headlessly and reads its layout.
 [dev-dependencies]
 nsh-engine = "0.5.0"
