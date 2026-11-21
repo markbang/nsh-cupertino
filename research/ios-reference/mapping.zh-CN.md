@@ -63,7 +63,7 @@
 | `components/SettingsSelectRow.ios.tsx` | `list.rs` ListTile、`picker.rs:59` | partial | 按住 120 ms 打开菜单（`SettingsSelectRow.tsx:16`），当前选项打勾（`:27`） | 没有按住打开的菜单。 |
 | `ui/ListRow.tsx` | `list.rs` ListTile | partial | 行高 72，头像 46（`tokens.ts:248`），平铺分隔线缩进 74（`ListRow.tsx:15`） | nsh 分隔线 64，没有头像位。 |
 | `ui.tsx` SettingsGroup（`ui.tsx:353`） | `list.rs:75` Section、`tokens.rs:579` | partial | cohub 分组 `mb-6 px-4`，标签 caption `px-4 pb-2`，卡片 `rounded-md`（20）连续曲线（`ui.tsx:355-357`）。nsh SECTION_EDGE 20，卡片 ROW 圆角 10 | 卡片左右边距：cohub 为 16（`ui.tsx:355`，`px-4`）。nsh 组件用 20（`tokens.rs:579`）。nsh 自己的 `theme/theme.json:41` 写 16（由 `theme_file.rs:59` 生成）。圆角 20 对 10。 |
-| `ui.tsx` SectionHeader（`ui.tsx:363`） | `list.rs:75`、`tokens.rs:581-605` | partial | cohub `pt-6 pl-4`，headline 17/22 semibold（`ui.tsx:366`）。nsh SECTION_TOP 20、SECTION_HEADER_SIZE 20 | 代码写 17 pt headline，参考图像素读到约 13 pt。代码和像素不一致。 |
+| `ui.tsx` SectionHeader（`ui.tsx:363`） | `list.rs:75`、`tokens.rs:581-605` | partial | cohub `pt-6 pl-4`，headline 17/22 semibold（`ui.tsx:366`）。nsh SECTION_TOP 20、SECTION_HEADER_SIZE 20 | 代码写 17 pt headline，参考图像素读到约 13 pt。代码和像素不一致。字重：半粗体（600），原为粗体；墨迹与参考相差 10 % 以内（粗体为 21 %），见 `docs/components/theme.zh-CN.md`“演示和截图里的字体”一节。 |
 | `components/FilterChip.tsx` | 无 | missing | 点击区 `min-h-12 min-w-12`（`FilterChip.tsx:25`），胶囊 | 没有筛选标签。 |
 | `ui/AppSwitch.tsx` | `switch.rs:32`、`tokens.rs` SWITCH_WIDTH 51、HEIGHT 31、THUMB 27 | partial | cohub 轨道 63×28，滑块 37×24，弹簧 1000/80，`LENS_MIN_MS 300`（`AppSwitch.tsx:18`） | cohub 自绘开关，nsh 用原生尺寸。参考图与 cohub 尺寸一致。 |
 | `ui/Loader.tsx` | `indicator.rs:33` ActivityIndicator | partial | 尺寸 `sm` 20 转圈、`md` 72 吉祥物（`Loader.tsx:9`），脉动 0.35 到 1 | nsh 为 8 片叶。没有吉祥物加载。 |

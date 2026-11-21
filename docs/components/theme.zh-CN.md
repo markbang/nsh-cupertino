@@ -86,6 +86,17 @@ NSH 目前没有对比度信号：由应用决定（Web 上读平台的 `prefers
 Rust：`TypeScale::from_theme()` 返回十一个 `TextStyle`（`size`、`line_height`、`weight`、
 `tracking`），每个都从主题读取，应用可以改任一项。字距跟随 SF Pro：34 pt 时 +0.38，17 pt 时 −0.41。
 
+## 演示和截图里的字体
+
+在 Apple 平台上，库不指定字体：文字使用系统字体，iOS 和 macOS 上是 SF Pro，上面的字号表也是按它画的。
+SF Pro 不随库发布（其许可不允许）。演示应用和目录截图改用 Inter，许可为 SIL Open Font License
+（`examples/demo/fonts/`，许可文本在 `OFL.txt`），作为 iOS 参考字体的替代。只有演示应用设置它
+（`examples/demo/nsh.json` 里的 `font-sans`）；库的默认值和 web 目标的系统字体栈都不变。
+
+因此与 iOS 参考图比较时，宽度和墨迹的差异来自渲染字体，而不是组件：同样字号下 Inter 比 SF Pro 宽
+（17 pt 的 "Appearance"：173 px，参考为 164 px，+5 %），垂直度量也让行高偏移几个像素。字重跟随参考：
+分组标题用半粗体（semibold），与参考一致。
+
 ## 无障碍
 
 - 颜色在浅色与深色下都达到对比度要求；高对比度取值使用 iOS 自己的值（文字 68–96 % 不透明度，
