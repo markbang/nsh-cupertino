@@ -1529,5 +1529,56 @@ export const API: Record<string, ApiGroup[]> = {
         }
       ]
     }
+  ],
+  "toast": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "",
+      "rows": [
+        {
+          "tsx": "`title`",
+          "rust": "`.title(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "The line that says what happened"
+        },
+        {
+          "tsx": "`message`",
+          "rust": "`.message(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "A detail under it"
+        },
+        {
+          "tsx": "`tone`",
+          "rust": "`.tone(..)`",
+          "type": "`\"neutral\"` | `\"success\"` | `\"danger\"`",
+          "default": "`neutral`",
+          "note": "`danger` draws a red border"
+        },
+        {
+          "tsx": "`action`",
+          "rust": "`.action(..)`",
+          "type": "`string`",
+          "default": "none",
+          "note": "A text action at the trailing edge, in the tint"
+        },
+        {
+          "tsx": "`onAction`",
+          "rust": "`Action` event",
+          "type": "event",
+          "default": "—",
+          "note": "The action was pressed"
+        },
+        {
+          "tsx": "children",
+          "rust": "`.child(..)`",
+          "type": "JSX",
+          "default": "none",
+          "note": "The icon or mascot at the leading edge, drawn by the caller"
+        }
+      ]
+    }
   ]
 };

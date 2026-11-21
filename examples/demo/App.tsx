@@ -43,6 +43,7 @@ import {
   SegmentedControl,
   Sheet,
   Skeleton,
+  Toast,
   Slider,
   StatusPill,
   SwipeRow,
@@ -417,6 +418,15 @@ function StatesPage() {
           </ErrorBanner>
         </View>
         <Skeleton rows={3} />
+        {/* No iOS reference: the loader's rest frame, and a toast, from Cohub Mobile's code values. */}
+        <View style={{ marginTop: 16, alignItems: "center", paddingTop: 5 }}>
+          <Mascot size={72} />
+        </View>
+        <View style={{ marginTop: 12, marginHorizontal: 12 }}>
+          <Toast title="Could not send" message="Check your connection and try again." tone="danger" action="Retry">
+            <Mascot size={20} mood="worried" />
+          </Toast>
+        </View>
       </View>
     </NavPage>
   );

@@ -120,7 +120,7 @@ def column_runs(im, x, bg):
 BG_PROBE = {("rows", "switch on"): (500, 413), ("rows", "tile destructive"): (40, 700)}
 
 # Where an element's colour is sampled, as (x, y) fractions of its box: clear of the label and the thumb.
-SAMPLE = {"switch on": (0.25, 0.5), "switch off": (0.8, 0.5), "status pill neutral": (0.96, 0.5), "status pill running": (0.96, 0.5)}
+SAMPLE = {"tile destructive": (0.12, 0.5), "switch on": (0.25, 0.5), "switch off": (0.8, 0.5), "status pill neutral": (0.96, 0.5), "status pill running": (0.96, 0.5)}
 SAMPLE_DEFAULT = (0.5, 0.2)
 
 
@@ -289,6 +289,7 @@ SEEN = {
             ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider: the face (FreeSans here)"),
             ((130, 720, 452, 752), "banner title 3.5 % wider: the face (FreeSans here)"),
             ((120, 500, 612, 540), "description: a touch lighter in ours, FreeSans here"),
+            ((0, 1262, 720, 1565), "loader and toast: no iOS reference, from Cohub Mobile's code values"),
         ],
         "dark": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
@@ -296,6 +297,7 @@ SEEN = {
             ((270, 447, 445, 490), "\"No files yet\" 4.5 % wider: the face (FreeSans here)"),
             ((130, 720, 452, 752), "banner title 3.5 % wider: the face (FreeSans here)"),
             ((120, 500, 612, 540), "description: a touch lighter in ours, FreeSans here"),
+            ((0, 1262, 720, 1565), "loader and toast: no iOS reference, from Cohub Mobile's code values"),
         ],
     },
     "rows": {
@@ -303,11 +305,13 @@ SEEN = {
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
             ((130, 388, 300, 421), "Notifications title: cap top 4 px high, baseline matches (font ascent: FreeSans here, the reference face)"),
             ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
+            ((262, 395, 530, 445), "Notifications detail: its box and gap match; FreeSans's \"Mentions and…\" is wider than the reference face's, so the 102 pt cap shows \"Mentions an…\""),
         ],
         "dark": [
             ((0, 0, 720, 104), "no status bar: the reference shows clock and signal, ours is blank"),
             ((130, 388, 300, 421), "Notifications title: cap top 4 px high, baseline matches (font ascent: FreeSans here, the reference face)"),
             ((74, 370, 690, 378), "separator: one device pixel by design; the reference's 1 px line, downscaled 3× to 1.79 px/pt, reads lighter"),
+            ((262, 395, 530, 445), "Notifications detail: its box and gap match; FreeSans's \"Mentions and…\" is wider than the reference face's, so the 102 pt cap shows \"Mentions an…\""),
         ],
     },
 }

@@ -180,7 +180,7 @@ pub fn ErrorBanner(props: ErrorBannerProps, cx: Scope<ErrorBannerEvent>) -> impl
                             .text_size(type_default::FOOTNOTE.size)
                             .line_height(type_default::FOOTNOTE.line_height)
                             .font_weight(FontWeight(500))
-                            .text_color(tokens::system_red),
+                            .text_color(tokens::danger),
                     )
                 }),
         )
@@ -194,9 +194,7 @@ pub fn ErrorBanner(props: ErrorBannerProps, cx: Scope<ErrorBannerEvent>) -> impl
                 .accessibility_label("Retry")
                 .active(|s| s.opacity(0.4))
                 .on_press(move || cx.emit(ErrorBannerEvent::Retry))
-                .child(
-                    icon_stroke("arrow.clockwise", RETRY_GLYPH, 1.6).text_color(tokens::system_red),
-                ),
+                .child(icon_stroke("arrow.clockwise", RETRY_GLYPH, 1.6).text_color(tokens::danger)),
         )
 }
 
@@ -277,4 +275,100 @@ fn bone_relative(fraction: f32, height: f32) -> impl IntoElement {
         .h(px(height))
         .rounded(px(height / 2.0))
         .bg(tokens::system_gray5)
+}
+
+/// The props of [`Toast`].
+#[derive(Debug, Clone, PartialEq, Props)]
+pub struct ToastProps {
+    /// The line that says what happened: 17 pt semibold.
+    pub title: Prop<Option<SharedString>>,
+    /// A detail under it: 13 pt in the secondary label. It wraps; Cohub Mobile
+    /// clamps it at two lines, which this does not yet.
+    pub message: Prop<Option<SharedString>>,
+    /// `neutral` (the default), `success` or `danger`. A danger toast takes a
+    /// red border.
+    pub tone: Prop<Option<SharedString>>,
+    /// A text action at the trailing edge, by its title (none leaves it out).
+    pub action: Prop<Option<SharedString>>,
+    /// The icon or mascot at the leading edge, drawn by the caller.
+    pub children: Prop<Children>,
+}
+
+/// The events of a [`Toast`].
+#[derive(Debug, Clone, PartialEq, Event)]
+pub enum ToastEvent {
+    /// The action was pressed.
+    Action,
+}
+
+/// A short confirmation or failure on the floating surface, 20 pt corners and
+/// a soft shadow: a leading icon, a title and an optional message and action.
+///
+/// It takes no position: the screen or a layer places it, with the margins
+/// it needs above the tab bar.
+#[component]
+pub fn Toast(props: ToastProps, cx: Scope<ToastEvent>) -> impl IntoElement {
+    let title = props.title;
+    let message = props.message;
+    let tone = props.tone;
+    let danger = move || tone.get().as_deref() == Some("danger");
+    view()
+        .flex_row()
+        .items_center()
+        .gap(px(12.0))
+        .px(px(16.0))
+        .py(px(12.0))
+        .rounded(px(radius::GROUP.0))
+        .bg(|| tokens::system("tertiary-system-background"))
+        .shadow([nsh_core::BoxShadow {
+            offset_y: px(6.0),
+            blur: px(20.0),
+            color: rgba(0x0000_0024).into(),
+            ..nsh_core::BoxShadow::default()
+        }])
+        .when(danger(), |v| v.border(px(1.0)).border_color(tokens::danger))
+        .child(props.children)
+        .child(
+            view()
+                .flex_1()
+                .min_w(px(0.0))
+                .flex_col()
+                .gap(px(1.0))
+                .child(
+                    text(move || title.get().unwrap_or_default())
+                        .text_size(type_default::HEADLINE.size)
+                        .line_height(type_default::HEADLINE.line_height)
+                        .font_weight(FontWeight(600))
+                        .text_color(tokens::label)
+                        .truncate(),
+                )
+                .when_some(message.get_untracked(), |v, _| {
+                    v.child(
+                        text(move || message.get().unwrap_or_default())
+                            .text_size(type_default::FOOTNOTE.size)
+                            .line_height(type_default::FOOTNOTE.line_height)
+                            .text_color(tokens::secondary_label),
+                    )
+                }),
+        )
+        .when_some(props.action.get_untracked(), move |v, label| {
+            v.child(
+                nsh_base::button()
+                    .min_h(px(44.0))
+                    .px(px(8.0))
+                    .items_center()
+                    .justify_center()
+                    .role(AccessibilityRole::Button)
+                    .accessibility_label(label.clone())
+                    .active(|s| s.opacity(0.4))
+                    .on_press(move || cx.emit(ToastEvent::Action))
+                    .child(
+                        text(label)
+                            .text_size(type_default::HEADLINE.size)
+                            .line_height(type_default::HEADLINE.line_height)
+                            .font_weight(FontWeight(600))
+                            .text_color(tokens::system_blue),
+                    ),
+            )
+        })
 }

@@ -19,7 +19,7 @@ Notes
 - The banner has no margins: the screen places it. Cohub Mobile's is 16 pt in from
   each edge.
 - The retry target is a 44 pt button with the `Retry` label for screen readers.
-- The fill is `danger-soft` and the message `system-red`: both follow the preset.
+- The fill is `danger-soft`, and the message and retry glyph are `danger`: both follow the preset.
 
 ## Accessibility
 

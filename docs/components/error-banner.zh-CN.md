@@ -16,7 +16,7 @@
 
 - 横幅没有外边距，由页面安排位置。Cohub Mobile 的横幅与两侧各相距 16 pt。
 - 重试目标是 44 pt 的按钮，无障碍标签为 `Retry`。
-- 底色为 `danger-soft`，消息为 `system-red`，两者都跟随预设。
+- 底色为 `danger-soft`，消息与重试图标为 `danger`，两者都跟随预设。
 
 ## 无障碍
 
