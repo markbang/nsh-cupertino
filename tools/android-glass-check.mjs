@@ -421,6 +421,18 @@ for (const scheme of SCHEMES) {
     }
     return median(values);
   };
+  // The page at the pill's own height, just left of it: a row of the list at a
+  // fixed height can be a separator or a grey card, and then the reference is wrong.
+  const pageBeside = (image, cx, cy) => {
+    const scale = scaleOf(image);
+    const values = [];
+    for (let y = Math.round(cy - 40 * scale); y <= Math.round(cy + 40 * scale); y += 3) {
+      for (let x = Math.round(8 * scale); x <= Math.round(28 * scale); x += 3) {
+        values.push(image.luminance(x, y));
+      }
+    }
+    return median(values);
+  };
   for (const scheme of SCHEMES) {
     const image = must(`rows-scrolled-${scheme}`);
     if (!image) continue;
@@ -480,12 +492,12 @@ for (const scheme of SCHEMES) {
       }
     }
     if (count < 40) {
-      fail(`rows-tabmin-${scheme}.png has no pill icon to measure`);
+      fail(`rows-tabmin-${scheme}.png has no pill icon to measure: no blue mail icon in the bottom 12 % of the frame, left of centre (${count} pixels)`);
       continue;
     }
     const cx = sumX / count;
     const cy = sumY / count;
-    const page = pageAt(image);
+    const page = pageBeside(image, cx, cy);
     const ring = [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]].map(
       ([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)),
     );
