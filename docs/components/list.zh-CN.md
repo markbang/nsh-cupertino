@@ -30,7 +30,7 @@ header/footer 色的 13 pt 脚注、52 pt 行（带副标题 57 pt）、17 pt �
 
 | TSX | Rust | 类型 | 默认值 | |
 | --- | --- | --- | --- | --- |
-| `header` | `.header(..)` | `string` | 无 | 13 pt 粗体、secondary label，距边缘 32 pt，上方 16 pt、下方 10 pt |
+| `header` | `.header(..)` | `string` | 无 | 13 pt 半粗体（semibold）、secondary label，距边缘 32 pt，上方 16 pt、下方 10 pt |
 | `footer` | `.footer(..)` | `string` | 无 | 13 pt、header/footer 色，下方 10 pt |
 | `children` | `.child(..)` | JSX | — | 各行 |
 

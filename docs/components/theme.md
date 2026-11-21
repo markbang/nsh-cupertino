@@ -101,6 +101,22 @@ Rust: `TypeScale::from_theme()` returns the eleven steps as `TextStyle`
 (`size`, `line_height`, `weight`, `tracking`), each read from the theme so an app
 can change one. The steps' tracking follows SF Pro's: +0.38 at 34 pt, −0.41 at 17.
 
+## The face in the demo and the screenshots
+
+On the Apple platforms the library sets no face: text uses the system font, SF Pro
+on iOS and macOS, and the type scale above is drawn for it. SF Pro is not shipped
+(its licence does not allow it). The demo app and its catalog screenshots use Inter
+instead, under the SIL Open Font License (`examples/demo/fonts/`, licence in
+`OFL.txt`), as the stand-in for the iOS reference's face. Only the demo sets it
+(`font-sans` in `examples/demo/nsh.json`); the library's defaults and the web
+target's system stack do not change.
+
+So a comparison with the iOS reference differs in width and ink for a reason that is
+not the component: the render font. At the same size Inter is wider than SF Pro
+(17 pt "Appearance": 173 px against the reference's 164 px, +5 %), and its vertical
+metrics put a line a few pixels off. Weights follow the reference: section headers
+are semibold, as the reference draws them.
+
 ## Accessibility
 
 - Colors meet contrast in light and dark; the high-contrast set follows the values

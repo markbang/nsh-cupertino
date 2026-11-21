@@ -57,7 +57,7 @@ pub fn List(props: ListProps) -> impl IntoElement {
 /// The props of [`Section`].
 #[derive(Debug, Clone, PartialEq, Props)]
 pub struct SectionProps {
-    /// The group's heading: 13 pt bold, in the secondary label color, at 32 pt
+    /// The group's heading: 13 pt semibold, in the secondary label color, at 32 pt
     /// from the screen's edge.
     pub header: Prop<Option<SharedString>>,
     /// A note under the group, 13 pt in the header/footer color.
@@ -89,7 +89,7 @@ pub fn Section(props: SectionProps) -> impl IntoElement {
                         text(move || header.get().unwrap_or_default())
                             .text_size(px(metrics::SECTION_HEADER_SIZE))
                             .line_height(px(metrics::SECTION_HEADER_SIZE * 1.2))
-                            .font_weight(FontWeight::BOLD)
+                            .font_weight(FontWeight(600))
                             .text_color(tokens::secondary_label)
                             .role(AccessibilityRole::Header)
                             .accessibility_level(2),
