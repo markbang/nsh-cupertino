@@ -122,23 +122,6 @@ shot() {
   adb logcat -d -s nsh:V AndroidRuntime:E >> "$LOGCAT" 2>/dev/null || true
 }
 
-# Waits until the screen stops changing: two captures half a second apart that
-# are byte-identical. The minimise spring moves the bar for longer than any fixed
-# delay on a software GPU, so a frame taken after `sleep` can catch the bar
-# mid-way (the flake in `tools/android-glass-check.mjs`'s tabmin check).
-settle() {
-  local previous="" current attempt
-  for attempt in $(seq 1 20); do
-    sleep 0.5
-    current=$(adb exec-out screencap -p | md5sum)
-    if [ "$current" = "$previous" ]; then
-      return 0
-    fi
-    previous=$current
-  done
-  step "the screen did not hold still within 10 s; capturing anyway"
-}
-
 # A finger that drags the page by `$1` pixels and lifts, then the settle.
 scroll_by() {
   adb shell input swipe 540 1600 540 $((1600 - $1)) 600 >/dev/null
@@ -149,24 +132,6 @@ scroll_by() {
 scroll_up_by() {
   adb shell input swipe 540 $((1600 - $1)) 540 1600 600 >/dev/null
   sleep 1
-}
-
-# The bar minimises on the downward swipe. A swipe that did not register leaves
-# it expanded, so the settled frame is checked for the bar's rim (the probe in
-# `tools/android-bar.mjs`, the one the checker reads), and the swipe is repeated
-# once when the rim is still there. Logged either way.
-minimised_shot() {
-  local name=$1
-  shot "$name"
-  if node "$here/tools/android-bar.mjs" --expanded "$OUT/android-glass-$name.png" >/dev/null 2>&1; then
-    step "$name: the bar is still expanded after the swipe; swiping once more"
-    scroll_by 500
-    settle
-    shot "$name"
-    if node "$here/tools/android-bar.mjs" --expanded "$OUT/android-glass-$name.png" >/dev/null 2>&1; then
-      step "$name: still expanded after the second swipe; the checker will judge the frame"
-    fi
-  fi
 }
 
 # One appearance at a time. Every state is seeded (`cupertino.page`,
@@ -187,8 +152,8 @@ capture() {
   # Further down the tab bar minimizes to its selected tab; a drag back up
   # expands it again, which is the state the material is measured in.
   scroll_by 500
-  settle
-  minimised_shot "tabmin-$scheme"
+  sleep 1
+  shot "tabmin-$scheme"
   scroll_up_by 320
   sleep 1
   shot "scrolled-$scheme"
@@ -201,8 +166,8 @@ capture() {
   adb shell input tap 906 2221 >/dev/null
   sleep 1
   scroll_by 900
-  settle
-  minimised_shot "tabmin-settings-$scheme"
+  sleep 2
+  shot "tabmin-settings-$scheme"
 
   # The glass sheet, seeded open at launch — the seed a screenshot test uses.
   # Its window takes seconds to draw on a software GPU.
@@ -224,7 +189,7 @@ capture() {
   sleep 1
   shot "rows-scrolled-$scheme"
   scroll_by 500
-  settle
+  sleep 2
   shot "rows-tabmin-$scheme"
 
   local mode
