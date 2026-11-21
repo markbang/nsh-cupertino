@@ -75,7 +75,7 @@
 | `components/ContextMenu.tsx` | `context_menu.rs:104` ContextMenu、`context_menu.rs` min-h 44、px 14、圆角 9、gap 12 | partial | 宽度最小 180 最大 280，预览 320，行高 48（`ContextMenu.tsx:11-14`），行 `min-h-12 px-4 gap-3`（`:72`） | 行高 48 对 44，内边距 16 对 14。 |
 | `components/NativeContextMenu.ios.tsx`、`NativeMenu.ios.tsx` | `context_menu.rs`、`action_sheet.rs` | unchecked | 菜单层的 iOS 分支 | 未细读。 |
 | `components/ComposerMenu.tsx`、`AttachmentMenu.tsx`、`ModelSelectorMenu.tsx`、`SlashCommandMenu.tsx`、`SpaceMentionMenu.tsx`、`ExecutionHarnessMenu.tsx` | `context_menu.rs` | partial | 菜单家族，基于锚定菜单和上下文菜单 | 与上面各行的差距相同。 |
-| `modules/cohub-glass-menu`（变形菜单） | 无 | missing | 菜单圆角 33（`motion.ts:116`），面板圆角 28，预热 800 ms。玻璃配方（`GlassRecipe.kt`）：MenuLight tint `.975`、alpha `.5` | 没有变形玻璃菜单。 |
+| `modules/cohub-glass-menu`（变形菜单） | 无 | missing | 菜单圆角 33（`motion.ts:116`），面板圆角 28，预热 800 ms。玻璃配方（`GlassRecipe.kt`）：MenuLight tint `.975`、alpha `.5` | 没有变形玻璃菜单。iOS 片段 `motion-menu.mp4`（30 fps，iOS 侧 442 px = 402 pt）：源玻璃胶囊（第 0–4 帧，mask 218 × 302 px ≈ 198 × 275 pt）在一帧内跳到 294 × 444 px 的面板（第 5 帧），保持到第 8 帧，第 9 帧落定为菜单（mask 296 × 426 px，可见宽 274 px ≈ 249 pt，即 `min_w` 250）。收起：面板在第 59–64 帧淡出并缩小（约 0.13 s）。面板圆角约 28 pt（对 mask 做圆拟合，±3 pt）。边界由 `tools/measure-menu-morph.py` 得出，阴影偏差约 8 px。叠在色条上的白色混合为 0.6–0.7，叠在奶油底上为 0.17：玻璃不是单纯的白色染色。染色、边缘光与按压未测。 |
 | 设置页：`SettingsScreen.tsx`、`SettingsHomeScreen.tsx`、`AboutScreen.tsx`、`AppearanceScreen.tsx`、`LanguageScreen.ios.tsx`、`StorageSettingsScreen.ios.tsx` | `list.rs`、`theme.rs` | partial | 外观页用主题预览卡片和主色色块 | 没有预览卡片和色块。其他页只有行和分组。 |
 
 ## 5. 聊天时间线（`modules/cohub-chat-timeline` 与 `components/timeline`）
