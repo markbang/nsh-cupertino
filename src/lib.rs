@@ -30,6 +30,7 @@ pub mod context_menu;
 pub mod date_picker;
 pub mod field;
 pub mod glass;
+pub mod glass_menu;
 pub mod icon;
 pub mod icon_view;
 pub mod indicator;
@@ -75,6 +76,7 @@ pub use glass::{
     GlassGroup, GlassGroupElement, GlassGroupProps, GlassProps, GlassQuality, GlassRect, GlassSpec,
     GlassVariant, glass, glass_button, glass_group, source as glass_source,
 };
+pub use glass_menu::{GlassMenu, GlassMenuElement, GlassMenuEvent, GlassMenuProps, glass_menu};
 pub use icon::{NAMES as ICON_NAMES, icon, icon_stroke, svg_markup};
 pub use icon_view::{Icon, IconProps};
 pub use indicator::{
@@ -158,6 +160,7 @@ fn native(registry: &mut Registry) {
         .register::<Glass>()
         .register::<GlassButton>()
         .register::<GlassGroup>()
+        .register::<GlassMenu>()
         .register::<GlassTabBar>()
         .register::<ScrollEdge>();
 }

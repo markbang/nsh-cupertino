@@ -1,0 +1,773 @@
+//! [`GlassMenu`]: a glass button whose shape grows into the menu it opens,
+//! as iOS 26's pull-down menus do.
+//!
+//! The motion is fitted to the iOS reference clip
+//! `research/ios-reference/motion/motion-menu.mp4` (`tools/fit-glass-menu.py`):
+//! the shape's size and horizontal place on one spring, a separate drop that
+//! carries it down and back, corners that stay round until late, the items
+//! fading in once the shape is nearly there, and a close that holds, then
+//! shrinks to 0.94 and fades.
+
+use std::time::Duration;
+
+use nsh_base::{PopoverEvent, popover};
+use nsh_core::{
+    AccessibilityRole, TransformKind,
+    animation::{Driver, sample_driver},
+    element::{AnimatedNode, ElementRef, Timing, reduce_motion},
+    prelude::*,
+};
+
+use crate::{
+    context_menu::ContextAction,
+    glass::{self, GlassSpec, GlassVariant, Press},
+    icon::icon,
+    tokens::{self, type_default},
+};
+
+/// The open panel's corner radius, in points (the iOS reference, ±3 pt).
+pub(crate) const RADIUS: f32 = 28.0;
+
+/// Room around the panel for the glass to overshoot into, in points.
+const PAD: f32 = 24.0;
+
+/// The panel's top sits this far up from the button's bottom: on the
+/// button's centre line, where the iOS menu opens (a 44 pt button).
+const OVERLAP: f32 = 22.0;
+
+/// The timing of the morph, all fitted to the iOS clip; times in ms from the
+/// press.
+pub(crate) mod motion {
+    use nsh_core::element::{Easing, Spring, Timing};
+
+    use crate::overlay::spring;
+
+    /// The shape's width, height and horizontal centre: ζ 0.76, k 380.
+    pub(crate) fn shape() -> Spring {
+        spring(0.76, 380.0)
+    }
+
+    /// The drop, in points: `DROP_PT` × (fast − slow), two critically damped
+    /// springs released together. Their gap is a bump: 69 pt at about
+    /// 100 ms, under 1 pt after 500 ms.
+    pub(crate) const DROP_PT: f32 = 380.0;
+
+    /// The drop's fast and slow springs.
+    pub(crate) fn drop() -> [Spring; 2] {
+        [spring(1.0, 540.0), spring(1.0, 270.0)]
+    }
+
+    /// The corners: a capsule's until 180 ms, the panel's 28 pt by 410 ms.
+    pub(crate) fn corners() -> Timing {
+        Timing {
+            delay_ms: 180.0,
+            ..Timing::new(230.0, Easing::EaseInOut)
+        }
+    }
+
+    /// The items fade in once the shape is nearly there: none at 107 ms in
+    /// the clip, all of them by 274 ms.
+    pub(crate) fn items() -> Timing {
+        Timing {
+            delay_ms: 110.0,
+            ..Timing::new(140.0, Easing::EaseOut)
+        }
+    }
+
+    /// The close: it holds for 70 ms, then fades over 60 ms.
+    pub(crate) fn close_fade() -> Timing {
+        Timing {
+            delay_ms: 70.0,
+            ..Timing::new(60.0, Easing::EaseIn)
+        }
+    }
+
+    /// The close's shrink to `CLOSE_SCALE`, with its shift, after the same
+    /// hold.
+    pub(crate) fn close_shrink() -> Timing {
+        Timing {
+            delay_ms: 70.0,
+            ..Timing::new(30.0, Easing::EaseOut)
+        }
+    }
+
+    /// The scale the close shrinks to.
+    pub(crate) const CLOSE_SCALE: f32 = 0.94;
+    /// How far the close moves it down and across, in points.
+    pub(crate) const CLOSE_SHIFT: [f32; 2] = [-5.0, 17.0];
+    /// The whole close, in ms: then the menu is gone.
+    pub(crate) const CLOSE_MS: f32 = 130.0;
+
+    /// Reduce Motion: a cross-fade of this long, in and out.
+    pub(crate) fn fade() -> Timing {
+        Timing::new(150.0, Easing::EaseOut)
+    }
+}
+
+/// The value a driver moves `from` to, `ms` after it starts: the curve the
+/// platform runs ([`sample_driver`]).
+pub(crate) fn value_at(driver: Driver, from: f32, ms: f32) -> f32 {
+    if ms <= 0.0 {
+        return from;
+    }
+    let samples = sample_driver(driver, from, f64::from(ms) / 1000.0, 2);
+    samples.last().copied().unwrap_or(from)
+}
+
+pub(crate) fn spring_driver(spring: Spring, to: f32) -> Driver {
+    Driver::Spring {
+        to,
+        stiffness: spring.stiffness,
+        damping: spring.damping,
+        mass: spring.mass,
+        velocity: spring.velocity,
+        frame_rate: spring.frame_rate,
+    }
+}
+
+pub(crate) fn timing_driver(timing: Timing, to: f32) -> Driver {
+    Driver::Timing {
+        to,
+        duration_ms: timing.duration_ms,
+        easing: timing.easing,
+        delay_ms: timing.delay_ms,
+        frame_rate: timing.frame_rate,
+    }
+}
+
+/// The props of [`GlassMenu`].
+#[derive(Debug, Clone, PartialEq, Props)]
+pub struct GlassMenuProps {
+    /// The button's icon, by name ([`crate::icon::NAMES`]); `ellipsis`
+    /// unless set.
+    pub icon: Prop<Option<SharedString>>,
+    /// What screen readers call the button (`More` unless set).
+    pub label: Prop<Option<SharedString>>,
+    /// Its items, in one group.
+    #[prop(default)]
+    pub actions: Prop<Vec<ContextAction>>,
+    /// `"start"` (the default) lines the menu up with the button's leading
+    /// edge, `"end"` with its trailing one.
+    pub align: Prop<Option<SharedString>>,
+    /// Open (controlled): the app owns it and follows `onOpenChange`.
+    pub open: Prop<Option<bool>>,
+    /// Holds the opening still this many milliseconds after the press, for
+    /// frame-by-frame comparisons; not for apps.
+    #[doc(hidden)]
+    pub frame_ms: Prop<Option<f32>>,
+    /// Holds it open, this many milliseconds into its close; not for apps.
+    #[doc(hidden)]
+    pub close_frame_ms: Prop<Option<f32>>,
+}
+
+/// The events of a [`GlassMenu`].
+#[derive(Debug, Clone, PartialEq, Event)]
+pub enum GlassMenuEvent {
+    /// It asks to open or close: set `open` to follow.
+    #[args(open)]
+    OpenChange(bool),
+    /// The item with this `id` was chosen.
+    #[args(id)]
+    Action(String),
+}
+
+/// The animated values of one menu.
+#[derive(Clone, Copy)]
+struct Morph {
+    /// The shape, 0 (the button) to 1 (the panel).
+    grow: AnimatedValue,
+    /// The drop's springs.
+    fast: AnimatedValue,
+    slow: AnimatedValue,
+    /// 1: a capsule's corners, 0: the panel's.
+    round: AnimatedValue,
+    /// The items' opacity.
+    items: AnimatedValue,
+    /// The whole menu's opacity.
+    fade: AnimatedValue,
+    /// The close, 0 to 1.
+    shrink: AnimatedValue,
+    /// The button's centre from the panel's, and its size over the panel's
+    /// less one, set at each opening: what the items and the fallback move
+    /// and scale by.
+    dx: AnimatedValue,
+    dy: AnimatedValue,
+    sx: AnimatedValue,
+    sy: AnimatedValue,
+    /// The button: hidden while its shape is the menu's.
+    button: AnimatedValue,
+}
+
+impl Morph {
+    fn new() -> Self {
+        Self {
+            grow: animated_value(0.0),
+            fast: animated_value(0.0),
+            slow: animated_value(0.0),
+            round: animated_value(1.0),
+            items: animated_value(0.0),
+            fade: animated_value(0.0),
+            shrink: animated_value(0.0),
+            dx: animated_value(0.0),
+            dy: animated_value(0.0),
+            sx: animated_value(0.0),
+            sy: animated_value(0.0),
+            button: animated_value(1.0),
+        }
+    }
+
+    /// 1 − grow: how far the shape still is from the panel.
+    fn left(&self) -> AnimatedNode {
+        self.grow.mul(-1.0).add(1.0)
+    }
+
+    /// The items' and the fallback's place and scale on the shape now.
+    fn follow_x(&self) -> AnimatedNode {
+        self.left().mul(&self.dx)
+    }
+
+    fn follow_y(&self) -> AnimatedNode {
+        self.left().mul(&self.dy)
+    }
+
+    fn scale_x(&self) -> AnimatedNode {
+        self.left().mul(&self.sx).add(1.0)
+    }
+
+    fn scale_y(&self) -> AnimatedNode {
+        self.left().mul(&self.sy).add(1.0)
+    }
+
+    /// The panel's own move: the drop while it opens, the shift while it
+    /// closes.
+    fn shift_x(&self) -> AnimatedNode {
+        self.shrink.mul(motion::CLOSE_SHIFT[0])
+    }
+
+    fn shift_y(&self) -> AnimatedNode {
+        self.fast
+            .sub(&self.slow)
+            .mul(motion::DROP_PT)
+            .add(&self.shrink.mul(motion::CLOSE_SHIFT[1]))
+    }
+
+    fn scale(&self) -> AnimatedNode {
+        self.shrink
+            .interpolate(&[0.0, 1.0], &[1.0, motion::CLOSE_SCALE])
+    }
+
+    /// The opening, from the button to the panel; held at `frame` ms when
+    /// given, or open and `close` ms into its close.
+    fn open(&self, frame: Option<f32>, close: Option<f32>) {
+        if let Some(ms) = close {
+            self.open(Some(10_000.0), None);
+            let fade = timing_driver(motion::close_fade(), 0.0);
+            let shrink = timing_driver(motion::close_shrink(), 1.0);
+            self.fade.set(value_at(fade, 1.0, ms));
+            self.shrink.set(value_at(shrink, 0.0, ms));
+            return;
+        }
+        self.shrink.set(0.0);
+        self.button.set(0.0);
+        if reduce_motion() {
+            self.grow.set(1.0);
+            self.round.set(0.0);
+            self.items.set(1.0);
+            self.fast.set(0.0);
+            self.slow.set(0.0);
+            self.fade.set(0.0);
+            let _ = self.fade.timing_with(1.0, motion::fade());
+            return;
+        }
+        self.fade.set(1.0);
+        let [fast, slow] = motion::drop();
+        let moves = [
+            (self.grow, 0.0, 1.0, Move::Spring(motion::shape())),
+            (self.fast, 0.0, 1.0, Move::Spring(fast)),
+            (self.slow, 0.0, 1.0, Move::Spring(slow)),
+            (self.round, 1.0, 0.0, Move::Timing(motion::corners())),
+            (self.items, 0.0, 1.0, Move::Timing(motion::items())),
+        ];
+        for (value, from, to, how) in moves {
+            match (frame, how) {
+                (Some(ms), how) => value.set(value_at(how.driver(to), from, ms)),
+                (None, Move::Spring(spring)) => {
+                    value.set(from);
+                    let _ = value.spring(to, spring);
+                }
+                (None, Move::Timing(timing)) => {
+                    value.set(from);
+                    let _ = value.timing_with(to, timing);
+                }
+            }
+        }
+    }
+
+    /// The close: hold, shrink and fade (a fade alone with Reduce Motion).
+    fn close(&self) {
+        if reduce_motion() {
+            let _ = self.fade.timing_with(0.0, motion::fade());
+            return;
+        }
+        let _ = self.fade.timing_with(0.0, motion::close_fade());
+        let _ = self.shrink.timing_with(1.0, motion::close_shrink());
+    }
+
+    /// Gone: the button shows its glass again.
+    fn closed(&self) {
+        self.fade.set(0.0);
+        if reduce_motion() {
+            self.button.set(1.0);
+        } else {
+            let _ = self.button.timing_with(1.0, motion::fade());
+        }
+    }
+}
+
+/// How a value of the morph moves.
+#[derive(Clone, Copy)]
+enum Move {
+    Spring(Spring),
+    Timing(Timing),
+}
+
+impl Move {
+    fn driver(self, to: f32) -> Driver {
+        match self {
+            Move::Spring(spring) => spring_driver(spring, to),
+            Move::Timing(timing) => timing_driver(timing, to),
+        }
+    }
+}
+
+/// A glass button that opens a menu out of its own shape, anchored to it on
+/// phones and desktops alike.
+///
+/// A press opens it: the button's glass grows into the panel, with 28 pt
+/// corners, and the items fade in after the shape. A press outside, Escape,
+/// the Android back button or a chosen item close it: it holds a moment,
+/// then shrinks to 0.94 and fades. The keyboard focus moves to the first
+/// item when it opens and back to the button when it closes (desktops);
+/// screen readers hear a menu of menuitems and the button's expanded state.
+/// Reduce Motion cross-fades it.
+#[component]
+pub fn GlassMenu(props: GlassMenuProps, cx: Scope<GlassMenuEvent>) -> impl IntoElement {
+    let own = signal(false);
+    let controlled = props.open;
+    let wanted = computed(move || controlled.get().unwrap_or_else(|| own.get()));
+    let request = move |next: bool| {
+        if controlled.get_untracked().is_none() {
+            own.set(next);
+        }
+        cx.emit(GlassMenuEvent::OpenChange(next));
+    };
+
+    let morph = Morph::new();
+    let frame = props.frame_ms;
+    let close_frame = props.close_frame_ms;
+    // The popover is up from the press until the close has run.
+    let mounted = signal(false);
+    let closing = signal(false);
+    let started = stored(false);
+    // Each close is one generation: a reopening cancels the one before.
+    let generation = stored(0_u32);
+    let from = signal([0.0_f32, 0.0, 44.0, 44.0]);
+    let to = signal([0.0_f32; 4]);
+    let button_ref = element_ref();
+    let first_item = element_ref();
+
+    effect(move || {
+        let wanted = wanted.get();
+        untracked(|| {
+            if wanted {
+                generation.replace(generation.get() + 1);
+                if closing.get() {
+                    // Opened again while it went: back as it is now.
+                    closing.set(false);
+                    morph.shrink.set(0.0);
+                    morph.fade.set(1.0);
+                } else if !mounted.get() {
+                    started.replace(false);
+                    mounted.set(true);
+                }
+            } else if mounted.get() && !closing.get() {
+                closing.set(true);
+                morph.close();
+                let this = generation.get();
+                set_timeout(
+                    Duration::from_millis(motion::CLOSE_MS as u64 + 20),
+                    move || {
+                        if generation.get() == this && closing.get_untracked() {
+                            closing.set(false);
+                            mounted.set(false);
+                            morph.closed();
+                        }
+                    },
+                );
+            }
+        });
+    });
+
+    // The panel is placed: measure the button and start from its shape.
+    let placed = move |bounds: Bounds<Points>| {
+        if started.get() {
+            return;
+        }
+        started.replace(true);
+        let size = bounds.size;
+        spawn(async move {
+            let Some(button) = button_ref.measure().await else {
+                morph.open(frame.get_untracked(), close_frame.get_untracked());
+                return;
+            };
+            let (w, h) = (size.width.0.max(1.0), size.height.0.max(1.0));
+            let (bw, bh) = (
+                button.frame.size.width.0.max(1.0),
+                button.frame.size.height.0.max(1.0),
+            );
+            let x = button.page.x.0 - bounds.origin.x.0;
+            let y = button.page.y.0 - bounds.origin.y.0;
+            from.set([x + PAD, y + PAD, bw, bh]);
+            to.set([PAD, PAD, w, h]);
+            morph.dx.set(x + bw / 2.0 - w / 2.0);
+            morph.dy.set(y + bh / 2.0 - h / 2.0);
+            morph.sx.set(bw / w - 1.0);
+            morph.sy.set(bh / h - 1.0);
+            morph.open(frame.get_untracked(), close_frame.get_untracked());
+        });
+    };
+
+    let label = props
+        .label
+        .get_untracked()
+        .unwrap_or_else(|| SharedString::from("More"));
+    let icon_name = props
+        .icon
+        .get_untracked()
+        .unwrap_or_else(|| SharedString::from("ellipsis"));
+    let press = Press::new();
+    let (held, released) = (press, press);
+    let trigger = nsh_base::button()
+        .relative()
+        .w(px(44.0))
+        .h(px(44.0))
+        .rounded_full()
+        .items_center()
+        .justify_center()
+        .accessibility_label(label)
+        .role(AccessibilityRole::Button)
+        .bind_scale(&press.scale())
+        .on_press_down(move || held.down())
+        .on_press_up(move || released.up())
+        .child(
+            view()
+                .absolute()
+                .inset_0()
+                .bind_opacity(&morph.button)
+                .child(glass::layer(
+                    GlassSpec::capsule().variant(GlassVariant::Interactive),
+                    Some(press),
+                )),
+        )
+        .child(
+            view()
+                .element_ref(&button_ref)
+                .absolute()
+                .inset_0()
+                .items_center()
+                .justify_center()
+                .pointer_events(PointerEvents::None)
+                .bind_opacity(&morph.button)
+                .child(icon(&icon_name, 20.0).text_color(tokens::label())),
+        );
+
+    let actions = props.actions;
+    let align = match props.align.get_untracked().as_deref() {
+        Some("end") => Align::End,
+        _ => Align::Start,
+    };
+
+    popover()
+        .open(move || Some(mounted.get()))
+        .placement(Placement::Bottom)
+        .align(align)
+        .offset(px(-OVERLAP))
+        .margin(px(16.0))
+        .on_open_change(move |event: &PopoverEvent| {
+            if let PopoverEvent::OpenChange(next, _) = event {
+                request(*next);
+            }
+        })
+        .on_open(move || first_item.focus())
+        .on_position(move |event: &PopoverEvent| {
+            if let PopoverEvent::Position(_, bounds, _) = event {
+                placed(*bounds);
+            }
+        })
+        .trigger(trigger)
+        .children([panel(
+            morph,
+            from,
+            to,
+            first_item,
+            actions.get_untracked(),
+            closing,
+            move |id: SharedString| {
+                cx.emit(GlassMenuEvent::Action(id.to_string()));
+                request(false);
+            },
+        )])
+}
+
+/// The open menu: its glass, growing out of the button's, and its items.
+fn panel(
+    morph: Morph,
+    from: Signal<[f32; 4]>,
+    to: Signal<[f32; 4]>,
+    first_item: ElementRef,
+    actions: Vec<ContextAction>,
+    closing: Signal<bool>,
+    chosen: impl Fn(SharedString) + Clone + 'static,
+) -> AnyElement {
+    let spec = GlassSpec::rounded(RADIUS)
+        .blur(tokens::glass::BAR_BLUR)
+        .shadow(PAD, 0.12)
+        .grow(
+            from,
+            to,
+            RADIUS,
+            morph.grow.animated_node(),
+            morph.round.animated_node(),
+        );
+    // With the shader, the glass draws the growing shape in a box with room
+    // around the panel. Without it, the material's fill is scaled from the
+    // button's box instead: its corners scale with it.
+    let material = when(glass::shader_draws, move || {
+        view()
+            .absolute()
+            .top(px(-PAD))
+            .left(px(-PAD))
+            .right(px(-PAD))
+            .bottom(px(-PAD))
+            .child(glass::layer(spec.clone(), None))
+    })
+    .otherwise(move || {
+        view()
+            .absolute()
+            .inset_0()
+            .rounded(px(RADIUS))
+            .bg(move || tokens::materials::fill("regular", nsh_core::element::dark(), false))
+            .backdrop_blur(tokens::materials::blur("regular"))
+            .bind_translate_x(&morph.follow_x())
+            .bind_translate_y(&morph.follow_y())
+            .bind_transform(TransformKind::ScaleX, &morph.scale_x())
+            .bind_transform(TransformKind::ScaleY, &morph.scale_y())
+    });
+
+    let mut items = view()
+        .p(px(6.0))
+        .min_w(px(250.0))
+        .bind_opacity(&morph.items)
+        .bind_translate_x(&morph.follow_x())
+        .bind_translate_y(&morph.follow_y())
+        .bind_scale(&morph.scale_x());
+    let count = actions.len();
+    let mut focus_set = false;
+    for (index, action) in actions.into_iter().enumerate() {
+        let id = action.id.clone();
+        let destructive = action.destructive;
+        let color = move || {
+            if destructive {
+                tokens::system_red()
+            } else {
+                tokens::label()
+            }
+        };
+        let chosen = chosen.clone();
+        let mut row = nsh_base::button()
+            .role(AccessibilityRole::Menuitem)
+            .accessibility_label(action.title.clone())
+            .disabled(action.disabled)
+            .flex_row()
+            .items_center()
+            .gap(px(12.0))
+            .min_h(px(44.0))
+            .px(px(14.0))
+            .rounded(px(RADIUS - 6.0))
+            .active(|s| s.bg(tokens::fill))
+            .pointer_events(move || {
+                if closing.get() {
+                    PointerEvents::None
+                } else {
+                    PointerEvents::Auto
+                }
+            })
+            .on_press(move || chosen(id.clone()))
+            .child(
+                view()
+                    .w(px(22.0))
+                    .items_center()
+                    .child(match action.icon.clone() {
+                        Some(name) => icon(&name, 20.0).text_color(color()).into_element(),
+                        None => view().into_element(),
+                    }),
+            )
+            .child(
+                text(action.title.clone())
+                    .flex_1()
+                    .text_size(type_default::BODY.size)
+                    .line_height(type_default::BODY.line_height)
+                    .text_color(color()),
+            );
+        if !focus_set && !action.disabled {
+            row = row.element_ref(&first_item);
+            focus_set = true;
+        }
+        items = items.child(row);
+        if index + 1 < count {
+            items = items.child(
+                view()
+                    .h(tokens::separator_thickness)
+                    .my(px(4.0))
+                    .mx(px(14.0))
+                    .bg(tokens::separator),
+            );
+        }
+    }
+
+    view()
+        .relative()
+        .role(AccessibilityRole::Menu)
+        .bind_opacity(&morph.fade)
+        .bind_translate_x(&morph.shift_x())
+        .bind_translate_y(&morph.shift_y())
+        .bind_scale(&morph.scale())
+        .child(material)
+        .child(items)
+        .into_element()
+}
+
+#[cfg(test)]
+mod tests {
+    //! The morph sampled every 30 ms, as the platform runs it
+    //! ([`sample_driver`]), against the curves fitted to the iOS clip
+    //! (`python3 tools/fit-glass-menu.py --rust` prints them), and the fit
+    //! against the clip's own frames.
+
+    use super::{motion, spring_driver, timing_driver, value_at};
+
+    /// The fitted curves at 0, 30, … 600 ms after the press.
+    const GROW: [f32; 21] = [
+        0.0000, 0.1264, 0.3708, 0.6099, 0.7941, 0.9152, 0.9836, 1.0154, 1.0251, 1.0235, 1.0177,
+        1.0114, 1.0063, 1.0028, 1.0008, 0.9998, 0.9994, 0.9994, 0.9995, 0.9997, 0.9998,
+    ];
+    const DROP: [f32; 21] = [
+        0.0000, 25.3600, 55.9111, 69.5780, 68.6496, 59.7355, 48.0661, 36.6794, 26.9473, 19.2448,
+        13.4485, 9.2388, 6.2606, 4.1955, 2.7859, 1.8359, 1.2021, 0.7828, 0.5074, 0.3275, 0.2107,
+    ];
+    const ROUNDNESS: [f32; 21] = [
+        1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 0.9661, 0.8591, 0.6819, 0.4626,
+        0.2523, 0.0969, 0.0148, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000,
+    ];
+    const ITEMS: [f32; 21] = [
+        0.0000, 0.0000, 0.0000, 0.0000, 0.1162, 0.4263, 0.6846, 0.8812, 0.9911, 1.0000, 1.0000,
+        1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000,
+    ];
+    /// The close at 0, 30, … 150 ms.
+    const CLOSE_OPACITY: [f32; 6] = [1.0000, 1.0000, 1.0000, 0.8438, 0.2603, 0.0000];
+    const CLOSE_SCALE: [f32; 6] = [1.0000, 1.0000, 1.0000, 0.9494, 0.9400, 0.9400];
+
+    /// The clip's panel at rest and the 44 pt button it grows from, in pt.
+    const REST: [f32; 4] = [250.1, 375.6, 139.6, 342.4];
+    const SOURCE: [f32; 4] = [44.0, 44.0, 29.1, 155.5];
+
+    fn grow(ms: f32) -> f32 {
+        value_at(spring_driver(motion::shape(), 1.0), 0.0, ms)
+    }
+
+    fn drop(ms: f32) -> f32 {
+        let [fast, slow] = motion::drop();
+        let fast = value_at(spring_driver(fast, 1.0), 0.0, ms);
+        let slow = value_at(spring_driver(slow, 1.0), 0.0, ms);
+        motion::DROP_PT * (fast - slow)
+    }
+
+    fn check(name: &str, expected: &[f32], tolerance: f32, actual: impl Fn(f32) -> f32) {
+        for (sample, want) in expected.iter().enumerate() {
+            let ms = 30.0 * sample as f32;
+            let got = actual(ms);
+            assert!(
+                (got - want).abs() <= tolerance,
+                "{name} at {ms} ms: {got:.4} against the fit's {want:.4} (±{tolerance})"
+            );
+        }
+    }
+
+    /// The shape: within 1 pt of the fit over the clip's 331.6 pt of height.
+    #[test]
+    fn the_shape_follows_the_fitted_spring_every_30_ms() {
+        check("the shape", &GROW, 1.0 / 331.6, grow);
+    }
+
+    #[test]
+    fn the_drop_follows_the_fitted_bump_every_30_ms() {
+        check("the drop (pt)", &DROP, 1.0, drop);
+    }
+
+    #[test]
+    fn the_corners_and_the_items_follow_the_fit_every_30_ms() {
+        check("the roundness", &ROUNDNESS, 0.01, |ms| {
+            value_at(timing_driver(motion::corners(), 0.0), 1.0, ms)
+        });
+        check("the items' opacity", &ITEMS, 0.01, |ms| {
+            value_at(timing_driver(motion::items(), 1.0), 0.0, ms)
+        });
+    }
+
+    #[test]
+    fn the_close_holds_then_shrinks_and_fades_within_130_ms() {
+        check("the close's opacity", &CLOSE_OPACITY, 0.01, |ms| {
+            value_at(timing_driver(motion::close_fade(), 0.0), 1.0, ms)
+        });
+        check("the close's scale", &CLOSE_SCALE, 0.002, |ms| {
+            let shrink = value_at(timing_driver(motion::close_shrink(), 1.0), 0.0, ms);
+            1.0 + (motion::CLOSE_SCALE - 1.0) * shrink
+        });
+        let fade = motion::close_fade();
+        let shrink = motion::close_shrink();
+        assert!(fade.delay_ms + fade.duration_ms <= motion::CLOSE_MS);
+        assert!(shrink.delay_ms + shrink.duration_ms <= motion::CLOSE_MS);
+    }
+
+    /// The fit against the clip's frames that differ (`tools/fit-glass-menu.py`):
+    /// width and centre within 4 pt and the centre's height within 6 pt;
+    /// height within 20 pt, as frame 0's blob has no sharp bottom over the
+    /// page (±8 px of shadow) and frame 5 is measured to 9 pt.
+    #[test]
+    fn the_fit_matches_the_ios_frames() {
+        // ms from the press; the panel's width, height, centre x and y in pt.
+        let frames: [(f32, [f32; 4]); 3] = [
+            (107.0, [190.1, 265.6, 111.4, 360.2]),
+            (273.7, [254.7, 392.0, 141.9, 363.3]),
+            (407.0, [250.6, 375.6, 139.8, 340.6]),
+        ];
+        for (ms, ios) in frames {
+            let p = grow(ms);
+            let shape: Vec<f32> = (0..4)
+                .map(|i| SOURCE[i] + (REST[i] - SOURCE[i]) * p)
+                .collect();
+            let model = [shape[0], shape[1], shape[2], shape[3] + drop(ms)];
+            for (i, (name, tolerance)) in [("width", 4.0), ("height", 20.0), ("x", 4.0), ("y", 6.0)]
+                .into_iter()
+                .enumerate()
+            {
+                assert!(
+                    (model[i] - ios[i]).abs() <= tolerance,
+                    "{name} at {ms} ms: {:.1} pt against iOS's {:.1} (±{tolerance})",
+                    model[i],
+                    ios[i]
+                );
+            }
+        }
+    }
+}

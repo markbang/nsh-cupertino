@@ -137,6 +137,7 @@ pub fn Settings() -> impl IntoElement {
 | [`ActionSheet`](docs/components/action-sheet.zh-CN.md) | 10 pt 圆角分组的操作与取消按钮 |
 | [`AlertDialog`](docs/components/alert-dialog.zh-CN.md) | iOS 警告框，支持按钮与输入框 |
 | [`ContextMenu`](docs/components/context-menu.zh-CN.md) | 长按/右键菜单，带抬起预览 |
+| [`GlassMenu`](docs/components/glass-menu.zh-CN.md) | 玻璃按钮的形状长成菜单，手机上也锚定在按钮旁 |
 | [`Picker`](docs/components/picker.zh-CN.md) | 吸附滚轮，边缘淡出 |
 | [`DatePicker`](docs/components/date-picker.zh-CN.md) | 日历、紧凑触发器与月/日/年滚轮 |
 | [`SegmentedControl`](docs/components/segmented-control.zh-CN.md) | 32 pt 胶囊轨道、滑动滑块，2–5 段 |

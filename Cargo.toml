@@ -40,6 +40,10 @@ name = "glass"
 path = "tests/glass.rs"
 
 [[test]]
+name = "glass_menu"
+path = "tests/glass_menu.rs"
+
+[[test]]
 name = "toast_timer"
 path = "tests/toast_timer.rs"
 

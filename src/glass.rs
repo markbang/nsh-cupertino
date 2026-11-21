@@ -70,7 +70,7 @@ struct Uniforms {
   margin: f32,
   shadow: f32,
   light_lift: f32,
-  pad: f32,
+  roundness: f32,
   pad2: f32,
 }
 
@@ -141,7 +141,13 @@ fn settle(shape: vec4f) -> vec4f {
 
 fn sd_shape(p: vec2f) -> f32 {
   let a = mix(settle(uniforms.first[0]), settle(uniforms.second[0]), uniforms.progress);
-  var d = sd_one(p - a.xy, a.zw, uniforms.radii);
+  // A growing menu rounds its corners toward a capsule: `roundness` 1 is a
+  // capsule of the shape's size now, 0 its own radius.
+  var radii = uniforms.radii;
+  if (uniforms.roundness > 0.0) {
+    radii = mix(radii, vec4f(min(a.z, a.w)), clamp(uniforms.roundness, 0.0, 1.0));
+  }
+  var d = sd_one(p - a.xy, a.zw, radii);
   if (uniforms.count > 1.5) {
     let b = mix(settle(uniforms.first[1]), settle(uniforms.second[1]), uniforms.progress);
     d = smin(d, sd_one(p - b.xy, b.zw, uniforms.other_radii), uniforms.spacing);
@@ -351,6 +357,12 @@ fn program() -> Option<Shader> {
     PROGRAM.get_or_init(|| Shader::compile(SOURCE).ok()).clone()
 }
 
+/// Whether the material is the shader here (else the fill and blur of
+/// [`crate::tokens::materials`] stand in for it).
+pub(crate) fn shader_draws() -> bool {
+    shaders_available() && program().is_some()
+}
+
 /// How much GPU work the material does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GlassQuality {
@@ -422,6 +434,16 @@ pub struct GlassSpec {
     margin: f32,
     shadow: f32,
     material_only: bool,
+    grow: Option<Grow>,
+}
+
+/// One shape growing between two rects ([`GlassSpec::grow`]).
+#[derive(Debug, Clone, PartialEq)]
+struct Grow {
+    from: Signal<[f32; 4]>,
+    to: Signal<[f32; 4]>,
+    progress: AnimatedNode,
+    roundness: AnimatedNode,
 }
 
 impl Default for GlassSpec {
@@ -450,6 +472,7 @@ impl GlassSpec {
             margin: 0.0,
             shadow: 0.0,
             material_only: false,
+            grow: None,
         }
     }
 
@@ -513,6 +536,29 @@ impl GlassSpec {
         self.radii = [radii[0], radii[1], 0.0, 0.0];
         self.merge = Some(progress);
         self.spacing = spacing;
+        self
+    }
+
+    /// One shape that grows from the rect `from` to the rect `to` (points
+    /// from the surface's top-left corner, as the signals hold them now) as
+    /// `progress` runs 0 to 1 (past 1 it overshoots), its corners a capsule's
+    /// while `roundness` is 1 and `radius` at 0: a glass control turning into
+    /// the menu it opens ([`crate::GlassMenu`]).
+    pub(crate) fn grow(
+        mut self,
+        from: Signal<[f32; 4]>,
+        to: Signal<[f32; 4]>,
+        radius: f32,
+        progress: AnimatedNode,
+        roundness: AnimatedNode,
+    ) -> Self {
+        self.radii = [radius; 4];
+        self.grow = Some(Grow {
+            from,
+            to,
+            progress,
+            roundness,
+        });
         self
     }
 
@@ -667,7 +713,7 @@ impl Press {
     }
 
     /// The squash of the surface under the finger (none with Reduce Motion).
-    fn scale(&self) -> AnimatedNode {
+    pub(crate) fn scale(&self) -> AnimatedNode {
         self.value.interpolate(
             &[0.0, numbers::PRESS_HELD],
             &[
@@ -749,7 +795,7 @@ pub fn layer(spec: GlassSpec, press: Option<Press>) -> impl IntoElement {
     let shader_spec = spec.clone();
     let material_spec = spec;
     when(
-        move || !material_spec.material_only && shaders_available() && program().is_some(),
+        move || !material_spec.material_only && shader_draws(),
         move || shader_layer(shader_spec.clone(), press),
     )
     .otherwise(move || material_layer(&material_spec))
@@ -829,6 +875,7 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
             move || if dark() { numbers::BODY_SHADE } else { 0.0 },
         )
         .uniform("reveal", 1.0_f32)
+        .uniform("roundness", 0.0_f32)
         .uniform("morph", 0.0_f32)
         .uniform("anchor", spec.anchor)
         .uniform("min_radius", numbers::MIN_RADIUS)
@@ -846,6 +893,19 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     }
     if let Some(progress) = &spec.merge {
         glass = glass.uniform("progress", progress);
+    }
+    if let Some(grow) = spec.grow.clone() {
+        let (from, to) = (grow.from, grow.to);
+        glass = glass
+            .uniform("first", move || {
+                UniformValue::List(vec![vector(from.get()), vector([0.0; 4])])
+            })
+            .uniform("second", move || {
+                UniformValue::List(vec![vector(to.get()), vector([0.0; 4])])
+            })
+            .uniform("count", 1.0_f32)
+            .uniform("progress", &grow.progress)
+            .uniform("roundness", &grow.roundness);
     }
     if let Some(press) = press {
         glass = glass

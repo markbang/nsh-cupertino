@@ -155,6 +155,7 @@ pub fn Settings() -> impl IntoElement {
 | [`ActionSheet`](docs/components/action-sheet.md) | Actions and a cancel button in 10 pt groups |
 | [`AlertDialog`](docs/components/alert-dialog.md) | iOS's alert, with buttons and a text field |
 | [`ContextMenu`](docs/components/context-menu.md) | A long-press / right-click menu with a lifted preview |
+| [`GlassMenu`](docs/components/glass-menu.md) | A glass button whose shape grows into its menu, anchored on phones too |
 | [`Picker`](docs/components/picker.md) | A snapping wheel that fades its edges |
 | [`DatePicker`](docs/components/date-picker.md) | A calendar, a compact trigger and a month/day/year wheel |
 | [`SegmentedControl`](docs/components/segmented-control.md) | A 32 pt capsule track with a sliding thumb, 2–5 segments |

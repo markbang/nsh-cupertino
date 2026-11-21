@@ -4,6 +4,17 @@ All notable changes to `nsh-cupertino`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`GlassMenu`.** A glass button whose shape grows into the menu it opens, as
+  iOS 26's pull-down menus do, anchored to the button on phones too. The motion
+  is fitted to the iOS reference clip: the shape on a spring (ζ 0.76, k 380), a
+  drop that settles back, corners that stay round until late, items that fade
+  in after the shape, and a close that holds, shrinks to 0.94 and fades within
+  130 ms. The glass shader gains a `roundness` uniform for it.
+
 ## [0.4.2] - 2026-11-17
 
 ### Fixed

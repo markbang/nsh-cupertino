@@ -412,6 +412,50 @@ export const API: Record<string, ApiGroup[]> = {
       ]
     }
   ],
+  "glass-menu": [
+    {
+      "title": "Props",
+      "kind": "props",
+      "events": "onOpenChange(open), onAction(id).",
+      "rows": [
+        {
+          "tsx": "`icon`",
+          "rust": "`.icon(..)`",
+          "type": "`string`",
+          "default": "`\"ellipsis\"`",
+          "note": "The button's icon"
+        },
+        {
+          "tsx": "`label`",
+          "rust": "`.label(..)`",
+          "type": "`string`",
+          "default": "`\"More\"`",
+          "note": "What screen readers call the button"
+        },
+        {
+          "tsx": "`actions`",
+          "rust": "`.actions(..)`",
+          "type": "`ContextAction[]`",
+          "default": "`[]`",
+          "note": "The items"
+        },
+        {
+          "tsx": "`align`",
+          "rust": "`.align(..)`",
+          "type": "`\"start\"` | `\"end\"`",
+          "default": "`\"start\"`",
+          "note": "Which edge of the button the menu lines up with"
+        },
+        {
+          "tsx": "`open`",
+          "rust": "`.open(..)`",
+          "type": "`boolean`",
+          "default": "—",
+          "note": "Controlled"
+        }
+      ]
+    }
+  ],
   "glass": [
     {
       "title": "Glass",
