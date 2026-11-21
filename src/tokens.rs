@@ -586,18 +586,19 @@ pub mod radius {
 ///
 /// iOS moves things with springs, not curves: a page pushes in with a spring
 /// that settles without bouncing (`damping` 0.86 of critical, stiffness 300),
-/// a sheet with a softer one (0.8 / 400). Presses are opacity, not scale, for
-/// buttons and rows; cards may scale to [`PRESS_SCALE`]. Every motion is
-/// skipped when the user asks for less motion.
+/// a sheet with a critically damped one (1.0 / 280, fitted to iOS's sheet
+/// recording, `research/ios-reference/motion/motion-sheet.mp4`). Presses are
+/// opacity, not scale, for buttons and rows; cards may scale to
+/// [`PRESS_SCALE`]. Every motion is skipped when the user asks for less motion.
 pub mod motion {
     /// The damping ratio of a pushed page, of critical damping.
     pub const PUSH_DAMPING: f32 = 0.86;
     /// The stiffness of a pushed page.
     pub const PUSH_STIFFNESS: f32 = 300.0;
-    /// The damping ratio of a sheet's detents.
-    pub const SHEET_DAMPING: f32 = 0.8;
-    /// The stiffness of a sheet's detents.
-    pub const SHEET_STIFFNESS: f32 = 400.0;
+    /// The damping ratio of a sheet's entrance and detents: critical.
+    pub const SHEET_DAMPING: f32 = 1.0;
+    /// The stiffness of a sheet's entrance and detents.
+    pub const SHEET_STIFFNESS: f32 = 280.0;
     /// The opacity of a pressed button or row (`CupertinoButton.pressedOpacity`).
     pub const PRESS_OPACITY: f32 = 0.4;
     /// The scale of a pressed card or tile.

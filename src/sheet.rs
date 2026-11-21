@@ -125,7 +125,7 @@ fn spring_with(velocity: f32) -> Spring {
 /// design system's sheet spring. Reduce Motion skips the entrance and exit.
 #[component]
 pub fn Sheet(props: SheetProps, cx: Scope<SheetEvent>) -> impl IntoElement {
-    let presence = Presence::new(props.open, props.default_open, 320.0);
+    let presence = Presence::new(props.open, props.default_open, 320.0).entering(sheet_spring());
     presence.sync();
     let initial = props
         .detent
