@@ -814,7 +814,9 @@ pub mod glass {
     /// rises from the edge to the flat middle.
     pub const BEVEL: f32 = 10.0;
     /// How far a ray shifts at the very rim, in points: a paraxial lens of
-    /// 1.24 through 32 pt of glass bends by `(n - 1) * thickness`.
+    /// 1.24 through 32 pt of glass bends by `(n - 1) * thickness`. Unmeasured
+    /// on iOS: no straight backdrop edge crosses a bar's rim in the shots or
+    /// motion clips (`research/ios-reference/mapping.md`, section 8).
     pub const THICKNESS: f32 = 8.0;
     /// The magnification of the picture under the sheet (0.8 %).
     pub const LENS: f32 = 0.008;
@@ -854,7 +856,9 @@ pub mod glass {
     pub const FROST_DARK: [f32; 3] = [0.4, 0.0, 5.0];
     /// The hairline's darkening, and the rim light's strength.
     pub const RIM: [f32; 2] = [1.0, 1.0];
-    /// See [`RIM`], dark (the rim light is a little stronger).
+    /// See [`RIM`], dark. Unmeasured: the tab bar's dark rim peaks are equal
+    /// at the top and bottom (102 and 101 of 255), so no lit-side excess shows
+    /// there; the strength itself is not measured.
     pub const RIM_DARK: [f32; 2] = [1.0, 1.15];
     /// How far a bright backdrop is pulled down (dark glass only).
     pub const BODY_SHADE: f32 = 0.32;
@@ -862,7 +866,8 @@ pub mod glass {
     pub const MIN_RADIUS: f32 = 25.0;
     /// How far content scrolls before a floating bar's glass is fully shown.
     pub const REVEAL_DISTANCE: f32 = 26.0;
-    /// The alpha of a `tinted` glass fill.
+    /// The alpha of a `tinted` glass fill. Unmeasured: no tinted glass control
+    /// is in the iOS shots or clips.
     pub const TINTED_ALPHA: f32 = 0.16;
 
     /// The token names of the fills: `glass-regular`, `glass-clear`,
@@ -875,11 +880,13 @@ pub mod glass {
 
     /// What a press drives its animated value to.
     pub const PRESS_HELD: f32 = 1.0;
-    /// How much harder the lens works while held.
+    /// How much harder the lens works while held. Unmeasured, as [`PRESS_LIFT`].
     pub const PRESS_LENS: f32 = 2.4;
-    /// The specular rim's exponent while held (a wider bloom).
+    /// The specular rim's exponent while held (a wider bloom). Unmeasured, as
+    /// [`PRESS_LIFT`].
     pub const PRESS_BLOOM: f32 = 0.8;
-    /// The extra brightness of the rim while held.
+    /// The extra brightness of the rim while held. Unmeasured: the iOS press
+    /// clip (`motion-press`) shows only solid buttons, no glass press.
     pub const PRESS_LIFT: f32 = 0.22;
     /// The squash of the surface while held.
     pub const PRESS_SCALE: f32 = 0.965;

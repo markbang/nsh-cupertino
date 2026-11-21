@@ -267,9 +267,9 @@ vendored, since Apple's are Apple's):
 | Backdrop saturation | 2.1 | 1.4 | `SATURATION` / `SATURATION_DARK` |
 | Blur | small; detail survives | small | 8 pt (`BLUR`), the top of the 3–8 pt band |
 | Frost: opacity / clamp / weight | plain blur: no weighted ghost (measured on the iOS pull-down menu) | ghost weight 5, opacity 0.4 (measured, dark) | `FROST` [1, 0, 0] / `FROST_DARK` [0.4, 0, 5] |
-| Thickness, refractive index | 32 pt, 1.24 (paraxial) | same | 8 pt of rim shift (0.24 × 32) |
+| Thickness, refractive index | 32 pt, 1.24 (paraxial) | same (not measured) | 8 pt of rim shift (0.24 × 32); unmeasured on iOS |
 | Light angle | +π/2 (from below) | −π/2 (from above) | `LIGHT` / `LIGHT_DARK` |
-| Rim: shade / light | 1 / 1 | 1 / 1.15 | `RIM` / `RIM_DARK` |
+| Rim: shade / light | 1 / 1 (measured: tab bar and back button, lit and opposite peaks equal) | 1 / 1.15 (not supported by the tab bar's equal peaks; menu asymmetric) | `RIM` / `RIM_DARK` |
 | Body shade | 0 | 0.28 | `BODY_SHADE` |
 | Shadow | `#0A000000`, blur 10, y 7 | none | the bar's shadow layer |
 
