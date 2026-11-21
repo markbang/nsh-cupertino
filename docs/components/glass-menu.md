@@ -26,10 +26,12 @@ Notes
   bottom edge, where the iOS menu opens.
 - With the glass shader, one glass shape grows from the button's rect to the
   panel's (`GlassSpec`'s single-shape growth; its corners go from a capsule's
-  to 28 pt through the shader's `roundness`). Once it is the panel, the glass
-  settles into the menu's fill: white at 60 % in light, a grey of about 80 at
-  44 % in dark, over an 11 pt blur (`ContextMenu`'s measured fill). The
-  shadow is black at 11.5 %, 9 pt down, 36 pt blur, fitted to the iOS clip.
+  to 28 pt through the shader's `roundness`). Its body is the menu's fill
+  from the first frame: the backdrop blurred by 11 pt, under white at 60 % in
+  light or a grey of about 80 at 44 % in dark (`ContextMenu`'s measured
+  fill). The glass is only its rim: the lens, the hairline and the rim light
+  at the edge. The shadow is black at 11.5 %, 9 pt down, 36 pt blur, fitted to
+  the iOS clip.
 - The items are drawn through a second shader that cuts them to the growing
   shape, so the round top hides what lies outside it. They do not show while
   the shape is still a blob (before 170 ms).
@@ -58,11 +60,13 @@ Fitted to the iOS clip `research/ios-reference/motion/motion-menu.mp4`
   100 ms and is under 1 pt after 500 ms.
 - **Corners**: a capsule's until 180 ms, then ease-in-out to 28 pt by 410 ms.
 - **Items**: none before 170 ms, then they fade in by 260 ms, ease-out.
-- **Settle**: from 290 ms the fill comes in over the glass, then the glass goes
-  under it, by 390 ms (ease-in-out).
+- **Fill**: 0.45 of the menu's fill from the first frame (white at 27 % in
+  light, as the clip's blob at 107 ms), the whole fill by 270 ms (ease-in-out
+  from 110 ms).
 - **Close**: it holds 70 ms, then shrinks to 0.94 and moves 17 pt down and
-  5 pt left within 30 ms (ease-out), and fades within 60 ms (ease-in). It is
-  gone at 130 ms, and the button fades back in.
+  5 pt left within 30 ms (ease-out), and fades within 60 ms (ease-in). The
+  fill, the rim, the shadow and the items fade as one layer. It is gone at
+  130 ms, and the button fades back in.
 - Reduce Motion: a 150 ms cross-fade in and out, no shape change.
 
 The curves are pinned in Rust by sampling them every 30 ms

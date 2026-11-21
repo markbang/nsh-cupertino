@@ -37,7 +37,7 @@ SHAPE = (0.76, 380.0)            # zeta, stiffness: width, height, centre x
 DROP = (380.0, 540.0, 270.0)     # pt x (critical k 540 - critical k 270)
 CORNERS = (180.0, 230.0)         # delay, duration, ease-in-out: capsule -> 28 pt
 ITEMS = (170.0, 90.0)            # delay, duration, ease-out: none in the blob phase
-SETTLE = (290.0, 100.0)          # delay, duration, ease-in-out: glass -> the menu's fill
+BODY = (0.45, 110.0, 160.0)      # from, delay, duration, ease-in-out: the body's share of the fill
 CLOSE_FADE = (70.0, 60.0)        # delay, duration, ease-in
 CLOSE_SHRINK = (70.0, 30.0)      # delay, duration, ease-out
 CLOSE_SCALE, CLOSE_SHIFT = 0.94, (-5.0, 17.0)
@@ -125,18 +125,23 @@ def opacity(f, closed, rest):
     return float((d * s).sum() / (s * s).sum())
 
 
-def settled_fill(rest, closed):
-    """White over the blurred bars inside the settled panel (x 215-280 px, clear of
-    text): rest = (1 - a) blur(closed) + a 255, a per bar, sigma 11 px (10 pt)."""
-    xs = np.arange(215, 280)
+def settled_fill(rest, closed, xs=range(215, 280), rows=(0, H)):
+    """White over the blurred bars inside the panel (by default x 215-280 px of the
+    settled panel, clear of text): rest = (1 - a) blur(closed) + a 255, a per bar,
+    sigma 11 px (10 pt)."""
+    xs = np.array(xs)
     blurred = np.stack([ndimage.gaussian_filter(closed[..., k], 11) for k in range(3)], -1)
     alphas = []
+    keep = []
     for a, b in BARS:
-        ys = np.arange(a + 8, b - 8)
+        ys = np.arange(max(a + 8, rows[0]), min(b - 8, rows[1]))
+        if len(ys) < 4:
+            continue
+        keep.append(ys)
         under = blurred[np.ix_(ys, xs)].ravel()
         over = rest[np.ix_(ys, xs)].ravel()
         alphas.append(float((over - under) @ (255 - under) / ((255 - under) @ (255 - under))))
-    every = np.concatenate([np.arange(a + 8, b - 8) for a, b in BARS])
+    every = np.concatenate(keep)
     under = blurred[np.ix_(every, xs)].ravel()
     over = rest[np.ix_(every, xs)].ravel()
     mean = float((over - under) @ (255 - under) / ((255 - under) @ (255 - under)))
@@ -197,7 +202,7 @@ def model(ms):
         drop=float(d * (spring(ms, 1, kf) - spring(ms, 1, ks))),
         roundness=1 - timing(ms, *CORNERS, "ease_in_out"),
         items=timing(ms, *ITEMS, "ease_out"),
-        settle=timing(ms, *SETTLE, "ease_in_out"),
+        body=BODY[0] + (1 - BODY[0]) * timing(ms, *BODY[1:], "ease_in_out"),
     )
 
 
@@ -215,7 +220,7 @@ def main():
     args = parser.parse_args()
     if args.rust:
         grid = range(0, 601, 30)
-        for name in ("grow", "drop", "roundness", "items", "settle"):
+        for name in ("grow", "drop", "roundness", "items", "body"):
             print(f"{name}: [{', '.join(f'{model(t)[name]:.4f}' for t in grid)}]")
         for name in ("opacity", "scale", "shift_y"):
             print(f"close {name}: [{', '.join(f'{close(t)[name]:.4f}' for t in range(0, 151, 30))}]")
@@ -251,6 +256,13 @@ def main():
     mean, low, high = settled_fill(rest, closed)
     print(f"Settled fill (frame 12, white over the blurred bars): alpha {mean:.3f}, per bar "
           f"{low:.2f}-{high:.2f}; GlassMenu uses {FILL_ALPHA:.2f}")
+    # The blob (frame 0, inside x 50-200, y 290-515 px) and the peak (frame 5,
+    # the bars inside the panel, below y 240 px).
+    for index, ms, xs, rows in ((0, 107, range(50, 200), (290, 515)), (5, 274, range(215, 280), (240, H))):
+        mean, low, high = settled_fill(clip[index], closed, xs, rows)
+        model_alpha = FILL_ALPHA * model(ms)["body"]
+        print(f"Body fill (frame {index}, {ms} ms): alpha {mean:.3f}, per bar {low:.2f}-{high:.2f}; "
+              f"GlassMenu {model_alpha:.3f}")
     profile = shadow_profile(rest, closed, r_right, r_top, r_bottom)
     for name, params in (("GlassMenu", SHADOW), ("ContextMenu token", TOKEN_SHADOW)):
         error = np.sqrt(np.mean([(shadow_model(side, d, *params) - v) ** 2 for side, d, v in profile]))

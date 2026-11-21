@@ -5,9 +5,10 @@
 //! `research/ios-reference/motion/motion-menu.mp4` (`tools/fit-glass-menu.py`):
 //! the shape's size and horizontal place on one spring, a separate drop that
 //! carries it down and back, corners that stay round until late, the items
-//! fading in once the blob has become a panel and cut by its shape, the glass
-//! settling into the menu's measured fill, and a close that holds, then
-//! shrinks to 0.94 and fades.
+//! fading in once the blob has become a panel and cut by its shape, the
+//! menu's measured fill as the body from the first frame with the glass only
+//! at its rim, and a close that holds, then shrinks to 0.94 and fades as one
+//! layer.
 
 use std::time::Duration;
 
@@ -29,15 +30,13 @@ use crate::{
 /// The open panel's corner radius, in points (the iOS reference, ±3 pt).
 pub(crate) const RADIUS: f32 = 28.0;
 
-/// Room around the panel for the glass to overshoot into, in points.
-const PAD: f32 = 24.0;
+/// Room around the panel for the glass to overshoot into and its shadow to
+/// fall in, in points (the shadow: 9 pt down, σ 18 pt).
+const PAD: f32 = 48.0;
 
 /// The panel's top sits this far up from the button's bottom: on the
 /// button's centre line, where the iOS menu opens (a 44 pt button).
 const OVERLAP: f32 = 22.0;
-
-/// How far into the settle the fill is all there and the glass starts to go.
-const SETTLE_SPLIT: f32 = 0.7;
 
 /// The timing of the morph, all fitted to the iOS clip; times in ms from the
 /// press.
@@ -81,14 +80,57 @@ pub(crate) mod motion {
         }
     }
 
-    /// The glass settles into the menu's fill: still glass at 274 ms (the
-    /// clip's frame 5, refracting at its rim), the flat fill by 407 ms
-    /// (frame 9).
-    pub(crate) fn settle() -> Timing {
+    /// The body's share of the menu's fill from the first frame: the clip's
+    /// blob at 107 ms is white at α 0.27 over the bars (per bar 0.24-0.30),
+    /// 0.45 of the settled 0.60.
+    pub(crate) const BODY_FROM: f32 = 0.45;
+
+    /// The body reaches the whole fill by the clip's frame 5 (274 ms: α 0.57,
+    /// per bar 0.55-0.63).
+    pub(crate) fn body() -> Timing {
         Timing {
-            delay_ms: 290.0,
-            ..Timing::new(100.0, Easing::EaseInOut)
+            delay_ms: 110.0,
+            ..Timing::new(160.0, Easing::EaseInOut)
         }
+    }
+
+    /// A part of the open menu a close moves.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "the close moves neither alone; the tests pin that"
+        )
+    )]
+    pub(crate) enum Part {
+        /// The whole menu's opacity: its fill, rim, shadow and items as one
+        /// layer.
+        Menu,
+        /// The body's share of the fill.
+        Body,
+        /// The items' opacity.
+        Items,
+        /// The shrink to `CLOSE_SCALE`, 0 to 1.
+        Shrink,
+    }
+
+    impl Part {
+        /// Its value in the open menu.
+        pub(crate) fn open(self) -> f32 {
+            if self == Part::Shrink { 0.0 } else { 1.0 }
+        }
+    }
+
+    /// The close: what it moves, to what, and how, from the open menu (all
+    /// at 1, the shrink at 0). Only the menu's opacity fades: the fill never
+    /// drops out under the items, so the page never shows through the menu
+    /// while its items still do.
+    pub(crate) fn close() -> [(Part, f32, Timing); 2] {
+        [
+            (Part::Menu, 0.0, close_fade()),
+            (Part::Shrink, 1.0, close_shrink()),
+        ]
     }
 
     /// The close: it holds for 70 ms, then fades over 60 ms.
@@ -115,8 +157,8 @@ pub(crate) mod motion {
     /// The whole close, in ms: then the menu is gone.
     pub(crate) const CLOSE_MS: f32 = 130.0;
 
-    /// The settled menu's shadow, fitted to the clip's frame 12 below, beside
-    /// and above the panel over the page (`tools/fit-glass-menu.py`): black at
+    /// The menu's shadow, fitted to the clip's frame 12 below, beside and
+    /// above the panel over the page (`tools/fit-glass-menu.py`): black at
     /// this alpha, offset down and blurred by these points (CSS blur, twice
     /// the Gaussian's σ of 18 pt).
     pub(crate) const SHADOW: (f32, f32, f32) = (0.115, 9.0, 36.0);
@@ -272,8 +314,8 @@ struct Morph {
     round: AnimatedValue,
     /// The items' opacity.
     items: AnimatedValue,
-    /// 0: the glass, 1: the menu's settled fill.
-    settle: AnimatedValue,
+    /// The body's share of the menu's fill.
+    body: AnimatedValue,
     /// The whole menu's opacity.
     fade: AnimatedValue,
     /// The close, 0 to 1.
@@ -297,7 +339,7 @@ impl Morph {
             slow: animated_value(0.0),
             round: animated_value(1.0),
             items: animated_value(0.0),
-            settle: animated_value(0.0),
+            body: animated_value(motion::BODY_FROM),
             fade: animated_value(0.0),
             shrink: animated_value(0.0),
             dx: animated_value(0.0),
@@ -330,17 +372,13 @@ impl Morph {
         self.left().mul(&self.sy).add(1.0)
     }
 
-    /// The fill comes in over the glass first, then the glass goes under
-    /// it: two translucent layers fading across would let the sharp page
-    /// show through between them.
-    fn fill_shown(&self) -> AnimatedNode {
-        self.settle
-            .interpolate(&[0.0, SETTLE_SPLIT, 1.0], &[0.0, 1.0, 1.0])
-    }
-
-    fn glass_shown(&self) -> AnimatedNode {
-        self.settle
-            .interpolate(&[0.0, SETTLE_SPLIT, 1.0], &[1.0, 1.0, 0.0])
+    fn part(&self, part: motion::Part) -> AnimatedValue {
+        match part {
+            motion::Part::Menu => self.fade,
+            motion::Part::Body => self.body,
+            motion::Part::Items => self.items,
+            motion::Part::Shrink => self.shrink,
+        }
     }
 
     /// The panel's own move: the drop while it opens, the shift while it
@@ -366,10 +404,10 @@ impl Morph {
     fn open(&self, frame: Option<f32>, close: Option<f32>) {
         if let Some(ms) = close {
             self.open(Some(10_000.0), None);
-            let fade = timing_driver(motion::close_fade(), 0.0);
-            let shrink = timing_driver(motion::close_shrink(), 1.0);
-            self.fade.set(value_at(fade, 1.0, ms));
-            self.shrink.set(value_at(shrink, 0.0, ms));
+            for (part, to, timing) in motion::close() {
+                self.part(part)
+                    .set(value_at(timing_driver(timing, to), part.open(), ms));
+            }
             return;
         }
         self.shrink.set(0.0);
@@ -378,7 +416,7 @@ impl Morph {
             self.grow.set(1.0);
             self.round.set(0.0);
             self.items.set(1.0);
-            self.settle.set(1.0);
+            self.body.set(1.0);
             self.fast.set(0.0);
             self.slow.set(0.0);
             self.fade.set(0.0);
@@ -393,7 +431,12 @@ impl Morph {
             (self.slow, 0.0, 1.0, Move::Spring(slow)),
             (self.round, 1.0, 0.0, Move::Timing(motion::corners())),
             (self.items, 0.0, 1.0, Move::Timing(motion::items())),
-            (self.settle, 0.0, 1.0, Move::Timing(motion::settle())),
+            (
+                self.body,
+                motion::BODY_FROM,
+                1.0,
+                Move::Timing(motion::body()),
+            ),
         ];
         for (value, from, to, how) in moves {
             match (frame, how) {
@@ -416,8 +459,9 @@ impl Morph {
             let _ = self.fade.timing_with(0.0, motion::fade());
             return;
         }
-        let _ = self.fade.timing_with(0.0, motion::close_fade());
-        let _ = self.shrink.timing_with(1.0, motion::close_shrink());
+        for (part, to, timing) in motion::close() {
+            let _ = self.part(part).timing_with(to, timing);
+        }
     }
 
     /// Gone: the button shows its glass again.
@@ -626,9 +670,10 @@ pub fn GlassMenu(props: GlassMenuProps, cx: Scope<GlassMenuEvent>) -> impl IntoE
         )])
 }
 
-/// The settled menu's fill and shadow: the measured fill of the iOS menu
-/// (`ContextMenu`'s, re-checked on the clip), its blur, and the clip's shadow.
-fn settled_fill(morph: Morph, shown: AnimatedNode) -> View {
+/// The menu's fill and shadow without the shader: the measured fill of the
+/// iOS menu (`ContextMenu`'s, re-checked on the clip), its blur and the
+/// clip's shadow, scaled from the button's box.
+fn fallback_fill(morph: Morph) -> View {
     let (alpha, offset, blur) = motion::SHADOW;
     view()
         .absolute()
@@ -642,7 +687,6 @@ fn settled_fill(morph: Morph, shown: AnimatedNode) -> View {
             color: Hsla::black().opacity(alpha).into(),
             ..nsh_core::BoxShadow::default()
         }])
-        .bind_opacity(&shown)
         .bind_translate_x(&morph.follow_x())
         .bind_translate_y(&morph.follow_y())
         .bind_transform(TransformKind::ScaleX, &morph.scale_x())
@@ -658,8 +702,8 @@ fn row_color(destructive: bool) -> Hsla {
     }
 }
 
-/// The open menu: its glass, growing out of the button's and settling into
-/// the menu's fill, and its items, cut by the growing shape.
+/// The open menu: its body, the menu's fill with glass at the rim, growing
+/// out of the button's shape, and its items, cut by the growing shape.
 fn panel(
     morph: Morph,
     from: Signal<[f32; 4]>,
@@ -670,9 +714,15 @@ fn panel(
     chosen: impl Fn(SharedString) + Clone + 'static,
 ) -> AnyElement {
     let shader = glass::shader_draws();
+    let (alpha, offset, blur) = motion::SHADOW;
+    // A disc of 24 pt blurs as a Gaussian of σ 11 pt: the menu's blur.
     let spec = GlassSpec::rounded(RADIUS)
         .blur(tokens::glass::BAR_BLUR)
-        .shadow(PAD, 0.12)
+        .soft_shadow(PAD, alpha, offset, blur / 2.0)
+        .menu_body(
+            [menu_fill(false), menu_fill(true)],
+            morph.body.animated_node(),
+        )
         .grow(
             from,
             to,
@@ -680,30 +730,19 @@ fn panel(
             morph.grow.animated_node(),
             morph.round.animated_node(),
         );
-    // With the shader, the glass draws the growing shape in a box with room
-    // around the panel, then gives way to the settled fill. Without it, the
-    // fill is all there is, scaled from the button's box: its corners scale
-    // with it.
+    // With the shader, one layer draws the growing shape, its fill, rim and
+    // shadow, in a box with room around the panel. Without it, the fill is
+    // all there is, scaled from the button's box: its corners scale with it.
     let material = if shader {
         view()
             .absolute()
-            .inset_0()
-            .child(
-                view()
-                    .absolute()
-                    .top(px(-PAD))
-                    .left(px(-PAD))
-                    .right(px(-PAD))
-                    .bottom(px(-PAD))
-                    .bind_opacity(&morph.glass_shown())
-                    .child(glass::layer(spec, None)),
-            )
-            .child(settled_fill(morph, morph.fill_shown()))
+            .top(px(-PAD))
+            .left(px(-PAD))
+            .right(px(-PAD))
+            .bottom(px(-PAD))
+            .child(glass::layer(spec, None))
     } else {
-        view()
-            .absolute()
-            .inset_0()
-            .child(settled_fill(morph, animated_value(1.0).animated_node()))
+        fallback_fill(morph)
     };
 
     let mut items = view()
@@ -853,9 +892,9 @@ mod tests {
         0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.1776, 0.6230, 0.9245, 1.0000, 1.0000,
         1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000,
     ];
-    const SETTLE: [f32; 21] = [
-        0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0197,
-        0.3319, 0.8126, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000,
+    const BODY: [f32; 21] = [
+        0.4500, 0.4500, 0.4500, 0.4500, 0.4542, 0.5210, 0.6663, 0.8390, 0.9607, 1.0000, 1.0000,
+        1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000, 1.0000,
     ];
     /// The close at 0, 30, … 150 ms.
     const CLOSE_OPACITY: [f32; 6] = [1.0000, 1.0000, 1.0000, 0.8438, 0.2603, 0.0000];
@@ -904,15 +943,19 @@ mod tests {
             value_at(timing_driver(motion::corners(), 0.0), 1.0, ms)
         });
         check("the items' opacity", &ITEMS, 0.01, items);
-        check("the settle into the fill", &SETTLE, 0.01, settle);
+        check("the body's share of the fill", &BODY, 0.01, body);
     }
 
     fn items(ms: f32) -> f32 {
         value_at(timing_driver(motion::items(), 1.0), 0.0, ms)
     }
 
-    fn settle(ms: f32) -> f32 {
-        value_at(timing_driver(motion::settle(), 1.0), 0.0, ms)
+    fn body(ms: f32) -> f32 {
+        value_at(timing_driver(motion::body(), 1.0), motion::BODY_FROM, ms)
+    }
+
+    fn fill_alpha(ms: f32) -> f32 {
+        nsh_core::Rgba::from(crate::context_menu::menu_fill(false)).a * body(ms)
     }
 
     /// No item shows while the shape is a blob: none before 170 ms, as the
@@ -926,23 +969,62 @@ mod tests {
         assert!(items(274.0) >= 0.999, "items at 274 ms: {}", items(274.0));
     }
 
-    /// The settled menu is the measured fill: glass at the clip's frame 5
-    /// (274 ms), all fill by its frame 9 (407 ms); the fill's white within
-    /// the clip's per-bar range (0.54-0.63, mean 0.567, frame 12) and the
-    /// shadow the clip's fit (`tools/fit-glass-menu.py`).
+    /// The body is the measured fill from the first frame: white at the
+    /// clip's blob's α (frame 0, 107 ms: 0.27, per bar 0.24-0.30) from t = 0
+    /// through the blob phase, the settled fill's (frame 5 on: per bar
+    /// 0.54-0.63, mean 0.567 at frame 12) by 274 ms; the shadow the clip's
+    /// fit (`tools/fit-glass-menu.py`).
     #[test]
-    fn the_menu_settles_into_the_measured_fill_and_shadow() {
-        assert_eq!(settle(274.0), 0.0, "still glass at frame 5");
-        assert!(settle(407.0) >= 0.999, "fill at frame 9: {}", settle(407.0));
-        let light = crate::context_menu::menu_fill(false);
-        let white = nsh_core::Rgba::from(light);
+    fn the_body_is_the_measured_fill_from_the_first_frame() {
+        for ms in (0..=107).step_by(10).chain([107]) {
+            let alpha = fill_alpha(ms as f32);
+            assert!(
+                (0.24..=0.31).contains(&alpha),
+                "the blob's fill at {ms} ms: α {alpha:.3}, the clip's 0.24-0.30"
+            );
+        }
+        for ms in [274.0, 407.0, 600.0] {
+            let alpha = fill_alpha(ms);
+            assert!(
+                (0.54..=0.63).contains(&alpha),
+                "the fill at {ms} ms: α {alpha:.3}, the clip's 0.54-0.63"
+            );
+        }
+        let white = nsh_core::Rgba::from(crate::context_menu::menu_fill(false));
         assert!(
             white.r > 0.99 && white.g > 0.99 && white.b > 0.99,
             "{white:?}"
         );
-        assert!((0.54..=0.63).contains(&white.a), "fill alpha {}", white.a);
         assert_eq!(motion::SHADOW, (0.115, 9.0, 36.0));
-        assert_eq!(crate::context_menu::MENU_BLUR, 11.0);
+    }
+
+    /// One part's value `ms` into the close, from the open menu's.
+    fn closing(part: motion::Part, ms: f32) -> f32 {
+        motion::close()
+            .into_iter()
+            .filter(|(moved, _, _)| *moved == part)
+            .fold(part.open(), |value, (_, to, timing)| {
+                value_at(timing_driver(timing, to), value, ms)
+            })
+    }
+
+    /// The close fades the menu as one layer: the fill and the items have
+    /// one opacity at every 30 ms (and every 10), so the page never shows
+    /// through the fill while the items still show.
+    #[test]
+    fn the_fill_and_the_items_fade_as_one_layer() {
+        use motion::Part;
+        for ms in (0..=150).step_by(10) {
+            let ms = ms as f32;
+            let menu = closing(Part::Menu, ms);
+            let fill = menu * closing(Part::Body, ms);
+            let items = menu * closing(Part::Items, ms);
+            assert!(
+                (fill - items).abs() < 1e-6,
+                "{ms} ms into the close: the fill at {fill:.3}, the items at {items:.3}"
+            );
+        }
+        assert_eq!(closing(Part::Menu, motion::CLOSE_MS), 0.0);
     }
 
     #[test]

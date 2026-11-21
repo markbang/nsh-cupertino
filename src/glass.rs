@@ -71,8 +71,17 @@ struct Uniforms {
   shadow: f32,
   light_lift: f32,
   roundness: f32,
+  body: f32,
+  shadow_offset: f32,
+  shadow_sigma: f32,
   pad2: f32,
+  pad3: f32,
 }
+
+// A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
+// and tinted by `tint` at `tint.a * body`, flat, with the glass only at its
+// rim (`GlassSpec::menu_body`).
+const BODY_SATURATION: f32 = 1.5;
 
 const TAU: f32 = 6.283185307;
 const GOLDEN: f32 = 2.39996323;
@@ -234,7 +243,8 @@ fn sample(p: vec2f, jitter: f32) -> vec3f {
     min(lit, cloud - vec3f(uniforms.frost_clamp)),
     uniforms.frost_clamp > 0.0,
   );
-  return mix(held, cloud, uniforms.frost_opacity);
+  let frost = select(uniforms.frost_opacity, 1.0, uniforms.body >= 0.0);
+  return mix(held, cloud, frost);
 }
 
 fn shade(uv: vec2f) -> vec4f {
@@ -252,6 +262,15 @@ fn shade(uv: vec2f) -> vec4f {
     if (uniforms.shadow <= 0.0) {
       return vec4f(0.0);
     }
+    // A measured shadow: the shape lowered by `shadow_offset`, blurred by a
+    // Gaussian of `shadow_sigma` (a logistic stand-in for its CDF), fading
+    // with `reveal` as the shape does.
+    if (uniforms.shadow_sigma > 0.0) {
+      let lowered = sd_silhouette(p - vec2f(0.0, uniforms.shadow_offset));
+      let soft = uniforms.shadow * clamp(uniforms.reveal, 0.0, 1.0)
+        / (1.0 + exp(1.702 * lowered / uniforms.shadow_sigma));
+      return vec4f(vec3f(0.0), soft);
+    }
     let below = sd_silhouette(p - vec2f(0.0, 6.0));
     let soft = clamp(0.5 - below / 9.0, 0.0, 1.0) * uniforms.shadow;
     return vec4f(vec3f(0.0), soft);
@@ -265,7 +284,8 @@ fn shade(uv: vec2f) -> vec4f {
 
   // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
   // the rim by (n - 1) * thickness * slope; the sheet also magnifies a little.
-  let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * uniforms.lens;
+  let flat = uniforms.body >= 0.0;
+  let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * select(uniforms.lens, 0.0, flat);
   let jitter = hash_cell(floor(uv * size * nsh.scale)) * 0.5;
   var rgb = sample(p + shift, jitter);
 
@@ -282,7 +302,7 @@ fn shade(uv: vec2f) -> vec4f {
   // appearances lift toward white where the backdrop is dark: the frost's
   // clamp does that, and the tint adds its 12 % (dark) or 53 % (light).
   var luminance = dot(rgb, LUMA);
-  rgb = rgb * (1.0 - uniforms.body_shade * luminance);
+  rgb = rgb * (1.0 - select(uniforms.body_shade, 0.0, flat) * luminance);
 
   // The tint thickens only where the backdrop would fight a label, and never
   // past 70 %: it is a tint on glass, not an opaque slab.
@@ -291,14 +311,20 @@ fn shade(uv: vec2f) -> vec4f {
     smoothstep(0.32, 0.86, luminance),
     uniforms.dark > 0.5,
   );
-  let alpha = clamp(uniforms.tint.a + uniforms.adapt * fight * 0.16, 0.0, 0.7);
+  let adaptive = clamp(uniforms.tint.a + uniforms.adapt * fight * 0.16, 0.0, 0.7);
+  let alpha = select(adaptive, clamp(uniforms.tint.a * uniforms.body, 0.0, 1.0), flat);
+  if (flat) {
+    rgb = apply_saturation(rgb, mix(BODY_SATURATION, 1.0, uniforms.dark));
+  }
   rgb = mix(rgb, uniforms.tint.rgb, alpha);
 
-  rgb = apply_saturation(rgb, uniforms.saturation);
+  if (!flat) {
+    rgb = apply_saturation(rgb, uniforms.saturation);
+  }
   // iOS 27's light glass over a white page of dark rows reads almost white;
   // our 24 pt cloud still carries a little of the strokes, so the light
   // material lifts a further 10 % toward white.
-  rgb = mix(rgb, vec3f(1.0), uniforms.light_lift);
+  rgb = mix(rgb, vec3f(1.0), select(uniforms.light_lift, 0.0, flat));
   luminance = dot(rgb, LUMA);
 
   // The light, a direction the app may turn with `tilt` (iOS 27 lights the
@@ -322,7 +348,7 @@ fn shade(uv: vec2f) -> vec4f {
   let tail = exp(-max(inside - 0.7, 0.0) / 7.0);
   rgb = rgb + vec3f(1.0) * uniforms.rim_light * lobe * ease * (0.30 * core + 0.05 * tail);
   let along = clamp(0.5 + 0.5 * dot(p / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
-  rgb = rgb + vec3f(1.0) * uniforms.specular * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
+  rgb = rgb + vec3f(1.0) * select(uniforms.specular, 0.0, flat) * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
   // The inner shadow opposite the light: the sheet's thickness shows.
   rgb = rgb * (1.0 - uniforms.inner * pow(opposite, 2.0) * rim);
@@ -498,6 +524,15 @@ pub struct GlassSpec {
     shadow: f32,
     material_only: bool,
     grow: Option<Grow>,
+    body: Option<Body>,
+    soft_shadow: Option<(f32, f32)>,
+}
+
+/// A menu's flat body ([`GlassSpec::menu_body`]).
+#[derive(Debug, Clone, PartialEq)]
+struct Body {
+    fill: [Hsla; 2],
+    amount: AnimatedNode,
 }
 
 /// One shape growing between two rects ([`GlassSpec::grow`]).
@@ -536,6 +571,8 @@ impl GlassSpec {
             shadow: 0.0,
             material_only: false,
             grow: None,
+            body: None,
+            soft_shadow: None,
         }
     }
 
@@ -622,6 +659,24 @@ impl GlassSpec {
             progress,
             roundness,
         });
+        self
+    }
+
+    /// A flat body instead of the glass's: the backdrop blurred and tinted by
+    /// `fill` (light, dark) at its alpha times `amount`, the glass's lens,
+    /// hairline and rim light only at the edge. A menu's material.
+    pub(crate) fn menu_body(mut self, fill: [Hsla; 2], amount: AnimatedNode) -> Self {
+        self.body = Some(Body { fill, amount });
+        self
+    }
+
+    /// A Gaussian drop shadow in both appearances: black at `alpha`, the
+    /// shape lowered by `offset` and blurred by `sigma` points, in a margin
+    /// of `margin` points; it fades with [`GlassSpec::reveal`].
+    pub(crate) fn soft_shadow(mut self, margin: f32, alpha: f32, offset: f32, sigma: f32) -> Self {
+        self.margin = margin.max(0.0);
+        self.shadow = alpha;
+        self.soft_shadow = Some((offset, sigma));
         self
     }
 
@@ -887,7 +942,10 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     };
     glass = glass
         .source(program)
-        .uniform("tint", move || tint.tint())
+        .uniform("tint", move || match &tint.body {
+            Some(body) => body.fill[usize::from(dark())],
+            None => tint.tint(),
+        })
         .uniform("radii", radii)
         .uniform("other_radii", other)
         .uniform("first", first)
@@ -943,7 +1001,16 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("anchor", spec.anchor)
         .uniform("min_radius", numbers::MIN_RADIUS)
         .uniform("margin", spec.margin)
-        .uniform("shadow", move || if dark() { 0.0_f32 } else { spec.shadow })
+        .uniform("shadow", move || {
+            if dark() && spec.soft_shadow.is_none() {
+                0.0_f32
+            } else {
+                spec.shadow
+            }
+        })
+        .uniform("body", -1.0_f32)
+        .uniform("shadow_offset", spec.soft_shadow.map_or(0.0, |s| s.0))
+        .uniform("shadow_sigma", spec.soft_shadow.map_or(0.0, |s| s.1))
         .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 });
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
@@ -969,6 +1036,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
             .uniform("count", 1.0_f32)
             .uniform("progress", &grow.progress)
             .uniform("roundness", &grow.roundness);
+    }
+    if let Some(body) = &spec.body {
+        glass = glass.uniform("body", &body.amount);
     }
     if let Some(press) = press {
         glass = glass
