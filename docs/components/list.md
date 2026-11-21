@@ -34,7 +34,7 @@ A group of rows on one surface, with an optional header above and footer below.
 
 | TSX | Rust | Type | Default | |
 | --- | --- | --- | --- | --- |
-| `header` | `.header(..)` | `string` | none | 13 pt bold in the secondary label, 32 pt from the edge, 16 pt above, 10 pt below |
+| `header` | `.header(..)` | `string` | none | 13 pt semibold in the secondary label, 32 pt from the edge, 16 pt above, 10 pt below |
 | `footer` | `.footer(..)` | `string` | none | 13 pt in the header/footer color, 10 pt below |
 | `children` | `.child(..)` | JSX | — | The rows |
 
