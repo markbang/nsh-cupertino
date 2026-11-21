@@ -48,7 +48,7 @@ Paths: `cohub:` is relative to `src/` in cohub-mobile unless it starts with `mod
 | `ui.tsx` StatusPill (`ui.tsx:382`) | none | missing | dot plus label, five tones | No status pill. |
 | `ui.tsx` EmptyState (`ui.tsx:392`) | none | missing | icon, title, description, action | No empty state. |
 | `ui.tsx` ConnectionBanner (`ui.tsx:791`), DataError (`ui.tsx:806`), `components/AppUpdateBanner.tsx` | none | missing | banner `min-h-14`, `rounded-md`, `shadow-float` (`AppUpdateBanner.tsx:88`) | No inline banners. |
-| `components/Toast.tsx` | none | missing | stack offset 10, bottom clearance 84, dismiss distance 56, velocity 800 (`Toast.tsx:41-45`) | No toast. |
+| `components/Toast.tsx` | `state.rs` Toast, ToastLayer | partial | stack offset 10, bottom clearance 84, dismiss distance 56, velocity 800, enter spring 400 ms (`Toast.tsx:41-45`) | Card, stack, enter, swipe and the 84 pt layer are in. No auto-dismiss timers, no pause while held. |
 | `ui/Skeleton.tsx` | none | missing | loading placeholder | No skeleton. |
 | `ui.tsx` Avatar (`ui.tsx:99`) | none | missing | default size 40, `round` option | No avatar. |
 | `components/ActivityHeatmap.tsx`, `TokenHeatmap.tsx` | none | missing | cell 11, gap 3 (`ActivityHeatmap.tsx:14-15`) | No heat grid. |
@@ -66,7 +66,7 @@ Paths: `cohub:` is relative to `src/` in cohub-mobile unless it starts with `mod
 | `ui.tsx` SectionHeader (`ui.tsx:363`) | `list.rs:75`, `tokens.rs:581-605` | partial | cohub `pt-6 pl-4`, headline 17/22 semibold (`ui.tsx:366`). nsh SECTION_TOP 20, SECTION_HEADER_SIZE 20 | Code says 17 pt headline, reference pixels read about 13 pt. Code and pixels disagree. Weight: semibold (600), was bold; ink matches the reference within 10 % (bold was 21 %), see `docs/components/theme.md`, "The face in the demo and the screenshots". |
 | `components/FilterChip.tsx` | none | missing | hit target `min-h-12 min-w-12` (`FilterChip.tsx:25`), capsule | No chip. |
 | `ui/AppSwitch.tsx` | `switch.rs:32`, `tokens.rs` SWITCH_WIDTH 51, HEIGHT 31, THUMB 27 | partial | cohub track 63×28, thumb 37×24, spring 1000/80, `LENS_MIN_MS 300` (`AppSwitch.tsx:18`) | Cohub draws its own switch, nsh uses native size. The reference matches the cohub size. |
-| `ui/Loader.tsx` | `indicator.rs:33` ActivityIndicator | partial | sizes `sm` 20 spinner, `md` 72 mascot (`Loader.tsx:9`), pulse 0.35 to 1 | nsh 8 blades. Mascot loader missing. |
+| `ui/Loader.tsx` | `indicator.rs` crescent (button loading), `indicator.rs:33` ActivityIndicator | partial | `sm` 20 the cheek turns 900 ms (`Loader.tsx:9`), `md` 72 mascot, pulse 0.35 to 1 | Button `sm` is the crescent; reduced motion is still (no pulse). Pull-to-refresh keeps the 8 blades. Mascot loader missing. |
 | `ui/SwipeActions.tsx` | `swipe.rs:86` ACTION_WIDTH 80, `swipe.rs:95` SwipeRow | partial | ACTION_WIDTH 76, ACTIVE_X 16, FAIL_Y 8, release projection 0.1 s (`SwipeActions.tsx:14-20`) | Action width 80 vs 76. |
 | `components/SheetConfirmButton.tsx` | `sheet.rs:127` footer | unchecked | confirm button with `loading`, `disabled` | Not compared in detail. |
 | `components/AdaptiveSheet.ios.tsx` | `sheet.rs:127` Sheet, `sheet.rs:66-67`, `tokens.rs:608` | partial | compact breakpoint 720 (`AdaptiveSheet.ios.tsx:17`), header `min-h-14 px-2 pt-2` (`:65`), subtitle `px-4 pb-2` (`:70`), footer hairline `px-4 pt-3` (`:74`). nsh large top = safe top + 10, max width 640 | Reference radius about 37 pt (est.), nsh 14. Spring differs (see motion). |

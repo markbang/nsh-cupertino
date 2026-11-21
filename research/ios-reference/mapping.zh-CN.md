@@ -48,7 +48,7 @@
 | `ui.tsx` StatusPill（`ui.tsx:382`） | 无 | missing | 圆点加文字，五种色调 | 没有状态胶囊。 |
 | `ui.tsx` EmptyState（`ui.tsx:392`） | 无 | missing | 图标、标题、描述、操作 | 没有空状态。 |
 | `ui.tsx` ConnectionBanner（`ui.tsx:791`）、DataError（`ui.tsx:806`）、`components/AppUpdateBanner.tsx` | 无 | missing | 横幅 `min-h-14`、`rounded-md`、`shadow-float`（`AppUpdateBanner.tsx:88`） | 没有内嵌横幅。 |
-| `components/Toast.tsx` | 无 | missing | 堆叠偏移 10、底部留白 84、关闭距离 56、速度 800（`Toast.tsx:41-45`） | 没有 Toast。 |
+| `components/Toast.tsx` | `state.rs` Toast、ToastLayer | partial | 堆叠偏移 10、底部留白 84、关闭距离 56、速度 800、进入弹簧 400 ms（`Toast.tsx:41-45`） | 卡片、堆叠、进入、滑动和距底 84 pt 的图层已有。没有自动消失计时，没有按住时暂停。 |
 | `ui/Skeleton.tsx` | 无 | missing | 加载占位 | 没有骨架屏。 |
 | `ui.tsx` Avatar（`ui.tsx:99`） | 无 | missing | 默认尺寸 40，`round` 选项 | 没有头像。 |
 | `components/ActivityHeatmap.tsx`、`TokenHeatmap.tsx` | 无 | missing | 格子 11、间距 3（`ActivityHeatmap.tsx:14-15`） | 没有热力网格。 |
@@ -66,7 +66,7 @@
 | `ui.tsx` SectionHeader（`ui.tsx:363`） | `list.rs:75`、`tokens.rs:581-605` | partial | cohub `pt-6 pl-4`，headline 17/22 semibold（`ui.tsx:366`）。nsh SECTION_TOP 20、SECTION_HEADER_SIZE 20 | 代码写 17 pt headline，参考图像素读到约 13 pt。代码和像素不一致。字重：半粗体（600），原为粗体；墨迹与参考相差 10 % 以内（粗体为 21 %），见 `docs/components/theme.zh-CN.md`“演示和截图里的字体”一节。 |
 | `components/FilterChip.tsx` | 无 | missing | 点击区 `min-h-12 min-w-12`（`FilterChip.tsx:25`），胶囊 | 没有筛选标签。 |
 | `ui/AppSwitch.tsx` | `switch.rs:32`、`tokens.rs` SWITCH_WIDTH 51、HEIGHT 31、THUMB 27 | partial | cohub 轨道 63×28，滑块 37×24，弹簧 1000/80，`LENS_MIN_MS 300`（`AppSwitch.tsx:18`） | cohub 自绘开关，nsh 用原生尺寸。参考图与 cohub 尺寸一致。 |
-| `ui/Loader.tsx` | `indicator.rs:33` ActivityIndicator | partial | 尺寸 `sm` 20 转圈、`md` 72 吉祥物（`Loader.tsx:9`），脉动 0.35 到 1 | nsh 为 8 片叶。没有吉祥物加载。 |
+| `ui/Loader.tsx` | `indicator.rs` 月牙（按钮加载）、`indicator.rs:33` ActivityIndicator | partial | `sm` 20，脸颊 900 ms 原地转动（`Loader.tsx:9`），`md` 72 吉祥物，脉动 0.35 到 1 | 按钮的 `sm` 为月牙；减少动态时静止（无脉动）。下拉刷新仍为 8 片叶。没有吉祥物加载。 |
 | `ui/SwipeActions.tsx` | `swipe.rs:86` ACTION_WIDTH 80、`swipe.rs:95` SwipeRow | partial | ACTION_WIDTH 76，ACTIVE_X 16，FAIL_Y 8，释放预测 0.1 s（`SwipeActions.tsx:14-20`） | 操作宽度 80 对 76。 |
 | `components/SheetConfirmButton.tsx` | `sheet.rs:127` 底部区 | unchecked | 带 `loading`、`disabled` 的确认按钮 | 未细比。 |
 | `components/AdaptiveSheet.ios.tsx` | `sheet.rs:127` Sheet、`sheet.rs:66-67`、`tokens.rs:608` | partial | 紧凑断点 720（`AdaptiveSheet.ios.tsx:17`），头部 `min-h-14 px-2 pt-2`（`:65`），副标题 `px-4 pb-2`（`:70`），底部分隔线 `px-4 pt-3`（`:74`）。nsh 大档顶部 = 安全区顶部 + 10，最大宽 640 | 参考圆角约 37 pt（估），nsh 为 14。弹簧不同（见动效）。 |

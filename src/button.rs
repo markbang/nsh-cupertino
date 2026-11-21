@@ -4,7 +4,7 @@ use nsh_core::{AccessibilityRole, prelude::*};
 
 use crate::{
     icon::icon,
-    indicator::activity_indicator,
+    indicator::crescent,
     tokens::{self, metrics, motion, radius, type_default},
 };
 
@@ -140,13 +140,7 @@ pub fn Button(props: ButtonProps, cx: Scope<ButtonEvent>) -> impl IntoElement {
                 cx.emit(ButtonEvent::Press);
             }
         })
-        .when(loading, |v| {
-            v.child(
-                activity_indicator()
-                    .size(step.size.0 * 1.2)
-                    .color("on-tint"),
-            )
-        })
+        .when(loading, |v| v.child(crescent(step.size.0 * 1.2)))
         .when(has_icon && !loading, |v| {
             v.child(
                 icon(
