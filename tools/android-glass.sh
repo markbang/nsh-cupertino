@@ -151,6 +151,24 @@ scroll_up_by() {
   sleep 1
 }
 
+# The bar minimises on the downward swipe. A swipe that did not register leaves
+# it expanded, so the settled frame is checked for the bar's rim (the probe in
+# `tools/android-bar.mjs`, the one the checker reads), and the swipe is repeated
+# once when the rim is still there. Logged either way.
+minimised_shot() {
+  local name=$1
+  shot "$name"
+  if node "$here/tools/android-bar.mjs" --expanded "$OUT/android-glass-$name.png" >/dev/null 2>&1; then
+    step "$name: the bar is still expanded after the swipe; swiping once more"
+    scroll_by 500
+    settle
+    shot "$name"
+    if node "$here/tools/android-bar.mjs" --expanded "$OUT/android-glass-$name.png" >/dev/null 2>&1; then
+      step "$name: still expanded after the second swipe; the checker will judge the frame"
+    fi
+  fi
+}
+
 # One appearance at a time. Every state is seeded (`cupertino.page`,
 # `cupertino.overlay`) and reached with a finger, never by a coordinate
 # guessed from the layout: the demo seeds the sheet the same way a screenshot
@@ -170,7 +188,7 @@ capture() {
   # expands it again, which is the state the material is measured in.
   scroll_by 500
   settle
-  shot "tabmin-$scheme"
+  minimised_shot "tabmin-$scheme"
   scroll_up_by 320
   sleep 1
   shot "scrolled-$scheme"
@@ -184,7 +202,7 @@ capture() {
   sleep 1
   scroll_by 900
   settle
-  shot "tabmin-settings-$scheme"
+  minimised_shot "tabmin-settings-$scheme"
 
   # The glass sheet, seeded open at launch — the seed a screenshot test uses.
   # Its window takes seconds to draw on a software GPU.
