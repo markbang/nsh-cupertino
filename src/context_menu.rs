@@ -195,9 +195,9 @@ pub fn ContextMenu(props: ContextMenuProps, cx: Scope<ContextMenuEvent>) -> impl
                 ))
                 .backdrop_blur(tokens::materials::blur("thick"))
                 .shadow([nsh_core::BoxShadow {
-                    offset_y: px(10.0),
+                    offset_y: px(4.0),
                     blur: px(40.0),
-                    color: rgba(0x00000040).into(),
+                    color: rgba(0x00000021).into(),
                     ..nsh_core::BoxShadow::default()
                 }])
         })

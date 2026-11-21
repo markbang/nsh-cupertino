@@ -3,7 +3,7 @@
 # Filter chip
 
 A capsule a list filters by: a 36 pt label in 15 pt semibold, an optional count
-or window after it (12 pt), the accent fill with white text when chosen, a white
+or window after it (13 pt), the accent fill with white text when chosen, a white
 surface otherwise. Cohub Mobile's `FilterChip` gives the same look, and the same
 16 pt sides.
 

@@ -233,6 +233,7 @@ fn alert_panel(
         .shadow([nsh_core::BoxShadow {
             offset_y: px(8.0),
             blur: px(32.0),
+            spread: px(3.0),
             color: rgba(0x00000033).into(),
             ..nsh_core::BoxShadow::default()
         }])
@@ -257,8 +258,8 @@ fn alert_panel(
                 )
                 .child(
                     text(move || message.get().unwrap_or_default())
-                        .text_size(type_default::FOOTNOTE.size)
-                        .line_height(type_default::FOOTNOTE.line_height)
+                        .text_size(type_default::SUBHEADLINE.size)
+                        .line_height(type_default::SUBHEADLINE.line_height)
                         .text_color(tokens::label)
                         .text_center(),
                 ),
