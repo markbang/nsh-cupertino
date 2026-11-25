@@ -167,12 +167,12 @@ What the shader does, and how close each part is:
 | --- | --- | --- |
 | Lensing | The surface's SDF gives a height field (a bevel of `BEVEL` points at the rim, flat inside); its gradient displaces the backdrop sample, strongest at the rim, and magnifies the whole picture by 2 % | **Refraction** of a sampled picture: the displacement is real, the height profile is a chosen curve, not Apple's optic |
 | Blur | 9 to 17 backdrop taps on a golden spiral, rotated per pixel; `quality` drops them | A blur of the sampled picture, coarser than a separable Gaussian |
-| Specular rim | `facing = dot(normal, light)` on the bevel, a hairline at the very edge, and an inner shadow on the unlit side | Directional and continuous around the silhouette; the *shape* of Apple's highlight is its own |
+| Specular rim | `abs(dot(normal, light))` on the bevel: both ends of the light axis lit alike, as iOS's equal top and bottom rim peaks show, and a hairline at the very edge | Continuous around the silhouette; the *shape* of Apple's highlight is its own |
 | Adaptive tint | The tint's alpha rises where the blurred backdrop's luminance would fight the label (up to 96 %) | Approximates "adapts to the background"; Apple's own rule is unpublished |
 | Chromatic separation | Red and blue sampled half a pixel apart along the normal, only in the rim band | ≤ 1 px, as Apple's edge shows |
 | Dynamic light | `light` (degrees) and an app-driven `tilt` angle | NSH reports no device motion, so the tilt is not automatic |
 | `GlassEffectContainer` | `GlassGroup`: one shader over two rects, fused with a smooth minimum (`spacing`) and sprung between two layouts | One sampling region and a fused silhouette, as Apple asks; no morphing of a shape's content |
-| Interactive | A press springs the lens, the specular bloom and a 3,5 % squash on the UI thread | Values and timing (~250 ms) are this crate's; Reduce Motion keeps the values and drops the springs |
+| Interactive | A press springs the lens (2.4 × `LENS`) and a 3,5 % squash on the UI thread | Values and timing (~250 ms) are this crate's; Reduce Motion keeps the values and drops the springs |
 
 The approaches were checked against the open-source implementations that solved
 the same problems; `NOTICE` lists each, its licence and what was taken from it.
@@ -278,8 +278,7 @@ point inside the edge and a soft tail about 8 pt into the body, scaled by
 `(1 − luminance)^0.3`; on black it adds about +50/255, easing to +27/255 over a
 near-white body (the measurement in `liquid_glass_widgets`'
 `liquid_glass_render.frag`). Ours follows that shape with one lobe pair and a
-soft sheen, and measures +0.32 luminance on the lit edge of the calibration
-capsule.
+soft sheen; the two lobes are equal, as iOS's top and bottom rim peaks are.
 
 The adaptive tint thickens only where the backdrop fights a label, and stops at
 70 %: it must never turn the glass into an opaque slab.
@@ -307,7 +306,7 @@ On the calibration page (a capsule over dense text and a blue edge, 3×):
 | Fill-only correlation, for contrast | below the shader's | 0.16 | 0.09 |
 | Material mean luminance | dark above the backdrop, 0.06–0.34 | — | 0.26 over 0.09 |
 | Rim displacement of the blue edge | ≥ 1.5 pt | 10.0 | 15.7 |
-| Lit edge − opposite edge | ≥ 0.05 | +0.06 (bottom) | +0.29 (top) |
+| Top − bottom rim peak, where the page above and below match | ≤ 0.02 (iOS 0.004), both above the body | 0.000 | 0.020 |
 
 `tools/android-glass-check.mjs` measures the same properties on the emulator's
 frames, and adds the structure checks: the bar spans ≥ 60 % of the screen when

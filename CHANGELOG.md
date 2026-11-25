@@ -17,6 +17,21 @@ All notable changes to `nsh-cupertino`. The format follows
   and a close that holds, shrinks to 0.94 and fades as one layer within 130 ms. Items take a `detail` line and a `section`
   header (`GlassMenuAction`). The glass shader gains a `roundness` uniform for it.
 
+### Fixed
+
+- **Interactive glass shows its backdrop.** A press bound the lens to 1.0 at
+  rest and 2.4 held instead of `LENS` times that, so `GlassButton`, the
+  `GlassMenu` button and `Glass interactive` drew the backdrop at their centre
+  across the whole body. The lens is now `LENS` at rest and `LENS × PRESS_LENS`
+  held.
+- **Both ends of the light axis catch the light, as on iOS.** The opposite
+  rim's lobe never ran (`opposite` was always 0); the rim is now symmetric on
+  the light axis, as the iOS tab bar's and back button's equal rim peaks are.
+  The never-read `INNER`, `BLOOM`, `EDGE`, `PRESS_BLOOM` and `PRESS_LIFT` are
+  gone. The pixel checks compare the top and bottom rim (|Δ| ≤ 0.02, both above
+  the body) where the page above and below match, instead of asserting a lit
+  side.
+
 ## [0.4.2] - 2026-11-17
 
 ### Fixed

@@ -46,13 +46,9 @@ struct Uniforms {
   thickness: f32,
   lens: f32,
   specular: f32,
-  bloom: f32,
-  lift: f32,
   chroma: f32,
   blur: f32,
   taps: f32,
-  inner: f32,
-  edge: f32,
   adapt: f32,
   dark: f32,
   tilt: f32,
@@ -335,10 +331,10 @@ fn shade(uv: vec2f) -> vec4f {
     uniforms.light.x * c - uniforms.light.y * s,
     uniforms.light.x * s + uniforms.light.y * c,
   );
-  let facing = clamp(dot(normal, light), 0.0, 1.0);
-  let lit = max(facing, 0.0);
-  let opposite = max(-facing, 0.0);
-  let lobe = lit * lit * lit + 0.85 * opposite * opposite * opposite;
+  // Both ends of the light axis catch it alike: iOS's rim peaks are equal
+  // top and bottom (tab bar 102 / 101 dark, back button 54 / 54).
+  let axis = abs(dot(normal, light));
+  let lobe = axis * axis * axis;
 
   // The iOS 27 rim light: a sharp core one point inside the hairline, a tail
   // a few points into the body, on the two ends of the light axis; stronger
@@ -350,21 +346,18 @@ fn shade(uv: vec2f) -> vec4f {
   let along = clamp(0.5 + 0.5 * dot(p / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
   rgb = rgb + vec3f(1.0) * select(uniforms.specular, 0.0, flat) * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
-  // The inner shadow opposite the light: the sheet's thickness shows.
-  rgb = rgb * (1.0 - uniforms.inner * pow(opposite, 2.0) * rim);
-
-  // The hairline: the backdrop at its own position, darkened; strongest across
-  // the light axis and fading at its ends. On a white page the fill cannot
+  // The hairline: the backdrop at its own position, darkened; strongest at
+  // the ends of the light axis and fading across it. On a white page the fill cannot
   // separate the glass from the page — this line and the soft band inside it
   // are what make the shape a surface rather than a smudge.
   let line = smoothstep(1.1, 0.0, inside);
-  let ends = 0.55 + 0.45 * (lit - opposite);
+  let ends = 0.55 + 0.45 * axis;
   rgb = rgb - vec3f(1.0) * line * uniforms.rim_shade * 0.10 * clamp(ends, 0.0, 1.0);
   rgb = rgb - vec3f(1.0) * smoothstep(6.0, 0.0, inside) * uniforms.rim_shade * 0.04;
 
   // The very edge catches the light: a bright hairline all round, stronger
-  // on the side the light comes from.
-  rgb = rgb + vec3f(1.0) * line * ease * (0.18 + 0.35 * lit);
+  // at the ends of the light axis.
+  rgb = rgb + vec3f(1.0) * line * ease * (0.18 + 0.35 * axis);
 
   return vec4f(clamp(rgb, vec3f(0.0), vec3f(1.0)), coverage);
 }
@@ -823,20 +816,10 @@ impl Press {
     }
 
     fn lens(&self) -> AnimatedNode {
-        self.value
-            .interpolate(&[0.0, numbers::PRESS_HELD], &[1.0, numbers::PRESS_LENS])
-    }
-
-    fn bloom(&self) -> AnimatedNode {
         self.value.interpolate(
             &[0.0, numbers::PRESS_HELD],
-            &[numbers::BLOOM, numbers::PRESS_BLOOM],
+            &[numbers::LENS, numbers::LENS * numbers::PRESS_LENS],
         )
-    }
-
-    fn lift(&self) -> AnimatedNode {
-        self.value
-            .interpolate(&[0.0, numbers::PRESS_HELD], &[0.0, numbers::PRESS_LIFT])
     }
 
     /// The squash of the surface under the finger (none with Reduce Motion).
@@ -984,12 +967,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("thickness", thickness)
         .uniform("lens", numbers::LENS)
         .uniform("specular", numbers::SPECULAR)
-        .uniform("bloom", numbers::BLOOM)
         .uniform("chroma", numbers::CHROMA)
         .uniform("blur", blur)
         .uniform("taps", quality)
-        .uniform("inner", numbers::INNER)
-        .uniform("edge", numbers::EDGE)
         .uniform("adapt", spec.adapts())
         .uniform("dark", move || if dark() { 1.0_f32 } else { 0.0 })
         .uniform("saturation", move || {
@@ -1059,10 +1039,7 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         glass = glass.uniform("body", &body.amount);
     }
     if let Some(press) = press {
-        glass = glass
-            .uniform("lens", &press.lens())
-            .uniform("bloom", &press.bloom())
-            .uniform("lift", &press.lift());
+        glass = glass.uniform("lens", &press.lens());
     }
     glass.absolute().inset_0()
 }
@@ -1101,8 +1078,8 @@ pub struct GlassProps {
     /// `"high"` (13 blur samples), `"balanced"` (5, the default) or `"low"`
     /// (1: no blur of its own, for weak GPUs).
     pub quality: Prop<Option<SharedString>>,
-    /// The surface answers presses: it squashes, its light blooms and it
-    /// lenses harder while held (none of it with Reduce Motion).
+    /// The surface answers presses: it squashes and lenses harder while
+    /// held (none of it with Reduce Motion).
     pub interactive: Prop<Option<bool>>,
     /// What draws over the glass.
     pub children: Prop<Children>,
@@ -1210,12 +1187,12 @@ pub enum GlassButtonEvent {
     Press,
 }
 
-/// A floating control of glass: a capsule that springs and blooms under the
-/// finger, with an icon or a short title inside.
+/// A floating control of glass: a capsule that springs under the finger,
+/// with an icon or a short title inside.
 ///
 /// It is the `interactive` variant of [`Glass`]: a press squashes it to
-/// 96,5 %, widens the specular rim and lenses the backdrop harder, and Reduce
-/// Motion collapses every step.
+/// 96,5 % and lenses the backdrop harder, and Reduce Motion collapses every
+/// step.
 #[component]
 pub fn GlassButton(props: GlassButtonProps, cx: Scope<GlassButtonEvent>) -> impl IntoElement {
     let press = Press::new();

@@ -9,12 +9,13 @@
 // It measures the properties the material is calibrated to, against the numbers
 // read from the iOS 27 reference (`docs/design-notes.md`): the structure under
 // the glass survives, dark glass is lighter than its backdrop, the rim
-// refracts, the lit edge is brighter than the opposite one, and the sheen is
+// refracts, both ends of the light axis catch it alike, and the sheen is
 // smooth rather than banded.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CAPSULE, judgeRim, rimColumns } from "./glass-rim.mjs";
 import { readPng } from "./png.mjs";
 
 const args = process.argv.slice(2);
@@ -26,9 +27,6 @@ const arg = (name, fallback) => {
 const root = join(fileURLToPath(import.meta.url), "..", "..");
 const DIR = arg("dir", join(root, "docs", "screenshots"));
 const SCALE = 3;
-
-/** The capsule of the calibration page, in page points. */
-const CAPSULE = { x: 60, y: 120, width: 180, height: 64 };
 
 const px = (points) => Math.round(points * SCALE);
 const failures = [];
@@ -178,28 +176,12 @@ for (const scheme of ["light", "dark"]) {
   );
 }
 
-// (d) The specular: a bright line on the lit edge, the lit side by appearance
-// (iOS 27 lights the light material from below and the dark one from above),
-// and the opposite edge dimmer.
-for (const [scheme, lit] of [
-  ["dark", "top"],
-  ["light", "bottom"],
-]) {
-  const column = px(CAPSULE.x + CAPSULE.width / 2);
-  const band = (from, to) => {
-    let best = 0;
-    for (let y = px(from); y < px(to); y++) best = Math.max(best, shader[scheme].luminance(column, y));
-    return best;
-  };
-  const top = band(CAPSULE.y + 0.5, CAPSULE.y + 5);
-  const bottom = band(CAPSULE.y + CAPSULE.height - 5, CAPSULE.y + CAPSULE.height - 0.5);
-  const middle = shader[scheme].luminance(column, px(CAPSULE.y + CAPSULE.height / 2));
-  const gain = lit === "top" ? top - bottom : bottom - top;
-  check(
-    `the specular follows the light (${scheme})`,
-    gain >= 0.05,
-    `${lit} edge ${gain.toFixed(3)} brighter (top ${top.toFixed(3)}, bottom ${bottom.toFixed(3)}, middle ${middle.toFixed(3)})`,
-  );
+// (d) The specular: both ends of the light axis catch it alike, as iOS's rim
+// peaks do (`tools/glass-rim.mjs`), and the sheen in the middle is smooth.
+for (const scheme of ["light", "dark"]) {
+  const rim = judgeRim(rimColumns(shader[scheme], none[scheme], (x, y) => [px(x), px(y)]));
+  check(`the top and bottom rims catch the light alike (${scheme})`, rim.ok, rim.detail);
+  const middle = shader[scheme].luminance(px(CAPSULE.x + CAPSULE.width / 2), px(CAPSULE.y + CAPSULE.height / 2));
   const base = mean(none[scheme], CAPSULE.x + 60, CAPSULE.y + 20, CAPSULE.x + CAPSULE.width - 20, CAPSULE.y + CAPSULE.height - 20);
   check(
     `the sheen is smooth, not banded (${scheme})`,
