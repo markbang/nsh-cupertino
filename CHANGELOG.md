@@ -22,8 +22,11 @@ All notable changes to `nsh-cupertino`. The format follows
 - **Interactive glass shows its backdrop.** A press bound the lens to 1.0 at
   rest and 2.4 held instead of `LENS` times that, so `GlassButton`, the
   `GlassMenu` button and `Glass interactive` drew the backdrop at their centre
-  across the whole body. The lens is now `LENS` at rest and `LENS × PRESS_LENS`
-  held.
+  across the whole body. The lens is now `LENS` at rest and `PRESS_LENS` held.
+- **Glass no longer magnifies at rest.** Colour bars scrolled under iOS 27's
+  composer keep their joins in place (m = 1.000 ± 0.002), so `LENS` is 0
+  instead of 0.8 %. A press still magnifies by 1.92 % (`PRESS_LENS`, now the
+  held value itself).
 - **Both ends of the light axis catch the light, as on iOS.** The opposite
   rim's lobe never ran (`opposite` was always 0); the rim is now symmetric on
   the light axis, as the iOS tab bar's and back button's equal rim peaks are.

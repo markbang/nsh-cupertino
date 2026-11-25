@@ -279,7 +279,7 @@ fn shade(uv: vec2f) -> vec4f {
   let normal = sd_gradient(p);
 
   // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
-  // the rim by (n - 1) * thickness * slope; the sheet also magnifies a little.
+  // the rim by (n - 1) * thickness * slope; a press also magnifies the sheet.
   let flat = uniforms.body >= 0.0;
   let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * select(uniforms.lens, 0.0, flat);
   let jitter = hash_cell(floor(uv * size * nsh.scale)) * 0.5;
@@ -818,7 +818,7 @@ impl Press {
     fn lens(&self) -> AnimatedNode {
         self.value.interpolate(
             &[0.0, numbers::PRESS_HELD],
-            &[numbers::LENS, numbers::LENS * numbers::PRESS_LENS],
+            &[numbers::LENS, numbers::PRESS_LENS],
         )
     }
 
