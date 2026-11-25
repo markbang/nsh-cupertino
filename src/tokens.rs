@@ -815,11 +815,15 @@ pub mod glass {
     pub const BEVEL: f32 = 10.0;
     /// How far a ray shifts at the very rim, in points: a paraxial lens of
     /// 1.24 through 32 pt of glass bends by `(n - 1) * thickness`. Unmeasured
-    /// on iOS: no straight backdrop edge crosses a bar's rim in the shots or
-    /// motion clips (`research/ios-reference/mapping.md`, section 8).
+    /// on iOS: under the composer the side rims show content from further in
+    /// while the top rim leans outward, so not even the sign is settled
+    /// (`research/ios-reference/mapping.md`, section 8).
     pub const THICKNESS: f32 = 8.0;
-    /// The magnification of the picture under the sheet (0.8 %).
-    pub const LENS: f32 = 0.008;
+    /// The magnification of the picture under the sheet at rest: none. Colour
+    /// bars scrolled under iOS 27's composer keep their joins within 0.5 px
+    /// 400 px from its centre (m = 1.000 ± 0.002, light and dark), where 0.8 %
+    /// would move them 3 px.
+    pub const LENS: f32 = 0.0;
     /// The blur radius of the material, in points: small, so the detail under
     /// a control survives (the scroll edge effect carries the dissolve).
     pub const BLUR: f32 = 5.0;
@@ -873,10 +877,9 @@ pub mod glass {
 
     /// What a press drives its animated value to.
     pub const PRESS_HELD: f32 = 1.0;
-    /// How much harder the lens works while held: [`LENS`] times this.
-    /// Unmeasured: the iOS press clip (`motion-press`) shows only solid
-    /// buttons, no glass press.
-    pub const PRESS_LENS: f32 = 2.4;
+    /// The magnification while held (1.92 %). Unmeasured: the iOS press clip
+    /// (`motion-press`) shows only solid buttons, no glass press.
+    pub const PRESS_LENS: f32 = 0.0192;
     /// The squash of the surface while held.
     pub const PRESS_SCALE: f32 = 0.965;
     /// The spring a press runs on (`~250 ms` to rest).

@@ -165,14 +165,14 @@ What the shader does, and how close each part is:
 
 | Part | What this crate does | Fidelity |
 | --- | --- | --- |
-| Lensing | The surface's SDF gives a height field (a bevel of `BEVEL` points at the rim, flat inside); its gradient displaces the backdrop sample, strongest at the rim, and magnifies the whole picture by 2 % | **Refraction** of a sampled picture: the displacement is real, the height profile is a chosen curve, not Apple's optic |
+| Lensing | The surface's SDF gives a height field (a bevel of `BEVEL` points at the rim, flat inside); its gradient displaces the backdrop sample, strongest at the rim; the flat middle does not magnify (iOS: 1.000 ± 0.002) | **Refraction** of a sampled picture: the displacement is real, the height profile is a chosen curve, not Apple's optic |
 | Blur | 9 to 17 backdrop taps on a golden spiral, rotated per pixel; `quality` drops them | A blur of the sampled picture, coarser than a separable Gaussian |
 | Specular rim | `abs(dot(normal, light))` on the bevel: both ends of the light axis lit alike, as iOS's equal top and bottom rim peaks show, and a hairline at the very edge | Continuous around the silhouette; the *shape* of Apple's highlight is its own |
 | Adaptive tint | The tint's alpha rises where the blurred backdrop's luminance would fight the label (up to 96 %) | Approximates "adapts to the background"; Apple's own rule is unpublished |
 | Chromatic separation | Red and blue sampled half a pixel apart along the normal, only in the rim band | ≤ 1 px, as Apple's edge shows |
 | Dynamic light | `light` (degrees) and an app-driven `tilt` angle | NSH reports no device motion, so the tilt is not automatic |
 | `GlassEffectContainer` | `GlassGroup`: one shader over two rects, fused with a smooth minimum (`spacing`) and sprung between two layouts | One sampling region and a fused silhouette, as Apple asks; no morphing of a shape's content |
-| Interactive | A press springs the lens (2.4 × `LENS`) and a 3,5 % squash on the UI thread | Values and timing (~250 ms) are this crate's; Reduce Motion keeps the values and drops the springs |
+| Interactive | A press springs the lens to a 1.92 % magnification and a 3,5 % squash on the UI thread | Values and timing (~250 ms) are this crate's; Reduce Motion keeps the values and drops the springs |
 
 The approaches were checked against the open-source implementations that solved
 the same problems; `NOTICE` lists each, its licence and what was taken from it.
