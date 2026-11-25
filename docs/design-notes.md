@@ -306,7 +306,7 @@ On the calibration page (a capsule over dense text and a blue edge, 3×):
 | Fill-only correlation, for contrast | below the shader's | 0.16 | 0.09 |
 | Material mean luminance | dark above the backdrop, 0.06–0.34 | — | 0.26 over 0.09 |
 | Rim displacement of the blue edge | ≥ 1.5 pt | 10.0 | 15.7 |
-| Top − bottom rim peak, where the page above and below match | ≤ 0.02 (iOS 0.004), both above the body | 0.000 | 0.016 |
+| Top − bottom rim peak, where the page above and below match | ≤ 0.02 (iOS 0.004), both above the body | 0.000 | 0.0157 |
 
 `tools/android-glass-check.mjs` measures the same properties on the emulator's
 frames, and adds the structure checks: the bar spans ≥ 60 % of the screen when
