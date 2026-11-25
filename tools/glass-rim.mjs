@@ -23,6 +23,8 @@ const THICKNESS = 8;
 const REACH = 13;
 const HALF_WIDTH = 3;
 const SAME = 0.02;
+/** How far a capture may place the capsule off the page's geometry (the emulator's sits about 0.5 pt higher). */
+const SLACK = 4;
 
 /**
  * The columns where the backdrop is the same above and below the capsule, with
@@ -47,13 +49,20 @@ export function rimColumns(glass, clear, at) {
     }
     return sum / count;
   };
-  const peak = (x, y0, y1) => {
-    const [, from] = at(x, y0);
-    const [, to] = at(x, y1);
-    const [px] = at(x, y0);
+  const peak = (px, from, to) => {
     let best = 0;
     for (let y = from; y < to; y++) best = Math.max(best, glass.luminance(px, y));
     return best;
+  };
+  // The capsule's edge in this capture: the first (or last) row near the
+  // page's geometry where the glass differs from the page without it.
+  const edge = (px, y, step) => {
+    const [, from] = at(0, y - step * SLACK);
+    const [, to] = at(0, y + step * SLACK);
+    for (let row = from; row !== to; row += step) {
+      if (Math.abs(glass.luminance(px, row) - clear.luminance(px, row)) > SAME) return row;
+    }
+    return at(0, y)[1];
   };
   const columns = [];
   for (let x = BLUE_EDGE + THICKNESS; x <= CAPSULE.x + CAPSULE.width - 4; x += 2) {
@@ -65,10 +74,14 @@ export function rimColumns(glass, clear, at) {
     const outside = Math.abs(band(clear, x, top - REACH, top) - band(clear, x, bottom, bottom + REACH));
     const inside = Math.abs(band(clear, x, top, top + REACH) - band(clear, x, bottom - REACH, bottom));
     if (outside >= SAME || inside >= SAME) continue;
+    const [px] = at(x, 0);
+    const depth = at(0, 4.5)[1] - at(0, 0)[1];
+    const from = edge(px, top, 1);
+    const to = edge(px, bottom, -1);
     columns.push({
       x,
-      top: peak(x, top + 0.5, top + 5),
-      bottom: peak(x, bottom - 5, bottom - 0.5),
+      top: peak(px, from, from + depth),
+      bottom: peak(px, to - depth + 1, to + 1),
       body: lum(glass, x, cy),
     });
   }

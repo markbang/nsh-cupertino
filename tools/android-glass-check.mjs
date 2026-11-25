@@ -288,8 +288,15 @@ SCHEMES.forEach((scheme, index) => {
   const expanded = expandedFrames[index];
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized || !located || located.steps[darkIndex] < 0.03) return;
+  // The light bar's top rim is lit as its bottom is, white over a white page as
+  // on iOS (tab bar top peak 254 over the page): where it steps less than the
+  // dark frame's floor, the dark frame carries the span, as it carries the
+  // minimise below.
   const span = barRimSpan(expanded, located.row);
-  if (span.width < 300 || Math.abs(span.centre - 0.5) > 0.03) {
+  const faint = scheme !== "dark" && rimStep(expanded, located.row) < 0.03;
+  if (faint) {
+    report(`${scheme}: the tab bar's rim is ${rimStep(expanded, located.row).toFixed(3)} at row ${located.row}, white on white; the dark frame carries the span`);
+  } else if (span.width < 300 || Math.abs(span.centre - 0.5) > 0.03) {
     fail(`scrolled-${scheme}.png's tab bar rim spans ${span.width.toFixed(0)} pt, centred at ${(span.centre * 100).toFixed(0)} %: it is not the floating capsule (about 350 pt, centred)`);
   } else {
     report(`${scheme}: the tab bar's rim spans ${span.width.toFixed(0)} pt, centred on the screen`);
