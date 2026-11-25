@@ -61,7 +61,7 @@ top-left corner; a radius of `-1` is a capsule and `-2` a circle.
 - `quality` trades blur samples for speed: `"high"` is 17 taps, `"balanced"` 9,
   `"low"` 1 (no blur of its own: the tint carries the material, for weak GPUs).
 - An `interactive` surface animates on the UI thread: the press is one animated
-  value, and the lens, the specular bloom and the squash derive from it. Nothing
+  value, and the lens and the squash derive from it. Nothing
   runs in the app's code per frame.
 - The lens and the blur read `maxSampleOffset` points beyond the box (the
   thickness of the lens plus the blur radius), so the platform keeps a picture

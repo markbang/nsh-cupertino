@@ -14,6 +14,7 @@ import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { judgeRim, rimColumns } from "./glass-rim.mjs";
 import { readPng } from "./png.mjs";
 import { barRimRow, barRimSpan, describeBar, rimStep } from "./android-bar.mjs";
 
@@ -287,8 +288,15 @@ SCHEMES.forEach((scheme, index) => {
   const expanded = expandedFrames[index];
   const minimized = must(`tabmin-${scheme}`);
   if (!expanded || !minimized || !located || located.steps[darkIndex] < 0.03) return;
+  // The light bar's top rim is lit as its bottom is, white over a white page as
+  // on iOS (tab bar top peak 254 over the page): where it steps less than the
+  // dark frame's floor, the dark frame carries the span, as it carries the
+  // minimise below.
   const span = barRimSpan(expanded, located.row);
-  if (span.width < 300 || Math.abs(span.centre - 0.5) > 0.03) {
+  const faint = scheme !== "dark" && rimStep(expanded, located.row) < 0.03;
+  if (faint) {
+    report(`${scheme}: the tab bar's rim is ${rimStep(expanded, located.row).toFixed(3)} at row ${located.row}, white on white; the dark frame carries the span`);
+  } else if (span.width < 300 || Math.abs(span.centre - 0.5) > 0.03) {
     fail(`scrolled-${scheme}.png's tab bar rim spans ${span.width.toFixed(0)} pt, centred at ${(span.centre * 100).toFixed(0)} %: it is not the floating capsule (about 350 pt, centred)`);
   } else {
     report(`${scheme}: the tab bar's rim spans ${span.width.toFixed(0)} pt, centred on the screen`);
@@ -348,25 +356,12 @@ for (const scheme of SCHEMES) {
   } else {
     report(`light glass reads ${lit.toFixed(3)} over a ${behind.toFixed(3)} backdrop`);
   }
-  // The lit edge: iOS 27 lights the dark material from above, the light one
-  // from below.
-  const y = Math.round(152 * scale);
-  const column = Math.round(150 * scale);
-  const top = (() => {
-    let best = 0;
-    for (let row = Math.round(121 * scale); row < Math.round(126 * scale); row++) best = Math.max(best, glass.luminance(column, row));
-    return best;
-  })();
-  const bottom = (() => {
-    let best = 0;
-    for (let row = Math.round(178 * scale); row < Math.round(183 * scale); row++) best = Math.max(best, glass.luminance(column, row));
-    return best;
-  })();
-  const gain = scheme === "dark" ? top - bottom : bottom - top;
-  if (gain < 0.03) {
-    fail(`calibration-shader-${scheme}.png has no specular on its lit edge (${gain.toFixed(3)})`);
+  // Both ends of the light axis catch it alike, as iOS's rim peaks do.
+  const rim = judgeRim(rimColumns(glass, clear, (x, y) => [Math.round(x * scale), Math.round(y * scale)]));
+  if (!rim.ok) {
+    fail(`calibration-shader-${scheme}.png: the top and bottom rims differ: ${rim.detail}`);
   } else {
-    report(`${scheme}: the lit rim is ${gain.toFixed(3)} brighter than the opposite one (row ${y})`);
+    report(`${scheme}: the top and bottom rims catch the light alike (${rim.detail})`);
   }
 }
 
@@ -498,10 +493,10 @@ for (const scheme of SCHEMES) {
     const cx = sumX / count;
     const cy = sumY / count;
     const page = pageBeside(image, cx, cy);
-    const ring = [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]].map(
-      ([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)),
-    );
+    const points = [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]];
+    const ring = points.map(([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)));
     const edge = Math.min(...ring);
+    report(`${scheme}: the pill's ring, pt from the icon: ${points.map(([dx, dy], i) => `(${dx},${dy}) ${ring[i].toFixed(4)}`).join(", ")}`);
     const fill = [[0, -10], [0, 10], [10, 0], [-10, 0]]
       .map(([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)))
       .reduce((s, v) => s + v, 0) / 4;

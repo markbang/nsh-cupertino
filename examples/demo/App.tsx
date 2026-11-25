@@ -1457,7 +1457,7 @@ function GlassPage() {
           </Section>
           <Section
             header="Glass controls"
-            footer="The interactive variant: a press squashes the capsule to 96,5 %, widens its specular rim and lenses harder, over 250 ms."
+            footer="The interactive variant: a press squashes the capsule to 96,5 % and lenses harder, over 250 ms."
           >
             <View class="bg-secondary-fill" style={{ flexDirection: "row", gap: 12, padding: 16 }}>
               <GlassButton icon="square.and.pencil" label="Compose" onPress={() => notice.set("Compose")} />

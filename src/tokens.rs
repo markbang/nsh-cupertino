@@ -829,13 +829,6 @@ pub mod glass {
     pub const BAR_BLUR: f32 = 24.0;
     /// The strength of the specular rim.
     pub const SPECULAR: f32 = 0.7;
-    /// The width of the specular rim, as the exponent of the bevel's falloff
-    /// (higher: a tighter rim).
-    pub const BLOOM: f32 = 2.0;
-    /// The strength of the hairline at the very edge.
-    pub const EDGE: f32 = 0.5;
-    /// The inner shadow opposite the light.
-    pub const INNER: f32 = 0.22;
     /// The chromatic separation of the rim, in points (one pixel at @3x).
     pub const CHROMA: f32 = 0.0;
     /// The direction the light comes from, in degrees: iOS 27 lights its light
@@ -880,14 +873,10 @@ pub mod glass {
 
     /// What a press drives its animated value to.
     pub const PRESS_HELD: f32 = 1.0;
-    /// How much harder the lens works while held. Unmeasured, as [`PRESS_LIFT`].
+    /// How much harder the lens works while held: [`LENS`] times this.
+    /// Unmeasured: the iOS press clip (`motion-press`) shows only solid
+    /// buttons, no glass press.
     pub const PRESS_LENS: f32 = 2.4;
-    /// The specular rim's exponent while held (a wider bloom). Unmeasured, as
-    /// [`PRESS_LIFT`].
-    pub const PRESS_BLOOM: f32 = 0.8;
-    /// The extra brightness of the rim while held. Unmeasured: the iOS press
-    /// clip (`motion-press`) shows only solid buttons, no glass press.
-    pub const PRESS_LIFT: f32 = 0.22;
     /// The squash of the surface while held.
     pub const PRESS_SCALE: f32 = 0.965;
     /// The spring a press runs on (`~250 ms` to rest).
