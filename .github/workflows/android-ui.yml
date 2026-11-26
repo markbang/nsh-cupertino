@@ -6,6 +6,11 @@ name: Android UI
 # blank (black or a single colour), and measures the calibration stills the way
 # `tools/glass-pixels.mjs` measures the web ones: the edge under the capsule's
 # rim must move, which a fill cannot do.
+#
+# Known thin margin: the dark rim symmetry reads 0.0196 against the 0.02 limit
+# here (light 0.0157; web 0.0000 / 0.0157). The soft sheen (specular × 0.055 ×
+# along²) leans to the lit side. There is no room left: do not treat the limit
+# as slack. See docs/design-notes.md, "What our renders measure".
 
 on:
   pull_request:

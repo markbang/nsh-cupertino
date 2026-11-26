@@ -306,12 +306,18 @@ On the calibration page (a capsule over dense text and a blue edge, 3×):
 | Fill-only correlation, for contrast | below the shader's | 0.16 | 0.09 |
 | Material mean luminance | dark above the backdrop, 0.06–0.34 | — | 0.26 over 0.09 |
 | Rim displacement of the blue edge | ≥ 1.5 pt | 10.0 | 15.7 |
-| Top − bottom rim peak, where the page above and below match | ≤ 0.02 (iOS 0.004), both above the body | 0.000 | 0.020 |
+| Top − bottom rim peak, where the page above and below match | ≤ 0.02 (iOS 0.004), both above the body | 0.000 | 0.0157 |
 
 `tools/android-glass-check.mjs` measures the same properties on the emulator's
 frames, and adds the structure checks: the bar spans ≥ 60 % of the screen when
 expanded and ≤ 45 % after a downward scroll, and the 20 pt either side of the
 capsule show content rather than the bar.
+
+The top − bottom rim check is the thinnest margin in CI. On the emulator the
+dark rim reads 0.0196 against the 0.02 limit (light 0.0157); on the web it reads
+0.0000 (light) and 0.0157 (dark). The soft sheen (specular × 0.055 × along²)
+leans to the lit side, which is what eats the margin. There is no room left:
+do not treat the limit as slack.
 
 ### What still differs from Apple
 
@@ -339,3 +345,9 @@ capsule show content rather than the bar.
 - **The scroll edge effect is one loop of taps over the strip**, not a separable
   two-pass Gaussian; at 20 pt over 110 pt it is smooth on our test content but
   can show a faint ring on an extremely high-contrast, fine pattern.
+- **The rim does not brighten next to bright content.** Over a flat backdrop
+  iOS's top and bottom rim peaks are equal (ratio 0.98–1.02), but where a bright
+  backdrop sits next to or under one rim, that rim brightens: the top/bottom
+  peak ratio reads 0.76 and 1.46 in the iOS 27 simulator stripes clips. Ours
+  keeps the two rims equal everywhere. There is no material to set a value
+  from, so this is not modelled.

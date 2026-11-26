@@ -96,6 +96,7 @@ export function judgeRim(columns) {
   const worst = columns.reduce((a, b) => (Math.abs(b.top - b.bottom) > Math.abs(a.top - a.bottom) ? b : a));
   const gain = Math.abs(worst.top - worst.bottom);
   const flat = columns.find((c) => !(c.top > c.body && c.bottom > c.body));
+  // The emulator's dark gain reads 0.0196 here: a known thin margin, see docs/design-notes.md.
   const ok = gain <= 0.02 && !flat;
   const where = (c) => `x ${c.x} pt: top ${c.top.toFixed(3)}, bottom ${c.bottom.toFixed(3)}, body ${c.body.toFixed(3)}`;
   const detail =

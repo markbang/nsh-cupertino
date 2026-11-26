@@ -495,6 +495,10 @@ for (const scheme of SCHEMES) {
     const page = pageBeside(image, cx, cy);
     const points = [[0, -25], [0, 25], [25, 0], [-25, 0], [0, 30], [0, 32], [18, 18], [-18, 18], [18, -18], [-18, -18]];
     const ring = points.map(([dx, dy]) => image.luminance(Math.round(cx + dx * scale), Math.round(cy + dy * scale)));
+    // TODO: the (-25, 0) pt point, from the mail icon's centroid (cx, cy), can read row text under the pill. The pill
+    // is translucent and this point sits on or just outside its hairline, so the minimum follows whatever is behind
+    // it: 0.8955 on the page, 0.49 and once 0.0000 over row text. The right check is the pill's own composite colour:
+    // sample inside the pill body against the same spot in the no-glass capture, not the minimum over ring points.
     const edge = Math.min(...ring);
     report(`${scheme}: the pill's ring, pt from the icon: ${points.map(([dx, dy], i) => `(${dx},${dy}) ${ring[i].toFixed(4)}`).join(", ")}`);
     const fill = [[0, -10], [0, 10], [10, 0], [-10, 0]]
