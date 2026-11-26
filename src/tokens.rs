@@ -827,9 +827,11 @@ pub mod glass {
     /// The blur radius of the material, in points: small, so the detail under
     /// a control survives (the scroll edge effect carries the dissolve).
     pub const BLUR: f32 = 5.0;
-    /// The blur of a floating bar, in points (24). The shader samples a disc of
+    /// The blur of the menu body, in points (24). The shader samples a disc of
     /// this radius, so its σ is 0.456 × 24 ≈ 11 pt: the iOS pull-down menu's
     /// measured σ, 10 pt in light and 12 pt in dark (`tools/measure-glass-ios.py`).
+    /// The iOS tab bar is a different, two-scale material (`docs/design-notes.md`,
+    /// "What still differs from Apple"). A rename must keep this at 24.
     pub const BAR_BLUR: f32 = 24.0;
     /// The strength of the specular rim.
     pub const SPECULAR: f32 = 0.7;
