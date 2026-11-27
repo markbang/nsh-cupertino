@@ -5,7 +5,7 @@ use nsh_core::prelude::*;
 
 use crate::tokens;
 
-/// The props of [`Slider`].
+/// The props of a [`Slider`].
 #[derive(Debug, Clone, PartialEq, Props)]
 pub struct SliderProps {
     /// The value (controlled): the app owns it and sets it in `onChange`.
