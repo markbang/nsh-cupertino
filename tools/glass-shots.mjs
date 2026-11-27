@@ -59,7 +59,7 @@ const SCALE = 3;
 /** The iOS fixture's screen, in points (1206 × 2622 px at 3x). */
 const IPHONE = [402, 874];
 /** The minimise progress of the morph stills. */
-const MORPHS = [0, 0.25, 0.5, 0.75, 1];
+const MORPHS = [0, 0.1, 0.25, 0.5, 0.75, 1];
 /** The demo's storage namespace: `nsh:<app id>:` (nsh-engine). */
 const PREFIX = "nsh:dev.nsh.cupertino.demo:";
 
