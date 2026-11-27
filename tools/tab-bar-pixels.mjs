@@ -772,6 +772,37 @@ for (const theme of THEMES) {
         console.log(`  one-disc:  ${show(single)}`);
       }
     }
+    // Report only: is the one-disc still offset against the two-scale one at the
+    // rim? Per silhouette profile (the same edges and the same flat filter in
+    // both), the shift of the one-disc profile, in device pixels along the
+    // edge's outward normal (+ outward, i.e. up on the top edge), that best
+    // matches the two-scale profile over the rim, -3 to +2 pt: least squares
+    // over shifts -3 to +3 px in 0.05 px steps, linear interpolation.
+    {
+      const two = r.profiles;
+      const one = measure[`single-${m}`].profiles;
+      const idx = ALONG.map((s, i) => [s, i]).filter(([s]) => s >= -3 && s <= 2).map(([, i]) => i);
+      const at = (p, x) => {
+        const i0 = Math.max(0, Math.min(p.length - 2, Math.floor(x)));
+        return p[i0] + (p[i0 + 1] - p[i0]) * (x - i0);
+      };
+      const shifts = two.map((a, j) => {
+        const b = one[j];
+        let best = { s: 0, e: Infinity };
+        for (let s = -3; s <= 3.0001; s += 0.05) {
+          // b sampled where a is, moved by s pixels outward (ALONG grows outward).
+          let e = 0;
+          for (const i of idx) e += (a[i] - at(b, i + s)) ** 2;
+          if (e < best.e) best = { s, e };
+        }
+        return best.s;
+      }).sort((x, y) => x - y);
+      const q = (v) => shifts[Math.min(shifts.length - 1, Math.floor(v * shifts.length))];
+      const drop = 18 * m;
+      console.log(
+        `RIM OFFSET ${theme} morph ${m}: one-disc against two-scale ${f(q(0.5), 2)} px (p25 ${f(q(0.25), 2)}, p75 ${f(q(0.75), 2)}) over ${shifts.length} profiles; the one-disc bar's DOM drop here is ${f(drop, 2)} px (fraction ${f(drop - Math.floor(drop), 2)}), the two-scale bar's is drawn in the shader`,
+      );
+    }
     // The layers' box edge outside the glass: its step and jump against the
     // one-disc body at the same morph, which has no layers there.
     const single = measure[`single-${m}`];
