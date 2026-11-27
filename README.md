@@ -272,6 +272,9 @@ node ../tools/site-api.mjs       # regenerate site/src/api.ts from docs/componen
 cd .. && node tools/site-check.mjs --url http://127.0.0.1:4173/nsh-cupertino/
 ```
 
+Builds, tests, screenshots and the Android emulator glass checks all run in GitHub
+Actions (`.github/workflows/ci.yml`, `android-ui.yml`); `pages.yml` publishes the site.
+
 CI (`.github/workflows/ci.yml`): fmt, clippy `-D warnings`, tests, the theme
 drift check, `nsh check` + `nsh test` of the demo, the web package, a screenshot
 job that publishes the captures to the `screenshots` branch, and the site's own

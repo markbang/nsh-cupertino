@@ -232,6 +232,8 @@ node ../tools/site-api.mjs       # 从 docs/components/ 重新生成 site/src/ap
 cd .. && node tools/site-check.mjs --url http://127.0.0.1:4173/nsh-cupertino/
 ```
 
+构建、测试、截图与 Android 模拟器上的玻璃检查都在 GitHub Actions 中运行（`.github/workflows/ci.yml`、`android-ui.yml`）；站点由 `pages.yml` 发布。
+
 CI（`.github/workflows/ci.yml`）：fmt、clippy `-D warnings`、测试、主题漂移检查、
 演示应用的 `nsh check` 与 `nsh test`、Web 打包、把截图发布到 `screenshots` 分支的截图任务，
 以及站点自身的检查、测试、Web 打包与无头运行。`pages.yml` 在每次推送到 `main`
