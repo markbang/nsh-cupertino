@@ -595,6 +595,22 @@ const FRAMES = 60;
 const MOTION_CLIP = { x: 0, y: 770, width: 402, height: 104, scale: 1 };
 
 /** One minimise of the fixture bar per appearance and body: the two-scale body and the one-disc body before it. */
+// The minimise progress the page shows: 1 minus the effective opacity of the
+// bar's shadow (`tab_bar.rs`, bound to 1 - progress) and the effective opacity
+// of the minimised pill's disc (bound to progress), each the product of the
+// opacities from the view up to the app's root. Two readings of one value.
+const PROGRESS = `(() => {
+  const all = [...document.querySelectorAll("#app *")];
+  const effective = (el) => {
+    let o = 1;
+    for (let n = el; n && n.id !== "app"; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
+    return o;
+  };
+  const shadow = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 7px 10px"));
+  const pill = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 5px 12px"));
+  return { fromShadow: shadow ? 1 - effective(shadow) : null, fromPill: pill ? effective(pill) : null };
+})()`;
+
 const RECORDINGS = ["light", "dark"].flatMap((scheme) => [
   ...[["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
     name: `tab-bar-motion-${tag}${scheme}`,
@@ -606,6 +622,9 @@ const RECORDINGS = ["light", "dark"].flatMap((scheme) => [
   // The same minimise on the pinned stills' own scene (`App.tsx`
   // `TabBarFixtureExactPage`): its frames are compared with the stills.
   { name: `tab-bar-exact-${scheme}`, scheme, barbody: undefined, scroll: "exact", wheel: [201, 870] },
+  // The one-disc body on the same scene and clock: the per-frame reference of
+  // `tools/tab-bar-pixels.mjs`.
+  { name: `tab-bar-exact-single-${scheme}`, scheme, barbody: "single-blur", scroll: "exact", wheel: [201, 870] },
 ]);
 
 async function record(page, base, rec) {
@@ -652,7 +671,9 @@ async function record(page, base, rec) {
   const frozen = await page
     .call("Runtime.evaluate", { expression: "window.__nshClock.freeze()", returnByValue: true })
     .then((result) => result.result.value);
-  const frames = [{ k: 0, t: 0, ran: 0 }];
+  const progressNow = () =>
+    page.call("Runtime.evaluate", { expression: PROGRESS, returnByValue: true }).then((result) => result.result.value);
+  const frames = [{ k: 0, t: 0, ran: 0, progress: await progressNow() }];
   await capture(0);
   // A user's scroll: one wheel notch over the page, 60 pt down. The bar
   // minimises after 20 pt of travel. Real time passes for the scroll to land
@@ -663,7 +684,7 @@ async function record(page, base, rec) {
     const { t, ran } = await page
       .call("Runtime.evaluate", { expression: `window.__nshClock.step(${STEP_MS})`, returnByValue: true })
       .then((result) => result.result.value);
-    frames.push({ k, t: t - frozen, ran });
+    frames.push({ k, t: t - frozen, ran, progress: await progressNow() });
     await capture(k);
   }
   for (const line of page.console.splice(0)) console.log(`  ${rec.name}: page says: ${line.slice(0, 300)}`);

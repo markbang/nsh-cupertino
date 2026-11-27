@@ -87,6 +87,8 @@ const check = (label, ok, detail) => {
   console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${detail}`);
   if (!ok) failures.push(label);
 };
+/** A criterion printed as `check` would, without failing the run. */
+const report = (label, ok, detail) => console.log(`${ok ? "ok  " : "OVER"} (report only) ${label}: ${detail}`);
 
 /** Luma in levels over the band, `(shot(...) @ L)[BAND[0]:BAND[1]]` (`common.py:15-16`). */
 function luma(file) {
@@ -566,7 +568,9 @@ for (const theme of THEMES) {
 //
 // A middle frame passes when each measure is no larger than the largest of its
 // references, the end frames (morph 0 and 1) and the one-disc body at the same
-// morph, plus the two-scale model's own residual on iOS (1.98 light, 2.40 dark
+// morph (since Stage 2 the frames judged are every frame of the recorded
+// minimise, `judgeFrames`, against the one-disc recording's frame of the same
+// index; the pinned stills are report only), plus the two-scale model's own residual on iOS (1.98 light, 2.40 dark
 // levels): a difference below that is below what the measurement resolves.
 const BAR = { cx: 201, cy: 822, hx: 180, hy: 32, radius: 32, lift: 6, pill: 25 };
 const MORPHS = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -650,6 +654,7 @@ const mean = (list) => list.reduce((s, v) => s + v, 0) / Math.max(list.length, 1
 /** Luma along each edge's normal at the offsets `along`, kept where the backdrop is flat if `flat`. */
 function profilesAt(image, ref, edges, along, flat) {
   const out = [];
+  const kept = [];
   for (const edge of edges) {
     if (flat) {
       let lo = Infinity;
@@ -664,7 +669,10 @@ function profilesAt(image, ref, edges, along, flat) {
       if (hi - lo > FLAT) continue;
     }
     out.push(along.map((s) => sampleAt(image, edge.x + s * edge.nx, edge.y + s * edge.ny)));
+    kept.push(edge);
   }
+  // The edges the profiles were read at, index for index.
+  out.edges = kept;
   return out;
 }
 
@@ -695,6 +703,155 @@ function jump(profiles, along, [inFrom, inTo], [outFrom, outTo]) {
   };
 }
 
+/**
+ * The step criteria's measures of one image of the bar at progress `m`: the
+ * silhouette's flat profiles (step over -12…+6 pt, ramp over -7.5…-1 pt, the
+ * inside/outside jump) and, where the silhouette has left the layers' box, the
+ * box edge's step and jump. Pinned stills and recorded frames are measured
+ * alike.
+ */
+function measureAt(image, ref, theme, m, body) {
+  const edges = silhouetteEdges(m, m);
+  const profiles = profilesAt(image, ref, edges, ALONG, true);
+  const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
+  const row = {
+    theme,
+    m,
+    body,
+    n: profiles.length,
+    step: largestStep(profiles, ALONG, -12, 6),
+    ramp: largestStep(profiles, ALONG, -7.5, -1),
+    worst: { step: worstStep(profiles, ALONG, -12, 6), ramp: worstStep(profiles, ALONG, -7.5, -1) },
+    profiles,
+    inside,
+    outside,
+    jump: inside - outside,
+  };
+  // The layers' box edge where the silhouette has left it: the same columns
+  // in both renders.
+  const box = boxEdges(m, m);
+  if (box.length) {
+    const across = profilesAt(image, ref, box, ACROSS_BOX, false);
+    const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);
+    row.box = { n: across.length, step: largestStep(across, ACROSS_BOX, -4, 4), jump: j.inside - j.outside, profiles: across };
+  }
+  return row;
+}
+
+/** A recorded frame (`glass-shots.mjs` MOTION_CLIP: the page from 770 pt down, 3x) as band luma; rows above the clip are 0 and never sampled. */
+function lumaClip(file) {
+  const image = readPng(file);
+  const top = 770 * 3;
+  if (image.width !== W || top + image.height !== H) {
+    throw new Error(`${file}: ${image.width} × ${image.height}, a recorded frame is ${W} × ${H - top}`);
+  }
+  const out = new Float64Array(BH * W);
+  for (let y = 0; y < BH; y++) {
+    const row = y + BAND[0] - top;
+    if (row < 0) continue;
+    for (let x = 0; x < W; x++) {
+      const [r, g, b] = image.pixel(x, row);
+      out[y * W + x] = r * L[0] + g * L[1] + b * L[2];
+    }
+  }
+  return out;
+}
+
+/** Where the worst sample of a failing criterion lies, and whether it is a one-pixel dip the reference does not have. */
+function explainWorst(key, r, single) {
+  const { profile, at } = r.worst[key];
+  const two = r.profiles[profile];
+  const one = single.profiles[profile];
+  const edge = r.profiles.edges?.[profile];
+  const show = (values) => values.map((v) => v.toFixed(0)).join(" ");
+  console.log(
+    `  worst ${key}: profile ${profile}${edge ? ` at x ${f(edge.x, 1)}, y ${f(edge.y, 1)} pt, normal (${f(edge.nx, 2)}, ${f(edge.ny, 2)})${Math.abs(edge.ny) < 0.5 ? ", a cap tip" : ""}` : ""}, between ${ALONG[at - 1].toFixed(2)} and ${ALONG[at].toFixed(2)} pt`,
+  );
+  console.log(`  two-scale: ${show(two)}`);
+  if (one) console.log(`  one-disc:  ${show(one)}`);
+  // A one-pixel notch: a sample more than 5 levels below both neighbours in
+  // the two-scale profile where the one-disc profile has none.
+  const dips = [];
+  for (let i = 1; i + 1 < two.length; i++) {
+    const dip = Math.min(two[i - 1], two[i + 1]) - two[i];
+    const refDip = one ? Math.min(one[i - 1], one[i + 1]) - one[i] : 0;
+    if (dip > 5 && refDip <= 5) dips.push(`${ALONG[i].toFixed(2)} pt (${two[i].toFixed(0)} between ${two[i - 1].toFixed(0)} and ${two[i + 1].toFixed(0)}; one-disc ${one ? one[i].toFixed(0) : "—"})`);
+  }
+  console.log(`  one-pixel notch in the two-scale profile only: ${dips.length ? dips.join(", ") : "none"}`);
+}
+
+/**
+ * The step criteria on every frame of the 60 fps minimise on the stills' own
+ * scene (`motion/tab-bar-exact-<theme>-NNN.png`), frames 1-60 (frame 0 is
+ * before the scroll): the same measures, windows, flat selection and limits as
+ * the stills had. The reference is the one-disc recording's frame of the same
+ * index (`motion/tab-bar-exact-single-<theme>-NNN.png`, same scene, same page
+ * clock); the end frames are the pinned two-scale stills at progress 0 and 1,
+ * the same scene (Stage 1, CI run 46008914329: the progress-1 still equals
+ * the settled frame, max |diff| 0). Each frame's progress is the one the page
+ * showed (`glass-shots.mjs` PROGRESS).
+ */
+function judgeFrames(theme, ref, measure) {
+  const motion = join(DIR, "motion");
+  const meta = (name) => JSON.parse(readFileSync(join(motion, `${name}.json`), "utf8"));
+  const two = meta(`tab-bar-exact-${theme}`);
+  const one = meta(`tab-bar-exact-single-${theme}`);
+  const ends = [measure["two-0"], measure["two-1"]];
+  const progressOf = (frame, name) => {
+    const { fromShadow, fromPill } = frame.progress ?? {};
+    if (typeof fromShadow !== "number" || typeof fromPill !== "number") {
+      throw new Error(`${name} frame ${frame.k}: no progress recorded (${JSON.stringify(frame.progress)})`);
+    }
+    return { p: fromShadow, agree: Math.abs(fromShadow - fromPill) };
+  };
+  const summary = { judged: 0, failing: [], worst: null };
+  for (let k = 1; k < two.frames.length; k++) {
+    const frame = two.frames[k];
+    const { p, agree } = progressOf(frame, `tab-bar-exact-${theme}`);
+    const { p: pOne } = progressOf(one.frames[k], `tab-bar-exact-single-${theme}`);
+    const tag = `frame ${theme} ${String(k).padStart(2, "0")} (t ${f(frame.t, 1)} ms, progress ${f(p, 4)})`;
+    const before = failures.length;
+    check(
+      `${tag}: the progress is known`,
+      agree <= 0.01 && Math.abs(p - pOne) <= 0.01,
+      `shadow and pill agree within ${f(agree, 4)}; the one-disc frame's progress ${f(pOne, 4)} (both ≤ 0.01)`,
+    );
+    const name = String(k).padStart(3, "0");
+    const r = measureAt(lumaClip(join(motion, `tab-bar-exact-${theme}-${name}.png`)), ref, theme, p, "two");
+    const single = measureAt(lumaClip(join(motion, `tab-bar-exact-single-${theme}-${name}.png`)), ref, theme, pOne, "single");
+    const refs = [...ends, single];
+    const limit = (key) => Math.max(...refs.map((x) => Math.abs(x[key]))) + MARGIN[theme];
+    summary.judged += 1;
+    let worstRatio = 0;
+    check(`${tag}: flat backdrop to measure on`, r.n >= 5, `${r.n} silhouette profiles (≥ 5)`);
+    for (const key of ["step", "ramp", "jump"]) {
+      const value = Math.abs(r[key]);
+      worstRatio = Math.max(worstRatio, value / limit(key));
+      check(
+        `${tag}: ${key}`,
+        value <= limit(key),
+        `${f(value, 2)} / ${f(limit(key), 2)} (end frames ${f(Math.abs(ends[0][key]), 2)}, ${f(Math.abs(ends[1][key]), 2)}; one-disc frame ${f(Math.abs(single[key]), 2)}; + ${MARGIN[theme]})`,
+      );
+      if (value > limit(key) && key !== "jump" && r.worst[key]) explainWorst(key, r, single);
+    }
+    if (r.box && single.box) {
+      for (const key of ["step", "jump"]) {
+        const value = Math.abs(r.box[key]);
+        const lim = Math.abs(single.box[key]) + MARGIN[theme];
+        worstRatio = Math.max(worstRatio, value / lim);
+        check(`${tag}: box edge ${key}`, value <= lim, `${f(value, 2)} / ${f(lim, 2)} over ${r.box.n} profiles (one-disc frame ${f(Math.abs(single.box[key]), 2)} + ${MARGIN[theme]})`);
+      }
+    } else {
+      console.log(`  ${tag}: box edge not judged: ${r.box ? "the one-disc frame has no box edge" : "the silhouette is still the layers' box"}`);
+    }
+    if (failures.length > before) summary.failing.push(k);
+    if (!summary.worst || worstRatio > summary.worst.ratio) summary.worst = { k, t: frame.t, p, ratio: worstRatio };
+  }
+  console.log(
+    `FRAMES ${theme}: ${summary.judged} frames judged, ${summary.failing.length} failing${summary.failing.length ? ` (${summary.failing.join(", ")})` : ""}; worst frame ${summary.worst.k} (t ${f(summary.worst.t, 1)} ms, progress ${f(summary.worst.p, 4)}) at ${f(summary.worst.ratio, 3)} of its limit`,
+  );
+}
+
 const morphRows = [];
 for (const theme of THEMES) {
   const ref = luma(join(FIXTURE_DIR, `tab-bar-ref-${theme}-a.png`));
@@ -703,30 +860,7 @@ for (const theme of THEMES) {
     const tag = String(Math.round(m * 100)).padStart(3, "0");
     for (const body of ["two", "single"]) {
       const image = luma(join(DIR, `tab-bar-fixture-morph-${body === "single" ? "single-" : ""}${theme}-${tag}.png`));
-      const edges = silhouetteEdges(m, m);
-      const profiles = profilesAt(image, ref, edges, ALONG, true);
-      const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
-      const row = {
-        theme,
-        m,
-        body,
-        n: profiles.length,
-        step: largestStep(profiles, ALONG, -12, 6),
-        ramp: largestStep(profiles, ALONG, -7.5, -1),
-        worst: { step: worstStep(profiles, ALONG, -12, 6), ramp: worstStep(profiles, ALONG, -7.5, -1) },
-        profiles,
-        inside,
-        outside,
-        jump: inside - outside,
-      };
-      // The layers' box edge where the silhouette has left it: the same columns
-      // in both renders.
-      const box = boxEdges(m, m);
-      if (box.length) {
-        const across = profilesAt(image, ref, box, ACROSS_BOX, false);
-        const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);
-        row.box = { n: across.length, step: largestStep(across, ACROSS_BOX, -4, 4), jump: j.inside - j.outside, profiles: across };
-      }
+      const row = measureAt(image, ref, theme, m, body);
       measure[`${body}-${m}`] = row;
       morphRows.push(row);
     }
@@ -740,11 +874,15 @@ for (const theme of THEMES) {
       );
     }
   }
+  // Report only since Stage 2: a pinned-progress still is not a frame of a real
+  // minimise (Stage 1, CI run 46008914329: measured noise 0, and none of the 8
+  // stills is within it of any of the 60 frames on the same scene). The same
+  // criteria are judged on every recorded frame (`judgeFrames`).
   for (const m of MORPHS.filter((v) => v > 0 && v < 1)) {
     const r = measure[`two-${m}`];
     const refs = [measure["two-0"], measure["two-1"], measure[`single-${m}`]];
     const limit = (key) => Math.max(...refs.map((x) => Math.abs(x[key]))) + MARGIN[theme];
-    check(
+    report(
       `the ${theme} bar at morph ${m} has flat backdrop to measure on`,
       r.n >= 5,
       `${r.n} silhouette profiles over a flat backdrop (≥ 5)`,
@@ -754,7 +892,7 @@ for (const theme of THEMES) {
       ["ramp", "largest step in the hand-over ramp"],
       ["jump", "brightness jump inside against outside"],
     ]) {
-      check(
+      report(
         `${label}, ${theme}, morph ${m}`,
         Math.abs(r[key]) <= limit(key),
         `${f(Math.abs(r[key]), 2)} levels (≤ ${f(limit(key), 2)}: the largest of morph 0 ${f(Math.abs(refs[0][key]), 2)}, morph 1 ${f(Math.abs(refs[1][key]), 2)}, the one-disc body ${f(Math.abs(refs[2][key]), 2)}, plus ${MARGIN[theme]})`,
@@ -813,13 +951,14 @@ for (const theme of THEMES) {
     const diff = mean(r.box.profiles.map((p, i) => Math.sqrt(mean(p.map((v, k) => (v - single.box.profiles[i][k]) ** 2)))));
     for (const key of ["step", "jump"]) {
       const lim = Math.abs(single.box[key]) + MARGIN[theme];
-      check(
+      report(
         `the fading layers' box edge, ${key}, ${theme}, morph ${m}`,
         Math.abs(r.box[key]) <= lim,
         `${f(Math.abs(r.box[key]), 2)} levels over ${r.box.n} profiles (≤ ${f(lim, 2)}: the one-disc body ${f(Math.abs(single.box[key]), 2)} plus ${MARGIN[theme]}); the layers differ from the one-disc frame there by ${f(diff, 2)} levels rms`,
       );
     }
   }
+  judgeFrames(theme, ref, measure);
 }
 
 // --- Increased contrast ------------------------------------------------------
