@@ -89,8 +89,9 @@ tab underneath.
 The body is iOS 27's measured two-scale material on the web: a 0.625 pt ghost and
 an 18 pt frost as two CSS backdrop layers under the shader, which draws the tint
 and the rim over them (`tokens::bar`; `tools/tab-bar-pixels.mjs` checks it against
-the iOS frames in CI). As the bar minimises the layers fade out and the shader
-body takes over. The native builds draw the shader's one-disc body. With
+the iOS frames in CI). As the bar starts to minimise, the layers fade out and the
+shader body takes over in place (the first 20 % of the progress), before the
+silhouette shrinks. The native builds draw the shader's one-disc body. With
 `prefers-reduced-transparency: reduce` (web) the bar is opaque: the shade it has
 over an empty page, read when the bar is built.
 Increased contrast keeps the shader's own body: the near-opaque `glass-regular` is
