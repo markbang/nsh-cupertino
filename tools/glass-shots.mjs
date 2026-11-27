@@ -696,11 +696,25 @@ async function main() {
   mkdirSync(OUT, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "glass-build-"));
   const built = packageApp(work);
+  const picked = SHOTS.filter((shot) =>
+    (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")) &&
+    (!SCHEME || shot.scheme === SCHEME) &&
+    (!PAGES || PAGES.includes(shot.page)),
+  );
+  // The recordings of a minimise: the fixture's page, spread over the shards
+  // on their own.
+  const recordings = RECORDINGS.filter((rec) =>
+    (ONLY ? ONLY.includes(rec.name) : true) &&
+    (!SCHEME || rec.scheme === SCHEME) &&
+    (!PAGES || PAGES.includes("tab-bar-fixture")),
+  ).filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
+  if (!picked.length && !recordings.length) throw new Error("no shot matches --only, --scheme and --pages");
   // The fixture's stills last: their 402 × 874 pt viewport and 1206 × 2622
   // backdrop must not change what the other stills see.
-  const picked = SHOTS.filter((shot) => (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")));
-  const chosen = [...picked.filter((shot) => !shot.fixture), ...picked.filter((shot) => shot.fixture)];
-  if (chosen.some((shot) => shot.fixture)) {
+  const ordered = [...picked.filter((shot) => !shot.fixture), ...picked.filter((shot) => shot.fixture)];
+  const chosen = ordered.filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
+  if (!chosen.length) console.log(`shard ${SHARD.join("/")} has none of the ${picked.length} shots`);
+  if (chosen.some((shot) => shot.fixture) || recordings.length) {
     // The fixture page's backdrops, served next to the build (same origin, so
     // the shader's backdrop picture may draw them).
     const frames = await fetchTabBarFixture();
@@ -722,18 +736,9 @@ async function main() {
     });
     await page.call("Page.navigate", { url: `http://127.0.0.1:${port}/` });
     await new Promise((resolve) => setTimeout(resolve, 2500));
-    const picked = SHOTS.filter((shot) =>
-      (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")) &&
-      (!SCHEME || shot.scheme === SCHEME) &&
-      (!PAGES || PAGES.includes(shot.page)),
-    );
-    if (!picked.length) throw new Error("no shot matches --only, --scheme and --pages");
-    const shots = picked.filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
-    if (!shots.length) console.log(`shard ${SHARD.join("/")} has none of the ${picked.length} shots`);
-    for (const shot of shots) {
+    for (const shot of chosen) {
       console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
     }
-    const recordings = RECORDINGS.filter((rec) => (ONLY ? ONLY.includes(rec.name) : true));
     if (recordings.length) {
       // The page clock goes in every page from here on (it is inert until frozen).
       await page.call("Page.addScriptToEvaluateOnNewDocument", { source: CLOCK });
