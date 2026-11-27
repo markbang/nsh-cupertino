@@ -25,7 +25,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DEFAULT_DIR } from "./fetch-tab-bar-fixture.mjs";
+import { DEFAULT_DIR, fetchTabBarFixture } from "./fetch-tab-bar-fixture.mjs";
 import { readPng } from "./png.mjs";
 
 const args = process.argv.slice(2);
@@ -36,6 +36,9 @@ const arg = (name, fallback) => {
 const root = join(fileURLToPath(import.meta.url), "..", "..");
 const DIR = arg("dir", join(root, "docs", "screenshots"));
 const FIXTURE_DIR = arg("fixture", DEFAULT_DIR);
+// The iOS frames, downloaded and checked against their sha256 if they are not
+// there yet (CI's glass-pixels job starts from a bare checkout).
+await fetchTabBarFixture(FIXTURE_DIR);
 
 // --- Pass thresholds ------------------------------------------------------
 //

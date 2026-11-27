@@ -1,3 +1,7 @@
+# The glass pixel checks, the tab bar's among them (`tools/glass-pixels.mjs`
+# runs `tab-bar-pixels.mjs` and `tab-bar-motion.mjs`), as CI's glass-pixels job
+# runs them.
+node tools/glass-pixels.mjs
 #!/usr/bin/env bash
 # Captures docs/screenshots from the web build and checks the separators it
 # drew. Run from the repository root; the demo app has no `fs` capability, so
@@ -13,13 +17,7 @@ nsh test screenshots.test.tsx --target web "$@"
 nsh test separators.test.tsx --target web "$@"
 cd ../..
 node tools/glass-shots.mjs "$@"
-# Both pixel checks run, then the script fails if either did.
-status=0
-node tools/glass-pixels.mjs || status=1
-# The tab bar over the iOS 27 tab-bar fixture's own backdrop (`glass-shots`
-# fetched the frames and checked their hashes): its body refitted to the
-# two-scale model, against the iOS frames, and its readability floor.
-node tools/tab-bar-pixels.mjs || status=1
-# The minimise recorded frame by frame: the hand-over in time and the motion.
-node tools/tab-bar-motion.mjs || status=1
-exit "$status"
+# The glass pixel checks, the tab bar's among them (`tools/glass-pixels.mjs`
+# runs `tab-bar-pixels.mjs` and `tab-bar-motion.mjs`), as CI's glass-pixels job
+# runs them.
+node tools/glass-pixels.mjs
