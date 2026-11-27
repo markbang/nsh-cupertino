@@ -258,8 +258,9 @@ pub struct GlassTabBarProps {
     pub scroll_offset: Prop<Option<f32>>,
     /// Forces the bar minimized (or expanded) while set.
     pub minimized: Prop<Option<bool>>,
-    /// `"glass"` (the shader, the default) or `"material"` (the blur-only fill
-    /// of a platform without a GPU), for comparing the two.
+    /// `"glass"` (the shader, the default), `"material"` (the blur-only fill
+    /// of a platform without a GPU) or `"single-blur"` (the shader's own
+    /// one-disc body, without the web's two-scale layers), for comparing them.
     pub material: Prop<Option<SharedString>>,
     /// What screen readers call the bar.
     pub label: Prop<Option<SharedString>>,
@@ -381,6 +382,10 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
 
     let material = props.material.get_untracked();
     let glass = material.as_deref() != Some("material");
+    let two_scale = glass && material.as_deref() != Some("single-blur");
+    // Reduce Transparency: an opaque bar, no backdrop at all. Asked once, as
+    // the bar is built (`glass::reduce_transparency`).
+    let reduced = crate::glass::reduce_transparency();
     let anchor = move || (selected.get() as f32 + 0.5) / count as f32;
     // The pill's place follows the chosen tab: a spring slides it there when the
     // selection changes while the bar is minimised. The glass silhouette and
@@ -403,14 +408,16 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let anchor_node = anchor_value.animated_node();
     let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
-        // A bar over a page of 14 pt rows needs a frosted backdrop: at the
-        // material's 5 pt the strokes stay legible. BAR_BLUR is the menu's
-        // blur, not the bar's two-scale material (design-notes: known gaps).
+        // Where the two-scale body does not draw (the native builds, increased
+        // contrast, the minimised pill), the shader's own body: a bar over a
+        // page of 14 pt rows needs a frosted backdrop, and at the material's
+        // 5 pt the strokes stay legible. BAR_BLUR is the menu's blur.
         .blur(crate::tokens::glass::BAR_BLUR)
         .quality(crate::glass::GlassQuality::High)
         .minimized(&morph, anchor())
         .anchor(&anchor_node)
-        .material_only(!glass);
+        .material_only(!glass)
+        .two_scale(two_scale);
 
     let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
     for (index, item) in values.iter().enumerate() {
@@ -568,7 +575,9 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 .bg(move || {
                     let page = tokens::system_background();
                     Hsla {
-                        a: if nsh_core::element::dark() {
+                        a: if reduced {
+                            1.0
+                        } else if nsh_core::element::dark() {
                             0.86
                         } else {
                             0.92
@@ -613,7 +622,32 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .role(AccessibilityRole::Tablist)
         .label(props.label.get_untracked().unwrap_or_else(|| "Tabs".into()))
         .child(shadow)
-        .child(crate::glass::layer(spec, None))
+        .when(reduced, |bar| {
+            // Opaque: the shade the bar has over an empty page
+            // (`tokens::bar::reduced_level`), a hairline for its edge.
+            bar.child(
+                view()
+                    .absolute()
+                    .inset_0()
+                    .rounded(px(32.0))
+                    .bg(move || grey(tokens::bar::reduced_level(nsh_core::element::dark())))
+                    .border(tokens::hairline())
+                    .border_color(move || {
+                        if nsh_core::element::dark() {
+                            rgba(0xffff_ff1a)
+                        } else {
+                            rgba(0x3c3c_4314)
+                        }
+                    })
+                    .bind_opacity(&expanded_opacity),
+            )
+        })
+        .when(!reduced, |bar| {
+            // The two-scale layers go right under the shader, which draws the
+            // tint and the rim over them.
+            bar.child(crate::glass::two_scale_layers(two_scale, 32.0, expanded_opacity))
+                .child(crate::glass::layer(spec, None))
+        })
         .child(
             view()
                 .absolute()
@@ -627,4 +661,10 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 .bind_opacity(&expanded_opacity),
         )
         .child(minimized_view)
+}
+
+/// An opaque grey of `level` (0–255, sRGB-encoded).
+fn grey(level: f32) -> Hsla {
+    let v = level.round().clamp(0.0, 255.0) as u32;
+    rgba((v << 24) | (v << 16) | (v << 8) | 0xff).into()
 }

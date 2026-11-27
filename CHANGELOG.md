@@ -16,6 +16,12 @@ All notable changes to `nsh-cupertino`. The format follows
   its body from the first frame with glass only at the rim, the clip's shadow,
   and a close that holds, shrinks to 0.94 and fades as one layer within 130 ms. Items take a `detail` line and a `section`
   header (`GlassMenuAction`). The glass shader gains a `roundness` uniform for it.
+- **`GlassTabBar` draws iOS 27's two-scale body on the web.** A 0.625 pt ghost
+  and an 18 pt frost as two CSS backdrop layers under the shader, which draws
+  the measured tint and the rim over them (`tokens::bar`). The native builds
+  keep the one-disc body. `material="single-blur"` shows that body for
+  comparison, and `prefers-reduced-transparency: reduce` (web) makes the bar
+  opaque. `tools/tab-bar-pixels.mjs` checks the body against the iOS frames in CI.
 
 ### Fixed
 

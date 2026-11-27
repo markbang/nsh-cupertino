@@ -65,7 +65,7 @@ content, not an edge-to-edge band.
 | `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit's `MinimizeBehavior`: minimise on the way down and expand on the way up. |
 | `scrollOffset` | number | | The page's offset, fed from its `onScroll`; without it the bar never minimises. |
 | `minimized` | boolean | | Forces the state while set. |
-| `material` | `"glass" \| "material"` | `"glass"` | The shader, or the blur-only fill (for comparing the two). |
+| `material` | `"glass" \| "material" \| "single-blur"` | `"glass"` | The shader, the blur-only fill, or the shader's one-disc body without the web's two-scale layers (for comparing them). |
 | `onChange` | `{ value, index }` | | Another tab was chosen. |
 
 Shape and motion: 64 pt tall, radius 32, 20 pt from the sides and 12 pt above the
@@ -83,3 +83,11 @@ The minimised pill is a picture of the chosen tab: its icon and its position
 follow the live selection (it springs to the new slot when the tab changes while
 minimised), and it takes no touches, so tapping the chosen tab still reaches the
 tab underneath.
+
+The body is iOS 27's measured two-scale material on the web: a 0.625 pt ghost and
+an 18 pt frost as two CSS backdrop layers under the shader, which draws the tint
+and the rim over them (`tokens::bar`; `tools/tab-bar-pixels.mjs` checks it against
+the iOS frames in CI). As the bar minimises the layers fade out and the shader
+body takes over. The native builds draw the shader's one-disc body. With
+`prefers-reduced-transparency: reduce` (web) the bar is opaque: the shade it has
+over an empty page, read when the bar is built.

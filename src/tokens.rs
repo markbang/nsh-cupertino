@@ -830,8 +830,10 @@ pub mod glass {
     /// The blur of the menu body, in points (24). The shader samples a disc of
     /// this radius, so its σ is 0.456 × 24 ≈ 11 pt: the iOS pull-down menu's
     /// measured σ, 10 pt in light and 12 pt in dark (`tools/measure-glass-ios.py`).
-    /// The iOS tab bar is a different, two-scale material (`docs/design-notes.md`,
-    /// "What still differs from Apple"). A rename must keep this at 24.
+    /// The iOS tab bar is a different, two-scale material ([`super::bar`]): the web
+    /// build draws it, the native builds still blur the bar with this disc
+    /// (`docs/design-notes.md`, "What still differs from Apple"). A rename must
+    /// keep this at 24.
     pub const BAR_BLUR: f32 = 24.0;
     /// The strength of the specular rim.
     pub const SPECULAR: f32 = 0.7;
@@ -896,6 +898,107 @@ pub mod glass {
     pub const MERGE_DAMPING: f32 = 0.78;
     /// See [`MERGE_DAMPING`].
     pub const MERGE_STIFFNESS: f32 = 340.0;
+}
+
+/// The iOS 27 tab bar's body, measured: two blur scales over one tint.
+///
+/// Fitted on the iOS 27 simulator's tab-bar fixture (1206 × 2622, 3 px/pt): the
+/// body inside the bar is `k1·G(σ1)∗ref + k2·G(σ2)∗ref + t`, where `ref` is the
+/// same frame without the bar, G a Gaussian, and the levels are sRGB-encoded
+/// Rec. 709 luma. Both themes share the two σ; each theme keeps its own k and t
+/// (`shared.json` of the m5b scripts, mean of frames a and b). The residual is
+/// 1.98 light / 2.40 dark levels; one Gaussian at best leaves 3.57 / 6.07.
+///
+/// The web build draws it as three layers, composited in sRGB as the browser
+/// does (CSS `blur(r)` has σ = r, a CSS pixel is a point):
+///
+/// 1. the ghost, `backdrop-filter: blur(σ1)`, opaque;
+/// 2. the frost, `backdrop-filter: blur(σ2)` at opacity α2. Its backdrop is the
+///    ghost, and G(σ2)∗G(σ1) is a Gaussian of √(18² + 0.625²) = 18.011 pt ≈ σ2;
+/// 3. the tint, a grey of `tint` levels at opacity β (the shader's body).
+///
+/// So k2 = (1 − β)·α2, k1 = (1 − β)·(1 − α2), t = β·tint, which gives
+/// β = 1 − (k1 + k2), α2 = k2 / (k1 + k2), tint = t / β ([`TwoScale`]):
+///
+/// | | k1 | k2 | t | k1 + k2 | β | α2 | tint |
+/// |---|---|---|---|---|---|---|---|
+/// | light | (0.06870 + 0.07001) / 2 = 0.06935 | (0.26822 + 0.25708) / 2 = 0.26265 | (166.02 + 168.26) / 2 = 167.14 | 0.33200 | 0.66800 | 0.79111 | 250.21 |
+/// | dark | (0.14344 + 0.13535) / 2 = 0.13939 | (0.50684 + 0.50271) / 2 = 0.50477 | (36.391 + 36.778) / 2 = 36.585 | 0.64417 | 0.35583 | 0.78361 | 102.81 |
+///
+/// The tint keeps the material's hue and matches only the luma: `glass-regular`
+/// is achromatic (#F8F8F8 light, #FFFFFF dark), so the tint is a grey. A CSS
+/// chain `blur(a) blur(b)` would be one Gaussian of √(a² + b²): the two scales
+/// need two stacked layers.
+pub mod bar {
+    /// The ghost's σ, in points (shared fit: 0.625 pt, 95 % CI [0.625, 0.75]).
+    pub const GHOST_SIGMA: f32 = 0.625;
+    /// The frost's σ, in points (shared fit: 18 pt, 95 % CI [16, 19]).
+    pub const FROST_SIGMA: f32 = 18.0;
+
+    /// One theme's fit: the ghost's and the frost's weights and the offset, in
+    /// levels of 255.
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub struct TwoScale {
+        /// k1, the ghost's weight.
+        pub ghost: f32,
+        /// k2, the frost's weight.
+        pub frost: f32,
+        /// t, the offset, in levels.
+        pub offset: f32,
+    }
+
+    impl TwoScale {
+        /// β = 1 − (k1 + k2): the tint's opacity.
+        pub const fn tint_alpha(self) -> f32 {
+            1.0 - (self.ghost + self.frost)
+        }
+
+        /// α2 = k2 / (k1 + k2): the frost layer's opacity over the ghost.
+        pub const fn frost_alpha(self) -> f32 {
+            self.frost / (self.ghost + self.frost)
+        }
+
+        /// tint = t / β: the tint's grey, in levels.
+        pub const fn tint_level(self) -> f32 {
+            self.offset / self.tint_alpha()
+        }
+
+        /// What the bar shows over a flat backdrop of `page` levels:
+        /// t + (k1 + k2)·page. The opaque fill of Reduce Transparency is this
+        /// over the page's own colour (white light, black dark), so the bar
+        /// keeps the shade it has over an empty page.
+        pub const fn over(self, page: f32) -> f32 {
+            self.offset + (self.ghost + self.frost) * page
+        }
+    }
+
+    /// Light: frames a / b, k1 0.06870 / 0.07001, k2 0.26822 / 0.25708, t 166.02 / 168.26.
+    pub const LIGHT: TwoScale = TwoScale {
+        ghost: (0.0686988 + 0.07000786) / 2.0,
+        frost: (0.2682207 + 0.2570791) / 2.0,
+        offset: (166.0235 + 168.2619) / 2.0,
+    };
+    /// Dark: frames a / b, k1 0.14344 / 0.13535, k2 0.50684 / 0.50271, t 36.391 / 36.778.
+    pub const DARK: TwoScale = TwoScale {
+        ghost: (0.1434363 + 0.1353484) / 2.0,
+        frost: (0.5068406 + 0.5027078) / 2.0,
+        offset: (36.39144 + 36.77845) / 2.0,
+    };
+
+    /// The fit of the appearance.
+    pub const fn of(dark: bool) -> TwoScale {
+        if dark { DARK } else { LIGHT }
+    }
+
+    /// The opaque fill of Reduce Transparency, in levels: [`TwoScale::over`]
+    /// the page, 255 × 0.33200 + 167.14 = 251.80 light, 36.58 dark.
+    pub const fn reduced_level(dark: bool) -> f32 {
+        if dark {
+            DARK.over(0.0)
+        } else {
+            LIGHT.over(255.0)
+        }
+    }
 }
 
 /// The fill of the glass material `name` in the appearance and contrast

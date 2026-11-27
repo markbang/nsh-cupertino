@@ -70,8 +70,8 @@ struct Uniforms {
   body: f32,
   shadow_offset: f32,
   shadow_sigma: f32,
-  pad2: f32,
-  pad3: f32,
+  two_scale_tint: f32,
+  two_scale_alpha: f32,
 }
 
 // A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
@@ -276,6 +276,22 @@ fn shade(uv: vec2f) -> vec4f {
   let inside = -sdf;
   let t = clamp(inside / max(uniforms.bevel, 0.5), 0.0, 1.0);
   let rim = 1.0 - t;
+
+  // The web tab bar's two-scale body (`GlassSpec::two_scale`, tokens `bar`):
+  // the ghost and the frost are CSS backdrop layers under this canvas, so the
+  // body here is the measured tint alone, at `two_scale_alpha` over them.
+  // `hand` gives the body to the layers between 1.5 and 6 pt inside the edge,
+  // past the hairline, the rim light's core and the rim's shade, which stay
+  // the glass's; as the bar minimises it gives the body back, while the layers
+  // fade out on the same `morph`.
+  var hand = 0.0;
+  if (uniforms.two_scale_alpha > 0.0) {
+    hand = smoothstep(1.5, 6.0, inside) * (1.0 - clamp(uniforms.morph, 0.0, 1.0));
+  }
+  if (hand >= 1.0) {
+    return vec4f(vec3f(uniforms.two_scale_tint), coverage * uniforms.two_scale_alpha);
+  }
+
   let normal = sd_gradient(p);
 
   // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
@@ -359,7 +375,17 @@ fn shade(uv: vec2f) -> vec4f {
   // at the ends of the light axis.
   rgb = rgb + vec3f(1.0) * line * ease * (0.18 + 0.35 * axis);
 
-  return vec4f(clamp(rgb, vec3f(0.0), vec3f(1.0)), coverage);
+  let surface = clamp(rgb, vec3f(0.0), vec3f(1.0));
+  if (hand <= 0.0) {
+    return vec4f(surface, coverage);
+  }
+  // Over the layers L the canvas must show
+  // hand·(β·tint + (1 − β)·L) + (1 − hand)·surface: alpha 1 − hand·(1 − β)
+  // and the straight colour that gives it.
+  let beta = uniforms.two_scale_alpha;
+  let alpha = 1.0 - hand * (1.0 - beta);
+  let colour = (hand * beta * vec3f(uniforms.two_scale_tint) + (1.0 - hand) * surface) / alpha;
+  return vec4f(clamp(colour, vec3f(0.0), vec3f(1.0)), coverage * alpha);
 }
 "#;
 
@@ -520,6 +546,7 @@ pub struct GlassSpec {
     body: Option<Body>,
     soft_shadow: Option<(f32, f32)>,
     shadow_amount: Option<AnimatedNode>,
+    two_scale: bool,
 }
 
 /// A menu's flat body ([`GlassSpec::menu_body`]).
@@ -568,6 +595,7 @@ impl GlassSpec {
             body: None,
             soft_shadow: None,
             shadow_amount: None,
+            two_scale: false,
         }
     }
 
@@ -707,6 +735,15 @@ impl GlassSpec {
     /// shader, whatever the GPU can do: the "material" side of a comparison.
     pub fn material_only(mut self, only: bool) -> Self {
         self.material_only = only;
+        self
+    }
+
+    /// The tab bar's two-scale body ([`tokens::bar`]) where [`two_scale_active`]
+    /// holds: the shader draws the measured tint over [`two_scale_layers`],
+    /// which must sit right under it, and keeps its own rim. Elsewhere, and as
+    /// the bar minimises, the shader's own body.
+    pub(crate) fn two_scale(mut self, on: bool) -> Self {
+        self.two_scale = on;
         self
     }
 
@@ -922,6 +959,7 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         return glass.absolute().inset_0();
     };
     let tint = spec.clone();
+    let two_scale = spec.two_scale;
     let quality = spec.quality.taps();
     let light_degrees = spec.light;
     let (first, second) = shape_slots(&spec.first, &spec.second);
@@ -997,7 +1035,21 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("body", -1.0_f32)
         .uniform("shadow_offset", spec.soft_shadow.map_or(0.0, |s| s.0))
         .uniform("shadow_sigma", spec.soft_shadow.map_or(0.0, |s| s.1))
-        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 });
+        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 })
+        .uniform("two_scale_tint", move || {
+            if two_scale && two_scale_active() {
+                tokens::bar::of(dark()).tint_level() / 255.0
+            } else {
+                0.0
+            }
+        })
+        .uniform("two_scale_alpha", move || {
+            if two_scale && two_scale_active() {
+                tokens::bar::of(dark()).tint_alpha()
+            } else {
+                0.0
+            }
+        });
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
@@ -1042,6 +1094,129 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         glass = glass.uniform("lens", &press.lens());
     }
     glass.absolute().inset_0()
+}
+
+/// Whether the tab bar draws iOS's two-scale body ([`tokens::bar`]) here: on
+/// the web, where two CSS backdrop layers give the two blur scales, while the
+/// shader draws, in normal contrast and without Reduce Transparency.
+///
+/// The native builds keep the shader's one-disc body: their shader reads one
+/// backdrop picture without mips, and whether a platform blur layer under it
+/// stays out of that picture, and blurs with a Gaussian of the same σ, is
+/// unmeasured there (`docs/design-notes.md`, "What still differs from Apple"). Increased contrast swaps in the near-opaque
+/// `glass-regular`, which the measured tint does not describe. Reading it
+/// subscribes to the appearance and the theme.
+pub(crate) fn two_scale_active() -> bool {
+    matches!(nsh_core::element::os(), nsh_core::platform::Os::Web)
+        && shader_draws()
+        && !reduce_transparency()
+        && standard_regular_fill()
+}
+
+/// Whether `glass-regular` is the standard-contrast value of the appearance
+/// (not the increased-contrast one a [`crate::Theme`] swaps in).
+fn standard_regular_fill() -> bool {
+    let now = tokens::glass_fill(numbers::REGULAR);
+    tokens::role(numbers::REGULAR)
+        .map(|role| role.value(dark(), false))
+        .is_some_and(|standard| (standard.a - now.a).abs() < 0.02)
+}
+
+/// Whether the user asked for less transparency: the browser's
+/// `prefers-reduced-transparency`, asked when called. NSH's environment has
+/// no such flag, so the native builds answer `false`.
+pub(crate) fn reduce_transparency() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        media_matches("(prefers-reduced-transparency: reduce)")
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+}
+
+/// `window.matchMedia(query).matches`; `false` where there is no
+/// `matchMedia` (a worker, a host without a window).
+#[cfg(target_arch = "wasm32")]
+fn media_matches(query: &str) -> bool {
+    use wasm_bindgen::{JsCast, JsValue};
+
+    let global = js_sys::global();
+    let Ok(function) = js_sys::Reflect::get(&global, &JsValue::from_str("matchMedia")) else {
+        return false;
+    };
+    let Some(function) = function.dyn_ref::<js_sys::Function>() else {
+        return false;
+    };
+    let Ok(list) = function.call1(&global, &JsValue::from_str(query)) else {
+        return false;
+    };
+    js_sys::Reflect::get(&list, &JsValue::from_str("matches"))
+        .ok()
+        .and_then(|matches| matches.as_bool())
+        .unwrap_or(false)
+}
+
+/// The two blur scales of the tab bar's body ([`tokens::bar`]), as CSS
+/// backdrop layers of the bar's box and `radius`: the ghost, opaque, then the
+/// frost at α2 over it. They go right under a [`layer`] of a spec with
+/// [`GlassSpec::two_scale`]`(on)`, which draws the tint over them, and show
+/// only with `on` and while [`two_scale_active`] holds.
+///
+/// `shown` is the bar's expanded amount (1 expanded, 0 minimised), the same
+/// progress the shader's silhouette morphs on: the layers fade out as the
+/// shader takes the body back, since a view keeps its box and cannot follow
+/// the silhouette into the pill. The opacity is the layers' own: on an
+/// ancestor it would make a Backdrop Root and blank the filters.
+pub(crate) fn two_scale_layers(on: bool, radius: f32, shown: AnimatedNode) -> impl IntoElement {
+    view()
+        .absolute()
+        .inset_0()
+        .pointer_events(PointerEvents::None)
+        .when(on, |layers| {
+            layers
+                .child(two_scale_pair(false, radius, shown))
+                .child(two_scale_pair(true, radius, shown))
+        })
+}
+
+/// The ghost and the frost of one appearance.
+fn two_scale_pair(dark_pair: bool, radius: f32, shown: AnimatedNode) -> impl IntoElement {
+    when(
+        move || dark() == dark_pair && two_scale_active(),
+        move || {
+            let fit = tokens::bar::of(dark_pair);
+            // The material's saturation, on the ghost only (the frost reads the
+            // ghost): CSS `saturate()` keeps Rec. 709 luma, which the fit is in.
+            let saturation = if dark_pair {
+                numbers::SATURATION_DARK
+            } else {
+                numbers::SATURATION
+            };
+            view()
+                .absolute()
+                .inset_0()
+                .child(
+                    view()
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(radius))
+                        .backdrop_blur(px(tokens::bar::GHOST_SIGMA))
+                        .backdrop_saturate(saturation)
+                        .bind_opacity(&shown),
+                )
+                .child(
+                    view()
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(radius))
+                        .backdrop_blur(px(tokens::bar::FROST_SIGMA))
+                        .bind_opacity(&shown.mul(fit.frost_alpha())),
+                )
+                .into_element()
+        },
+    )
 }
 
 /// The material without a GPU shader: the fill and blur of
