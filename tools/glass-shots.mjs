@@ -60,9 +60,6 @@ const SCALE = 3;
 const IPHONE = [402, 874];
 /** The minimise progress of the morph stills. */
 const MORPHS = [0, 0.1, 0.25, 0.5, 0.75, 1];
-/** The two-scale bar hands its body over in the first `HANDOVER` of the progress (`tab_bar.rs`), then morphs over the rest. */
-const HANDOVER = 0.2;
-const sameSilhouette = (progress) => Math.min(Math.max((progress - HANDOVER) / (1 - HANDOVER), 0), 1);
 /** The demo's storage namespace: `nsh:<app id>:` (nsh-engine). */
 const PREFIX = "nsh:dev.nsh.cupertino.demo:";
 
@@ -142,10 +139,7 @@ const SHOTS = [
         scheme,
         fixture: `${scheme}-a`,
         barbody,
-        // The one-disc body morphs without the hand-over: it is pinned where its
-        // silhouette is the two-scale one's at this progress, so the two compare
-        // at the same shape (`tab-bar-pixels.mjs`).
-        morph: barbody ? sameSilhouette(morph) : morph,
+        morph,
         viewport: IPHONE,
       })),
     ),

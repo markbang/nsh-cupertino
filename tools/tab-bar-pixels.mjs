@@ -546,13 +546,15 @@ for (const theme of THEMES) {
 
 // --- The minimise morph's middle frames ------------------------------------
 //
-// The fixture bar pinned at progress 0, 0.1 (inside the hand-over), 0.25, 0.5,
-// 0.75 and 1 (`GlassTabBar`'s `morph`), with the two-scale body and with the one-disc body (no layers).
-// Two seams could show: the shader's hand-over ramp (smoothstep(1.5, 6, inside),
-// scaled by the layers' share of the body) between its own body and the tint
-// over the layers, and the layers' box edge wherever the silhouette has shrunk
-// inside it while the layers still show. The bar hands its body back before the
-// silhouette moves, so the second must read as the one-disc frame. Luma is
+// The fixture bar pinned at progress 0, 0.1, 0.25, 0.5, 0.75 and 1 (`GlassTabBar`'s
+// `morph`; the layers' share of the body is then 1 − progress), with the
+// two-scale body and with the one-disc body (no layers), both on the same
+// silhouette. Two seams could show: the shader's hand-over ramp
+// (smoothstep(1.5, 6, inside), scaled by the layers' share) between its own
+// body and the tint over the layers, and the layers' box edge wherever the
+// silhouette has shrunk inside it while the layers still show. The shader
+// covers the layers there with the page, so the second must read as the
+// one-disc frame. Luma is
 // read along the silhouette's normals (inside −12 pt to outside +6 pt, one
 // pixel a step) where the backdrop under the profile is flat (the iOS
 // reference spans ≤ 3 levels there), so a step is the material's, not a
@@ -564,10 +566,6 @@ for (const theme of THEMES) {
 // morph, plus the two-scale model's own residual on iOS (1.98 light, 2.40 dark
 // levels): a difference below that is below what the measurement resolves.
 const BAR = { cx: 201, cy: 822, hx: 180, hy: 32, radius: 32, lift: 6, pill: 25 };
-// The bar hands its body back in place over the first `HANDOVER` of the progress
-// (`tab_bar.rs`), then the silhouette morphs over the rest.
-const HANDOVER = 0.2;
-const silhouetteMorph = (progress) => Math.min(Math.max((progress - HANDOVER) / (1 - HANDOVER), 0), 1);
 const MORPHS = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const MARGIN = { light: 1.98, dark: 2.4 };
 const FLAT = 3;
@@ -694,12 +692,7 @@ for (const theme of THEMES) {
     const tag = String(Math.round(m * 100)).padStart(3, "0");
     for (const body of ["two", "single"]) {
       const image = luma(join(DIR, `tab-bar-fixture-morph-${body === "single" ? "single-" : ""}${theme}-${tag}.png`));
-      // The one-disc still (`single-blur`, no hand-over) is pinned at the progress
-      // where its silhouette is the two-scale one's (`glass-shots.mjs`): the same
-      // shape, its own lift.
-      const shape = silhouetteMorph(m);
-      const lift = body === "two" ? m : shape;
-      const edges = silhouetteEdges(shape, lift);
+      const edges = silhouetteEdges(m, m);
       const profiles = profilesAt(image, ref, edges, ALONG, true);
       const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
       const row = {
@@ -713,9 +706,9 @@ for (const theme of THEMES) {
         outside,
         jump: inside - outside,
       };
-      // The layers' box edge where the two-scale silhouette has left it: the same
-      // columns in both renders, each at its own lift.
-      const box = boxEdges(shape, lift);
+      // The layers' box edge where the silhouette has left it: the same columns
+      // in both renders.
+      const box = boxEdges(m, m);
       if (box.length) {
         const across = profilesAt(image, ref, box, ACROSS_BOX, false);
         const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);
