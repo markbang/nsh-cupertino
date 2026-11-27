@@ -9,6 +9,7 @@
 import {
   Image,
   Keyboard,
+  Scroll,
   ShaderEffect,
   type JSX,
   mount,
@@ -1663,8 +1664,33 @@ const fixtureBody = signal("glass");
 const fixtureMorph = signal<number | undefined>(undefined);
 // The recording of a minimise (`tools/glass-shots.mjs`, `--record`): the same
 // backdrop in a page that scrolls, and the bar minimising as it does for a user.
-const fixtureScrolls = signal(false);
+// `"1"`: the scrolling page above; `"exact"`: the still's own scene in a scroll
+// view, for comparing the recording's frames with the pinned stills.
+const fixtureScrolls = signal("");
 const fixtureOffset = signal(0);
+
+// The pinned stills' scene, scrolling: a 60 pt spacer above the fixture image,
+// so that after the user's 60 pt scroll the image lies at y 0 as on the still
+// page, and the bar in the still page's own container. The scroll is fed to
+// the bar, which minimises as it does for a user. Scroll at y 866-874: the
+// bar's container covers the rest and would take the wheel.
+function TabBarFixtureExactPage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Scroll
+        style={{ position: "absolute", left: 0, top: 0, width: 402, height: 874 }}
+        onScroll={(event: { offset: { x: number; y: number } }) => fixtureOffset.set(event.offset.y)}
+      >
+        <View style={{ height: 60 }} />
+        <Image src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`} style={{ width: 402, height: 874 }} />
+        <View style={{ height: 600 }} />
+      </Scroll>
+      <View style={{ position: "absolute", left: 1, right: 1, top: 0, height: 866 }}>
+        <GlassTabBar items={[]} label="Fixture tabs" material={fixtureBody()} scrollOffset={fixtureOffset()} />
+      </View>
+    </View>
+  );
+}
 
 function TabBarFixtureScrollPage() {
   return (
@@ -1683,7 +1709,8 @@ function TabBarFixtureScrollPage() {
 }
 
 function TabBarFixturePage() {
-  if (fixtureScrolls()) return <TabBarFixtureScrollPage />;
+  if (fixtureScrolls() === "exact") return <TabBarFixtureExactPage />;
+  if (fixtureScrolls() === "1") return <TabBarFixtureScrollPage />;
   return (
     <View style={{ flex: 1 }}>
       <Image
@@ -1756,7 +1783,8 @@ function App() {
     if (seedBody) fixtureBody.set(seedBody);
     const seedMorph = await Storage.getItem("cupertino.morph");
     if (seedMorph) fixtureMorph.set(Number(seedMorph));
-    if ((await Storage.getItem("cupertino.fixturescroll")) === "1") fixtureScrolls.set(true);
+    const seedScroll = await Storage.getItem("cupertino.fixturescroll");
+    if (seedScroll === "1" || seedScroll === "exact") fixtureScrolls.set(seedScroll);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     const seedFrame = await Storage.getItem("cupertino.menuframe");
     if (seedFrame) menuFrame.set(Number(seedFrame));

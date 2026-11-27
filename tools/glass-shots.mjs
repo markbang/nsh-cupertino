@@ -144,6 +144,19 @@ const SHOTS = [
       })),
     ),
   ),
+  // The two-scale morph stills a second time, from a fresh navigation: two
+  // independent captures of one state, the noise floor of comparing stills
+  // (`tools/tab-bar-frames.mjs`).
+  ...["light", "dark"].flatMap((scheme) =>
+    MORPHS.map((morph) => ({
+      name: `tab-bar-fixture-morph-${scheme}-${String(Math.round(morph * 100)).padStart(3, "0")}-again`,
+      page: "tab-bar-fixture",
+      scheme,
+      fixture: `${scheme}-a`,
+      morph,
+      viewport: IPHONE,
+    })),
+  ),
   ...["light", "dark"].flatMap((scheme) =>
     [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
       name: `tab-bar-fixture-contrast-${tag}${scheme}`,
@@ -582,19 +595,24 @@ const FRAMES = 60;
 const MOTION_CLIP = { x: 0, y: 770, width: 402, height: 104, scale: 1 };
 
 /** One minimise of the fixture bar per appearance and body: the two-scale body and the one-disc body before it. */
-const RECORDINGS = ["light", "dark"].flatMap((scheme) =>
-  [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+const RECORDINGS = ["light", "dark"].flatMap((scheme) => [
+  ...[["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
     name: `tab-bar-motion-${tag}${scheme}`,
     scheme,
     barbody,
+    scroll: "1",
+    wheel: [201, 400],
   })),
-);
+  // The same minimise on the pinned stills' own scene (`App.tsx`
+  // `TabBarFixtureExactPage`): its frames are compared with the stills.
+  { name: `tab-bar-exact-${scheme}`, scheme, barbody: undefined, scroll: "exact", wheel: [201, 870] },
+]);
 
 async function record(page, base, rec) {
   const values = {
     "cupertino.page": "tab-bar-fixture",
     "cupertino.fixture": `${rec.scheme}-a`,
-    "cupertino.fixturescroll": "1",
+    "cupertino.fixturescroll": rec.scroll,
     "cupertino.barbody": rec.barbody ?? "",
   };
   const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
@@ -639,7 +657,7 @@ async function record(page, base, rec) {
   // A user's scroll: one wheel notch over the page, 60 pt down. The bar
   // minimises after 20 pt of travel. Real time passes for the scroll to land
   // and its events to reach the app; the app's frames do not.
-  await page.call("Input.dispatchMouseEvent", { type: "mouseWheel", x: 201, y: 400, deltaX: 0, deltaY: 60 });
+  await page.call("Input.dispatchMouseEvent", { type: "mouseWheel", x: rec.wheel[0], y: rec.wheel[1], deltaX: 0, deltaY: 60 });
   await new Promise((resolve) => setTimeout(resolve, 500));
   for (let k = 1; k <= FRAMES; k++) {
     const { t, ran } = await page
