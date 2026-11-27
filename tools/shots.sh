@@ -14,3 +14,7 @@ nsh test separators.test.tsx --target web "$@"
 cd ../..
 node tools/glass-shots.mjs "$@"
 node tools/glass-pixels.mjs
+# The tab bar over the iOS 27 tab-bar fixture's own backdrop (`glass-shots`
+# fetched the frames and checked their hashes): its body refitted to the
+# two-scale model, against the iOS frames, and its readability floor.
+node tools/tab-bar-pixels.mjs

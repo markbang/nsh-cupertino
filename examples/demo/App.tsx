@@ -7,6 +7,7 @@
 // `cupertino.contrast` and `cupertino.appearance` — `open(entry, { storage })`
 // in a test, or the app's own storage elsewhere.
 import {
+  Image,
   Keyboard,
   ShaderEffect,
   type JSX,
@@ -106,7 +107,7 @@ const menuCloseFrame = signal<number | undefined>(undefined);
 const presses = new Count();
 const pressCount = signal(0);
 
-const PAGE_IDS = ["gallery", "glass-calibration", "glass-rows", ...PAGES.map((entry) => entry.id)];
+const PAGE_IDS = ["gallery", "glass-calibration", "glass-rows", "tab-bar-fixture", ...PAGES.map((entry) => entry.id)];
 
 function titleOf(id: string): string {
   return PAGES.find((entry) => entry.id === id)?.title ?? "Cupertino";
@@ -1647,6 +1648,31 @@ function GlassRowsPage() {
   );
 }
 
+// The iOS 27 tab-bar fixture's backdrop under our bar, for
+// `tools/tab-bar-pixels.mjs`: the reference frame without the bar
+// (`tab-bar-ref-<theme>-<frame>.png`, fetched at CI time and served next to the
+// build by `tools/glass-shots.mjs`) fills a 402 × 874 pt screen at 3x, pixel
+// for pixel, and the bar sits where iOS's does: x 21–381 pt, and our 64 pt
+// centred on iOS's 62 pt (791–853), so 790–854. The bar has no tabs: the
+// measurement reads the material between iOS's tab items.
+const fixtureFrame = signal("light-a");
+// `"glass"`, or `"single-blur"` for the shader's own one-disc body.
+const fixtureBody = signal("glass");
+
+function TabBarFixturePage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Image
+        src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`}
+        style={{ position: "absolute", left: 0, top: 0, width: 402, height: 874 }}
+      />
+      <View style={{ position: "absolute", left: 1, right: 1, top: 0, height: 866 }}>
+        <GlassTabBar items={[]} label="Fixture tabs" behavior="never" material={fixtureBody()} />
+      </View>
+    </View>
+  );
+}
+
 function CurrentPage() {
   const id = page();
   if (id === "gallery") return <Gallery />;
@@ -1665,6 +1691,7 @@ function CurrentPage() {
   if (id === "glass") return <GlassPage />;
   if (id === "glass-calibration") return <GlassCalibrationPage />;
   if (id === "glass-rows") return <GlassRowsPage />;
+  if (id === "tab-bar-fixture") return <TabBarFixturePage />;
   if (id === "sheet") return <SheetPage />;
   if (id === "actionsheet") return <ActionSheetPage />;
   if (id === "alert") return <AlertPage />;
@@ -1693,6 +1720,10 @@ function App() {
     const seedOverlay = await Storage.getItem("cupertino.overlay");
     const seedGlass = await Storage.getItem("cupertino.glass");
     if (seedGlass) glassMode.set(seedGlass);
+    const seedFixture = await Storage.getItem("cupertino.fixture");
+    if (seedFixture) fixtureFrame.set(seedFixture);
+    const seedBody = await Storage.getItem("cupertino.barbody");
+    if (seedBody) fixtureBody.set(seedBody);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     const seedFrame = await Storage.getItem("cupertino.menuframe");
     if (seedFrame) menuFrame.set(Number(seedFrame));

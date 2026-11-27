@@ -18,6 +18,7 @@
 // without a GPU, the shader) that `tools/glass-pixels.mjs` asserts on.
 import { spawn, spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -33,6 +34,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { FIXTURE, fetchTabBarFixture } from "./fetch-tab-bar-fixture.mjs";
 import { patchRuntimeSource } from "./patch-runtime.mjs";
 import { readPng } from "./png.mjs";
 
@@ -54,6 +56,8 @@ if (!(SHARD[0] >= 1 && SHARD[0] <= SHARD[1])) throw new Error(`--shard must be i
 const WIDTH = 390;
 const HEIGHT = 844;
 const SCALE = 3;
+/** The iOS fixture's screen, in points (1206 × 2622 px at 3x). */
+const IPHONE = [402, 874];
 /** The demo's storage namespace: `nsh:<app id>:` (nsh-engine). */
 const PREFIX = "nsh:dev.nsh.cupertino.demo:";
 
@@ -112,6 +116,24 @@ const SHOTS = [
       frames: true,
     })),
   ),
+  // The bar over the iOS 27 tab-bar fixture's own backdrop, at the iPhone's 402 × 874 pt
+  // so the still lines up with the iOS frames pixel for pixel
+  // (`tools/tab-bar-pixels.mjs`): the two-scale body, the shader's one-disc
+  // body it replaces, and the opaque bar of Reduce Transparency.
+  ...["light", "dark"].flatMap((scheme) =>
+    ["a", "b"].flatMap((frame) => [
+      { name: `tab-bar-fixture-${scheme}-${frame}`, page: "tab-bar-fixture", scheme, fixture: `${scheme}-${frame}`, viewport: IPHONE },
+      { name: `tab-bar-fixture-single-${scheme}-${frame}`, page: "tab-bar-fixture", scheme, fixture: `${scheme}-${frame}`, barbody: "single-blur", viewport: IPHONE },
+    ]),
+  ),
+  ...["light", "dark"].map((scheme) => ({
+    name: `tab-bar-fixture-reduced-${scheme}-a`,
+    page: "tab-bar-fixture",
+    scheme,
+    fixture: `${scheme}-a`,
+    reduced: true,
+    viewport: IPHONE,
+  })),
   ...["none", "material", "shader"].flatMap((mode) =>
     ["light", "dark"].map((scheme) => ({
       name: `glass-calibration-${mode}-${scheme}`,
@@ -331,10 +353,17 @@ async function shoot(page, base, shot) {
     "cupertino.overlay": shot.overlay ?? "",
     "cupertino.menuframe": shot.menuframe === undefined ? "" : String(shot.menuframe),
     "cupertino.menuclose": shot.menuclose === undefined ? "" : String(shot.menuclose),
+    "cupertino.fixture": shot.fixture ?? "",
+    "cupertino.barbody": shot.barbody ?? "",
   };
   const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
+  const [width, height] = shot.viewport ?? [WIDTH, HEIGHT];
+  await page.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: SCALE, mobile: true });
   await page.call("Emulation.setEmulatedMedia", {
-    features: [{ name: "prefers-color-scheme", value: shot.scheme }],
+    features: [
+      { name: "prefers-color-scheme", value: shot.scheme },
+      { name: "prefers-reduced-transparency", value: shot.reduced ? "reduce" : "no-preference" },
+    ],
   });
   await page.call("Runtime.evaluate", {
     expression: `(() => { localStorage.clear(); const prefix = ${JSON.stringify(PREFIX)}; for (const [key, value] of Object.entries(${seed})) localStorage.setItem(prefix + key, value); })()`,
@@ -349,6 +378,21 @@ async function shoot(page, base, shot) {
       .catch(() => false);
     if (mounted) break;
     await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (shot.fixture) {
+    // The backdrop is a 1206 × 2622 PNG: the still waits until it has decoded.
+    let loaded = false;
+    for (let i = 0; i < 100 && !loaded; i++) {
+      loaded = await page
+        .call("Runtime.evaluate", {
+          expression: "[...document.querySelectorAll('#app img')].some((img) => img.complete && img.naturalWidth === 1206)",
+          returnByValue: true,
+        })
+        .then((result) => result.result.value === true)
+        .catch(() => false);
+      if (!loaded) await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!loaded) throw new Error(`${shot.name}: the fixture backdrop did not load`);
   }
   await new Promise((resolve) => setTimeout(resolve, 1200));
   if (shot.tap) {
@@ -424,6 +468,14 @@ async function main() {
   mkdirSync(OUT, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "glass-build-"));
   const built = packageApp(work);
+  const chosen = SHOTS.filter((shot) => (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")));
+  if (chosen.some((shot) => shot.fixture)) {
+    // The fixture page's backdrops, served next to the build (same origin, so
+    // the shader's backdrop picture may draw them).
+    const frames = await fetchTabBarFixture();
+    mkdirSync(join(built, "fixtures"), { recursive: true });
+    for (const name of Object.keys(FIXTURE)) copyFileSync(join(frames, name), join(built, "fixtures", name));
+  }
   const { server, port } = await serve(built);
   const { child, profile, page } = await launch();
   try {
