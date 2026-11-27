@@ -422,9 +422,10 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         }
     });
     let anchor_node = anchor_value.animated_node();
-    // Only where the layers can draw (the web): the native morph is unchanged.
+    // On the web, for every shader body (`single-blur` too, so the two can be
+    // compared at the same silhouette); the native morph is unchanged.
     let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
-    let handover = if two_scale && web { HANDOVER } else { 0.0 };
+    let handover = if glass && web { HANDOVER } else { 0.0 };
     let morph = progress.interpolate(&[handover, 1.0], &[0.0, 1.0]);
     let carried = progress.interpolate(&[0.0, HANDOVER], &[1.0, 0.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
@@ -666,12 +667,8 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .when(!reduced, |bar| {
             // The two-scale layers go right under the shader, which draws the
             // tint and the rim over them.
-            bar.child(crate::glass::two_scale_layers(
-                two_scale,
-                32.0,
-                carried,
-            ))
-            .child(crate::glass::layer(spec, None))
+            bar.child(crate::glass::two_scale_layers(two_scale, 32.0, carried))
+                .child(crate::glass::layer(spec, None))
         })
         .child(
             view()
