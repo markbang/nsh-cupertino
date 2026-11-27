@@ -452,3 +452,53 @@ do not treat the limit as slack.
   next mount. Increased contrast keeps the shader's own body: its near-opaque
   `glass-regular` is not the measured tint. CI checks it: under increased contrast
   the still has no backdrop-filtered layers and its bar is the one-disc render.
+
+### The web two-scale minimise: known limits
+
+PR #43 (not merged) gives the web tab bar iOS's two-scale body. Two CSS backdrop layers (0.625 pt and
+18 pt) sit under the shader, which draws the measured tint over them. Its minimise was checked frame by frame
+against the shader's one-disc body. These are the limits that check met.
+
+- **The layers keep the bar's box; the shader covers them outside the glass.** A view cannot follow the
+  minimise's silhouette: it is the zero set of mix(bar, disc, morph), a pointed lens, not a box. nsh 0.5.1 cannot
+  animate a view's box or radius either. So while the layers carry the body, the shader draws the page itself, from
+  its backdrop picture, everywhere inside their box and outside the glass. CI measured that cover against the
+  one-disc frames of the same index (run 46036703523):
+  - at least 2 pt from the glass it reads as the page: mean |difference| 0.003 light / 0.014 dark levels;
+  - no shadow is lost: signed mean +0.001 / +0.013.
+  - The early failures first read as the layers' box edge (Stage 2) came from the lag below.
+- **One-frame lag.** On the web the shader draws the minimise one frame behind the DOM. In frame k its silhouette is
+  at frame k − 1's progress.
+  - **Why the two bars sit apart:** the two-scale bar draws its 6 pt drop in the shader (`lowered`), so the drop
+    trails too. The one-disc bar drops by its DOM container. In frames 1–4 the two glasses sit 0.24, 0.58, 0.74 and
+    0.79 pt apart vertically.
+  - **Why the drop stays in the shader:** moving the canvas made the cover a frame late (CI runs 45997124152 and
+    45999666204).
+  - **Pixel evidence:** on dark frames where the edge is measurable, the edge detected in the pixels lies 0.12–0.39
+    pt from the k − 1 model and 6–15 pt from the model at frame k's progress (runs 46039755135 and 46045745728).
+- **Pill occlusion.** The minimised pill is a CSS capsule (50 × 64 pt, page-coloured at α 0.92 light / 0.86 dark)
+  over the glass. Its edge lies about 6.4 pt outside the glass disc's. From frame 10 on, every scan line over a flat
+  backdrop crosses it, so the glass's edge cannot be measured there.
+- **Grain.** In light the glass's edge steps 3–4 levels per third of a point, as much as the shader's grain inside
+  the body, so the steepest step is often in the grain.
+- **Hairline rounding.** In light the edge is a bright hairline, not a step. Its two flanks differ by about 1 level,
+  so the steepest step lands on the inner flank, 0.6–1.1 pt inside the edge. A pixel detector therefore cannot place
+  the light edge within 0.5 pt.
+
+**What stays red.** Judged on the geometry the shader draws (run 46054638029: silhouette at frame k − 1's progress,
+each bar's own drop), with the limits unchanged (the larger of the two-scale end frames and the one-disc frame of
+the same index, + 1.98 light / 2.40 dark):
+
+| theme | frame | criterion | value / limit | where |
+|---|---|---|---|---|
+| light | 2 | box-edge jump | 8.06 / 7.48 | the layers' box top, 62 columns beside the lens tips |
+| light | 4 | step, ramp | 13.92 / 13.70, 13.92 / 12.83 | cap tip (313.0, 822.2): a one-pixel notch 251 → 241 → 255 in the two-scale render only |
+| light | 7 | step, ramp | 15.53 / 13.70, 15.53 / 8.44 | (160.0, 821.8), 2.7–3 pt inside the edge: 233 → 218 in the two-scale body |
+| light | 11 | step, ramp | 25.42 / 24.75 (both) | cap tip (175.0, 820.3): 241 → 215 (one-disc 241 → 218) |
+| dark | 2 | box-edge jump | 11.76 / 11.20 | as light 2 |
+| dark | 3 | ramp; box-edge step | 45.67 / 34.84; 99.07 / 98.01 | (73.0, 807.3), 1–1.3 pt inside: 147 → 193 (one-disc 159 → 185); the box top, 218 columns |
+| dark | 4 | step, ramp | 98.15 / 87.36, 71.05 / 57.52 | cap tip (313–314, 822.2–822.6): a notch 117 → 56 → 154 in the two-scale render only (one-disc 110 → 90 → 137) |
+| dark | 11 | ramp | 67.28 / 65.95 | cap tip (175.0, 820.3): 35 → 103 (one-disc 34 → 97) |
+
+The four time criteria pass, as do increased contrast (0.00 levels from the one-disc body) and the two-scale checks
+against iOS.
