@@ -670,14 +670,20 @@ function profilesAt(image, ref, edges, along, flat) {
 
 /** The largest step between adjacent samples with offsets in [from, to]. */
 function largestStep(profiles, along, from, to) {
-  let most = 0;
-  for (const profile of profiles) {
+  return worstStep(profiles, along, from, to).most;
+}
+
+/** The largest step between adjacent samples with offsets in [from, to], and where: its profile and sample. */
+function worstStep(profiles, along, from, to) {
+  let worst = { most: 0, profile: -1, at: -1 };
+  profiles.forEach((profile, p) => {
     for (let i = 1; i < along.length; i++) {
       if (along[i - 1] < from || along[i] > to) continue;
-      most = Math.max(most, Math.abs(profile[i] - profile[i - 1]));
+      const step = Math.abs(profile[i] - profile[i - 1]);
+      if (step > worst.most) worst = { most: step, profile: p, at: i };
     }
-  }
-  return most;
+  });
+  return worst;
 }
 
 /** Mean luma at offsets in [inFrom, inTo] minus [outFrom, outTo], over the profiles. */
@@ -707,6 +713,8 @@ for (const theme of THEMES) {
         n: profiles.length,
         step: largestStep(profiles, ALONG, -12, 6),
         ramp: largestStep(profiles, ALONG, -7.5, -1),
+        worst: { step: worstStep(profiles, ALONG, -12, 6), ramp: worstStep(profiles, ALONG, -7.5, -1) },
+        profiles,
         inside,
         outside,
         jump: inside - outside,
@@ -751,6 +759,18 @@ for (const theme of THEMES) {
         Math.abs(r[key]) <= limit(key),
         `${f(Math.abs(r[key]), 2)} levels (≤ ${f(limit(key), 2)}: the largest of morph 0 ${f(Math.abs(refs[0][key]), 2)}, morph 1 ${f(Math.abs(refs[1][key]), 2)}, the one-disc body ${f(Math.abs(refs[2][key]), 2)}, plus ${MARGIN[theme]})`,
       );
+      if (Math.abs(r[key]) > limit(key) && r.worst[key]) {
+        // Where it is: the worst profile of this frame beside the one-disc
+        // frame's at the same place (same edges, same flat filter), every
+        // third of a point from -12 pt inside to +6 pt outside.
+        const { profile, at } = r.worst[key];
+        const two = r.profiles[profile];
+        const single = measure[`single-${m}`].profiles[profile];
+        const show = (values) => values.map((v) => v.toFixed(0)).join(" ");
+        console.log(`  worst ${key}: profile ${profile}, between ${ALONG[at - 1].toFixed(2)} and ${ALONG[at].toFixed(2)} pt`);
+        console.log(`  two-scale: ${show(two)}`);
+        console.log(`  one-disc:  ${show(single)}`);
+      }
     }
     // The layers' box edge outside the glass: its step and jump against the
     // one-disc body at the same morph, which has no layers there.
