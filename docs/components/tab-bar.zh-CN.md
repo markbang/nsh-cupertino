@@ -72,6 +72,6 @@
 
 在 Web 上，主体是实测的 iOS 27 双尺度材质：0.625 pt 的 ghost 与 18 pt 的 frost 是着色器之下的两层 CSS
 背景模糊，着色器在其上画色调与边缘（`tokens::bar`；CI 中 `tools/tab-bar-pixels.mjs` 拿它与 iOS 帧对照）。
-栏开始收起时（进度的前 20 %），这两层原地淡出、由着色器自己的主体接手，之后轮廓才收缩。原生构建画着色器的单圆盘主体。`prefers-reduced-transparency: reduce`
+栏收起时，轮廓随弹簧收缩，着色器在 200 ms 内交叉淡入自己的主体，并在轮廓离开图层盒子之处盖住图层。原生构建画着色器的单圆盘主体。`prefers-reduced-transparency: reduce`
 （Web）下栏不透明：取它在空白页面上的明度，在栏构建时读取。
 增强对比度沿用着色器自己的主体：近乎不透明的 `glass-regular` 不是实测的色调，CI 检查此时不画图层。

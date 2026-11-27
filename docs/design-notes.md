@@ -383,17 +383,37 @@ do not treat the limit as slack.
   10.1 / 22.2). The shader's one-disc body, rendered the same way
   (`material="single-blur"`), reads 5.11 / 33.8, 4.85 / 33.7 and 2.7 / 12.2.
 - **The minimise morph hands the body back.** A view keeps its box, so the layers
-  cannot follow the silhouette into the 50 pt pill. On the web the bar hands the
-  body back in place over the first 20 % of the minimise progress (about 30 ms
-  of the spring): the layers fade out and the shader's one-disc body fades in
-  while the silhouette keeps the bar's shape, and only then does it minimise.
-  The rest of the morph and the pill are the one-disc body. Letting the layers
-  fade while the silhouette shrank, as first built, showed them outside the
-  glass: CI measured a 10-level jump at their box edge at progress 0.25 and 0.5
-  (run 45975856837). `tools/tab-bar-pixels.mjs` pins the progress at 0.1, 0.25,
-  0.5 and 0.75 (`GlassTabBar`'s `morph`) and checks the silhouette's edge, the hand-over ramp and the fading
-  layers' box edge for steps and brightness jumps against the end frames and the
-  one-disc body at the same morph.
+  cannot follow the silhouette into the 50 pt pill. On the web the silhouette
+  morphs on the minimise spring as it always did, and the body passes from the
+  layers to the shader's one-disc body on a clock of its own: a linear 200 ms
+  crossfade of the shader's hand-over (`GlassTabBar`'s `HANDOVER_MS`). The layers
+  stay whole under the crossfade, so the mix is exact, and while they show the
+  shader draws the page itself, from its backdrop picture, wherever the
+  silhouette has left their box: no layer shows outside the glass. The 200 ms
+  comes from the measurement: the two bodies differ by up to 17 levels (dark,
+  at rest), which over 12 frames is 1.4 levels a frame, half the 3-level budget.
+- **Two designs failed first.** Fading the layers while the silhouette shrank
+  showed them outside the glass (a 10-level jump at their box edge at progress
+  0.25 and 0.5, CI run 45975856837). Handing the body back over the first 20 %
+  of the progress, before the silhouette moved, kept them inside but delayed the
+  minimise by a frame (light settles at 150 ms against the one-disc body's
+  133 ms, +12.5 %), moved the bar down before its edge moved (a 0.4 pt reversal
+  of the dark edge) and stepped the dark body by 3.15 levels in one frame (CI
+  run 45991898528).
+- **CI checks it in pinned stills and in time.** `tools/tab-bar-pixels.mjs` pins
+  the progress at 0.1, 0.25, 0.5 and 0.75 (`GlassTabBar`'s `morph`) and checks the
+  silhouette's edge, the hand-over ramp and the layers' box edge for steps and
+  brightness jumps against the end frames and the one-disc body at the same
+  progress. `tools/tab-bar-motion.mjs` records one minimise at 60 fps on a page
+  clock that only steps when asked, and checks that the hand-over's luma is
+  monotonic (±1 level) and changes at most 3 levels a frame, that the bar settles
+  within 5 % of the one-disc body's time, and that its edge reverses or stalls no
+  more than the one-disc body's.
+- **The page in that ring is nsh's picture of it.** For up to 200 ms the shader
+  shows the page between the shrinking silhouette and the layers' box from the
+  backdrop picture nsh paints, which leaves gradients, rotations and shadows out
+  (see above). Over such content the ring can differ from the page for that
+  time; the fixture's page is an image and text, which the picture holds.
 - **The ghost layer's saturation is not measured.** The ghost carries the
   material's `saturate(2.1)` light / `saturate(1.4)` dark. CSS `saturate()` keeps
   Rec. 709 luma, and only luma was fitted (the fixture's backdrop is grey text),
