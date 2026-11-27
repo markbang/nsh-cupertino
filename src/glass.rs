@@ -252,6 +252,18 @@ fn shade(uv: vec2f) -> vec4f {
   let p = uv * size - size * 0.5;
   let sdf = sd_silhouette(p);
   let coverage = clamp(0.5 - sdf, 0.0, 1.0) * clamp(uniforms.reveal, 0.0, 1.0);
+  // The web tab bar's two-scale layers keep the bar's box while they carry any
+  // of the body (`two_scale_amount` > 0), and the silhouette may have shrunk
+  // inside it: there this canvas draws the page itself over them, from the
+  // backdrop picture (which leaves the layers out), so no layer shows outside
+  // the glass.
+  var ring = 0.0;
+  if (uniforms.two_scale_alpha > 0.0 && uniforms.two_scale_amount > 0.0 && uniforms.morph > 0.0) {
+    ring = clamp(0.5 - sd_shape(p), 0.0, 1.0);
+  }
+  if (coverage <= 0.0 && ring > 0.0) {
+    return vec4f(backdrop_at(p).rgb, ring);
+  }
   if (coverage <= 0.0) {
     // The drop shadow lives in the margin around the shape: the shape lowered
     // by 6 pt, blurred over 9. Above and to the sides of the glass, the page
@@ -283,8 +295,9 @@ fn shade(uv: vec2f) -> vec4f {
   // body here is the measured tint alone, at `two_scale_alpha` over them.
   // `hand` gives the body to the layers between 1.5 and 6 pt inside the edge,
   // past the hairline, the rim light's core and the rim's shade, which stay
-  // the glass's; `two_scale_amount` takes it back (the layers fade out with
-  // the same value) before the silhouette starts to minimise.
+  // the glass's; `two_scale_amount` (1 expanded, 0 minimised, on its own
+  // clock) crossfades it with the shader's own body while the layers stay
+  // whole under it.
   var hand = 0.0;
   if (uniforms.two_scale_alpha > 0.0) {
     hand = smoothstep(1.5, 6.0, inside) * clamp(uniforms.two_scale_amount, 0.0, 1.0);
@@ -378,7 +391,7 @@ fn shade(uv: vec2f) -> vec4f {
 
   let surface = clamp(rgb, vec3f(0.0), vec3f(1.0));
   if (hand <= 0.0) {
-    return vec4f(surface, coverage);
+    return over_ring(surface, coverage, coverage, ring, p);
   }
   // Over the layers L the canvas must show
   // hand·(β·tint + (1 − β)·L) + (1 − hand)·surface: alpha 1 − hand·(1 − β)
@@ -386,7 +399,18 @@ fn shade(uv: vec2f) -> vec4f {
   let beta = uniforms.two_scale_alpha;
   let opacity = 1.0 - hand * (1.0 - beta);
   let colour = (hand * beta * vec3f(uniforms.two_scale_tint) + (1.0 - hand) * surface) / opacity;
-  return vec4f(clamp(colour, vec3f(0.0), vec3f(1.0)), coverage * opacity);
+  return over_ring(clamp(colour, vec3f(0.0), vec3f(1.0)), coverage * opacity, coverage, ring, p);
+}
+
+// The glass (`rgb` at `alpha`, its silhouette covering `coverage` of the
+// pixel) over the page drawn in the ring outside it (`ring`).
+fn over_ring(rgb: vec3f, alpha: f32, coverage: f32, ring: f32, p: vec2f) -> vec4f {
+  let cover = ring * (1.0 - coverage);
+  if (cover <= 0.0) {
+    return vec4f(rgb, alpha);
+  }
+  let a = alpha + cover;
+  return vec4f((rgb * alpha + backdrop_at(p).rgb * cover) / max(a, 1e-4), min(a, 1.0));
 }
 "#;
 
@@ -751,8 +775,9 @@ impl GlassSpec {
     }
 
     /// How much of the body the two-scale layers carry, 0 to 1, as an animated
-    /// value: the bar hands its body back to the shader with it as it starts
-    /// to minimise. 1 unless set.
+    /// value: the shader crossfades its own body in as it falls, and while it
+    /// is above 0 covers the layers wherever the minimising silhouette has
+    /// left their box. 1 unless set.
     pub(crate) fn two_scale_amount(mut self, amount: &AnimatedNode) -> Self {
         self.two_scale_amount = Some(*amount);
         self
@@ -1179,12 +1204,12 @@ fn media_matches(query: &str) -> bool {
 /// [`GlassSpec::two_scale`]`(on)`, which draws the tint over them, and show
 /// only with `on` and while [`two_scale_active`] holds.
 ///
-/// `shown` is the spec's [`GlassSpec::two_scale_amount`] (1 the layers carry
-/// the body, 0 the shader does): a view keeps its box and cannot follow the
-/// silhouette into the pill, so the bar hands the body back in place, while
-/// its silhouette is still the layers' box, and only then minimises. The
-/// opacity is the layers' own: on an ancestor it would make a Backdrop Root
-/// and blank the filters.
+/// `shown` is 1 while the layers carry any of the body
+/// ([`GlassSpec::two_scale_amount`] above 0) and 0 after: they stay whole, so
+/// the shader's crossfade over them is exact. A view keeps its box and cannot
+/// follow the silhouette into the pill; the shader covers what of them lies
+/// outside the glass. The opacity is the layers' own: on an ancestor it would
+/// make a Backdrop Root and blank the filters.
 pub(crate) fn two_scale_layers(on: bool, radius: f32, shown: AnimatedNode) -> impl IntoElement {
     view()
         .absolute()

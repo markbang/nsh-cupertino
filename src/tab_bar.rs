@@ -259,8 +259,9 @@ pub struct GlassTabBarProps {
     /// Forces the bar minimized (or expanded) while set.
     pub minimized: Prop<Option<bool>>,
     /// Pins the minimise progress while set: 0 is the bar, 1 the pill, and the
-    /// values between hold the morph there, with no spring. The way to drive
-    /// the morph by hand (a gesture the app tracks itself, a still of a middle
+    /// values between hold the morph there, with no spring; on the web the
+    /// two-scale body's share follows it (1 − progress). The way to drive the
+    /// morph by hand (a gesture the app tracks itself, a still of a middle
     /// frame); it overrides `minimized` and the scroll while set.
     pub morph: Prop<Option<f32>>,
     /// `"glass"` (the shader, the default), `"material"` (the blur-only fill
@@ -293,11 +294,13 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     const HEIGHT: f32 = 64.0;
     const INSET: f32 = 20.0;
     const LIFT: f32 = 12.0;
-    // The part of the minimise progress in which the two-scale layers hand the
-    // body back to the shader, in place: the silhouette holds the bar's shape
-    // until it is done, so the layers (a view keeps its box) never show
-    // outside the glass. About 30 ms of the spring.
-    const HANDOVER: f32 = 0.2;
+    // How long the body takes to pass between the two-scale layers and the
+    // shader's own, in ms, linearly, as the bar minimises or expands. The two
+    // bodies differ by up to 17 levels (dark, the morph stills at rest): over
+    // 12 frames of 16.7 ms that is 1.4 levels a frame, half the 3-level budget
+    // of a frame, the rest left to the silhouette's own motion (at most 1.35 a
+    // frame in the one-disc recording, `tools/tab-bar-motion.mjs`).
+    const HANDOVER_MS: f32 = 200.0;
 
     let items = props.items;
     let values = items.get_untracked();
@@ -338,6 +341,9 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let forced = props.minimized;
     let offset = props.scroll_offset;
     let pinned = props.morph;
+    // The layers' share of the body: 1 expanded, 0 minimised, on its own clock.
+    let carried = animated_value(1.0);
+    let fade = carried;
     let accumulator = stored(0.0_f32);
     let baseline = stored(f32::MIN);
     let state = minimized;
@@ -347,6 +353,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
             let value = value.clamp(0.0, 1.0);
             state.set(value >= 0.5);
             animator.set(value);
+            fade.set(1.0 - value);
             return;
         }
         let wanted = match forced.get() {
@@ -392,8 +399,10 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         let target = if wanted { 1.0 } else { 0.0 };
         if reduce_motion() {
             animator.set(target);
+            fade.set(1.0 - target);
         } else {
             animator.spring(target, crate::overlay::spring(0.78, 340.0));
+            fade.timing(1.0 - target, HANDOVER_MS, Easing::Linear);
         }
     });
 
@@ -423,12 +432,12 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         }
     });
     let anchor_node = anchor_value.animated_node();
-    // Only where the layers can draw (the web): the native morph, and the
-    // one-disc body's (`single-blur`, the motion before the layers), are unchanged.
-    let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
-    let handover = if two_scale && web { HANDOVER } else { 0.0 };
-    let morph = progress.interpolate(&[handover, 1.0], &[0.0, 1.0]);
-    let carried = progress.interpolate(&[0.0, HANDOVER], &[1.0, 0.0]);
+    // The silhouette morphs on the progress itself, as it always did: the body
+    // passes to the shader on `carried`'s clock meanwhile, and the shader covers
+    // the layers wherever the silhouette has left their box (`glass.rs`).
+    let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
+    // The layers show, whole, while they carry any of the body.
+    let layers_on = carried.interpolate(&[0.0, 0.001], &[0.0, 1.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
         // Where the two-scale body does not draw (the native builds, increased
         // contrast, the minimised pill), the shader's own body: a bar over a
@@ -440,7 +449,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .anchor(&anchor_node)
         .material_only(!glass)
         .two_scale(two_scale)
-        .two_scale_amount(&carried);
+        .two_scale_amount(&carried.animated_node());
 
     let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
     for (index, item) in values.iter().enumerate() {
@@ -668,7 +677,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .when(!reduced, |bar| {
             // The two-scale layers go right under the shader, which draws the
             // tint and the rim over them.
-            bar.child(crate::glass::two_scale_layers(two_scale, 32.0, carried))
+            bar.child(crate::glass::two_scale_layers(two_scale, 32.0, layers_on))
                 .child(crate::glass::layer(spec, None))
         })
         .child(
