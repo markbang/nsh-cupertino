@@ -44,16 +44,6 @@ outputs:
 runs:
   using: composite
   steps:
-    # QuickJS' bindings come from bindgen, which needs libclang.
-    - name: System packages
-      if: inputs.apt != ''
-      shell: bash
-      env:
-        PACKAGES: ${{ inputs.apt }}
-      run: |
-        sudo apt-get update -qq
-        # shellcheck disable=SC2086
-        sudo apt-get install -y -qq --no-install-recommends $PACKAGES
     - uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ inputs.targets }}
@@ -109,6 +99,20 @@ runs:
         if [ "$CARGO_OUTCOME" = failure ]; then what="the cargo cache $CARGO_KEY"; else what="the nsh install $NSH_KEY"; fi
         echo "::error title=Cache miss::No cache for $what. A pull request only reads caches that runs on main (push, nightly) or this pull request's own warm runs saved, and does not build dependencies from scratch. If this pull request changes a Cargo.lock, site/nsh.json, Cargo.toml or NSH_VERSION, label it 'deps' (gh pr edit $PR --add-label deps): that run builds and saves its caches, later runs read them; remove the label afterwards. If main changed them, re-run this job when main's CI run has finished."
         exit 1
+    # After the restore, so a miss fails before this minute is spent. QuickJS'
+    # bindings come from bindgen, which needs libclang.
+    - name: System packages
+      if: inputs.apt != ''
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.apt }}
+      run: |
+        # The image's third-party lists (packages.microsoft.com) can refuse a
+        # runner; the packages come from Ubuntu's archive, and the install fails
+        # if they cannot be had.
+        sudo apt-get update -qq || echo "::warning::apt-get update failed for a list; installing from what it fetched"
+        # shellcheck disable=SC2086
+        sudo apt-get install -y -qq --no-install-recommends $PACKAGES
     - name: Put nsh on PATH
       if: inputs.nsh == 'true'
       shell: bash

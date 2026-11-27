@@ -204,7 +204,8 @@ class Cdp {
         if (!this.pending.has(id)) return;
         this.pending.delete(id);
         reject(new Error(`${method} timed out`));
-      }, 60000);
+        // Unref'd: an answered call's timer must not hold the process for a minute.
+      }, 60000).unref();
     });
   }
 }

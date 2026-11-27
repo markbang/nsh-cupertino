@@ -224,7 +224,7 @@ jobs:
   # `tools/glass-shots.mjs` patches the runtime of the web build (see
   # docs/design-notes.md) and drives Chrome over CDP. No toolchain here.
   glass-shots:
-    name: web glass shots (${{ matrix.scheme }}, ${{ matrix.shard }}/2)
+    name: web glass shots (${{ matrix.scheme }}, ${{ matrix.shard }}/3)
     needs: [changes, web-build]
     if: needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes' && needs.changes.outputs.glass_pages != ''
     runs-on: ubuntu-24.04
@@ -233,7 +233,7 @@ jobs:
       fail-fast: false
       matrix:
         scheme: [light, dark]
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
@@ -247,7 +247,7 @@ jobs:
           GLASS_PAGES: ${{ needs.changes.outputs.glass_pages }}
         run: |
           node tools/glass-shots.mjs --from "$RUNNER_TEMP/web" --out docs/screenshots \
-            --scheme "$SCHEME" --shard "$SHARD/2" --pages "$GLASS_PAGES" \
+            --scheme "$SCHEME" --shard "$SHARD/3" --pages "$GLASS_PAGES" \
             --chrome "$(command -v google-chrome || command -v google-chrome-stable)"
       - uses: actions/upload-artifact@v7
         with:
