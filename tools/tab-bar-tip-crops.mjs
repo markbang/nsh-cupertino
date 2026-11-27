@@ -1,24 +1,21 @@
 #!/usr/bin/env node
-// Crops of the minimise's lens tip, before and after the crease fix, for review.
+// Crops of the minimise's lens tip and of capsule centre lines, for review.
 //
 //   node tools/tab-bar-tip-crops.mjs --dir docs/screenshots --out docs/screenshots/compare
 //
 // `tab-bar-tip-crops.png`: 24 × 24 pt around the cap tip of recorded frames 3
 // and 4 (x 301-325, y 810-834 pt) and frame 11 (x 163-187, y 808-832 pt), light
-// and dark, upscaled ×6 nearest neighbour. Each row is one appearance and frame:
-// the two-scale render before and after, then the one-disc render before and
-// after. "Before" is `tools/fixtures/tab-bar-tip-before`, the same crops cut
-// byte for byte from CI run 46054638029's `screenshots` artifact (sources and
-// their sha256 in `before.json`); "after" is this run's `motion` recordings.
-// `glass-crease-crops.png`: 24 × 24 pt of three capsule centre lines, ×6, before
-// (`tools/fixtures/glass-crease-before`, from the same run) and after: the
-// calibration capsule (x 218-242, y 140-164 pt), the top bar (x 353-377, y 10-34)
-// and the tab bar at rest (x 18-42, y 810-834), light and dark.
+// and dark, upscaled ×6 nearest neighbour, from this run's `motion` recordings:
+// each row is one appearance and frame, the two-scale render, then the one-disc
+// render. `glass-crease-crops.png`: 24 × 24 pt of three capsule centre lines,
+// ×6, from this run's shots: the calibration capsule (x 218-242, y 140-164 pt),
+// the top bar (x 353-377, y 10-34) and the tab bar at rest (x 18-42,
+// y 810-834), light and dark. A before/after comparison puts the same sheet of
+// two runs side by side; the repository keeps no image.
 //
 // It writes PNGs only; it judges nothing.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 
 import { readPng } from "./png.mjs";
@@ -30,9 +27,6 @@ const arg = (name, fallback) => {
 };
 const DIR = arg("dir", "docs/screenshots");
 const OUT = arg("out", join(DIR, "compare"));
-const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const BEFORE = join(FIXTURES, "tab-bar-tip-before");
-const CREASE_BEFORE = join(FIXTURES, "glass-crease-before");
 const SCALE = 3;
 const CROP = 24 * SCALE;
 const ZOOM = 6;
@@ -135,7 +129,7 @@ function crop(file, x, y) {
   return (cx, cy) => image.pixel(x + cx, y + cy).slice(0, 3);
 }
 
-const columns = ["two-scale before", "two-scale after", "one-disc before", "one-disc after"];
+const columns = ["two-scale", "one-disc"];
 const rows = [];
 for (const theme of ["light", "dark"]) {
   for (const [k, xPt, yPt] of TIPS) {
@@ -143,9 +137,7 @@ for (const theme of ["light", "dark"]) {
     rows.push({
       label: `${theme} frame ${k}`,
       tiles: [
-        crop(join(BEFORE, name("")), 0, 0),
         crop(join(DIR, "motion", name("")), xPt * SCALE, yPt * SCALE - TOP),
-        crop(join(BEFORE, name("single-")), 0, 0),
         crop(join(DIR, "motion", name("single-")), xPt * SCALE, yPt * SCALE - TOP),
       ],
     });
@@ -162,13 +154,14 @@ for (const [title, file, xPt, yPt] of [
     const name = `${file}-${theme}${file === "tab-bar-fixture" ? "-a" : ""}.png`;
     crease.push({
       label: `${title} ${theme}`,
-      tiles: [crop(join(CREASE_BEFORE, name), 0, 0), crop(join(DIR, name), xPt * SCALE, yPt * SCALE)],
+      tiles: [crop(join(DIR, name), xPt * SCALE, yPt * SCALE)],
     });
   }
 }
 
 function sheet(file, columns, rows) {
-  const width = columns.length * (TILE + GAP) + GAP;
+  const label = Math.max(...rows.map((row) => row.label.length), ...columns.map((c) => c.length)) * 18;
+  const width = Math.max(columns.length * (TILE + GAP), label + GAP) + GAP;
   const height = rows.length * (TILE + 2 * STRIP + GAP) + GAP;
   const out = canvas(width, height);
   rows.forEach((row, r) => {
@@ -184,8 +177,8 @@ function sheet(file, columns, rows) {
   });
   mkdirSync(OUT, { recursive: true });
   writePng(join(OUT, file), out);
-  console.log(`wrote ${join(OUT, file)} (${width} × ${height}, before: ${JSON.parse(readFileSync(join(BEFORE, "before.json"), "utf8")).run})`);
+  console.log(`wrote ${join(OUT, file)} (${width} × ${height})`);
 }
 
 sheet("tab-bar-tip-crops.png", columns, rows);
-sheet("glass-crease-crops.png", ["before", "after"], crease);
+sheet("glass-crease-crops.png", ["centre line"], crease);
