@@ -394,6 +394,8 @@ for (const [tool, toolArgs] of [
   ["tab-bar-motion.mjs", ["--dir", join(DIR, "motion")]],
   // Report only: pinned stills against the frames of a real minimise.
   ["tab-bar-frames.mjs", ["--dir", DIR]],
+  // Report only: the cover over the layers against the one-disc frames.
+  ["tab-bar-cover.mjs", ["--dir", DIR]],
 ]) {
   console.log(`\n== ${tool}`);
   const run = spawnSync(process.execPath, [join(root, "tools", tool), ...toolArgs], { stdio: "inherit" });
