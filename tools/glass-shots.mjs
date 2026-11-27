@@ -5,6 +5,12 @@
 // `tools/patch-runtime.mjs` applies never survives into a test's page.
 //
 //   node tools/glass-shots.mjs [--out docs/screenshots] [--chrome <path>]
+//     [--from <dir>] [--scheme light|dark] [--pages glass,contextmenu] [--shard 1/2]
+//
+// `--from` takes a directory `nsh package App.tsx --target web -o <dir>` wrote
+// (CI builds the demo once and passes it on) instead of packaging it here; the
+// copy is patched, the directory is not. `--scheme`, `--pages` (a shot's page)
+// and `--shard i/n` (every n-th of the shots left) pick the shots to take.
 //
 // It packages `examples/demo` for the web, patches the runtime, serves the
 // build and drives headless Chrome: `glass-{light,dark}`, the increased
@@ -12,6 +18,8 @@
 // without a GPU, the shader) that `tools/glass-pixels.mjs` asserts on.
 import { spawn, spawnSync } from "node:child_process";
 import {
+  cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -38,6 +46,11 @@ const root = join(fileURLToPath(import.meta.url), "..", "..");
 const OUT = arg("out", join(root, "docs", "screenshots"));
 const CHROME = arg("chrome", process.env.CHROME ?? "google-chrome");
 const ONLY = arg("only", null)?.split(",");
+const FROM = arg("from", null);
+const SCHEME = arg("scheme", null);
+const PAGES = arg("pages", null)?.split(",").filter(Boolean);
+const SHARD = arg("shard", "1/1").split("/").map(Number);
+if (!(SHARD[0] >= 1 && SHARD[0] <= SHARD[1])) throw new Error(`--shard must be i/n with 1 <= i <= n, not ${arg("shard")}`);
 const WIDTH = 390;
 const HEIGHT = 844;
 const SCALE = 3;
@@ -125,12 +138,18 @@ const TYPES = {
 
 /** Packages the demo for the web into `dir`, with the runtime's bindings fixed. */
 function packageApp(dir) {
-  const status = spawnSync("nsh", ["package", "App.tsx", "--target", "web", "-o", dir], {
-    cwd: join(root, "examples", "demo"),
-    stdio: "inherit",
-  });
-  if (status.status !== 0) throw new Error("nsh package failed");
+  if (FROM) {
+    // A copy: the patch below writes into it.
+    cpSync(FROM, dir, { recursive: true });
+  } else {
+    const status = spawnSync("nsh", ["package", "App.tsx", "--target", "web", "-o", dir], {
+      cwd: join(root, "examples", "demo"),
+      stdio: "inherit",
+    });
+    if (status.status !== 0) throw new Error("nsh package failed");
+  }
   const built = join(dir, "Cupertino");
+  if (!existsSync(built)) throw new Error(`no Cupertino/ in ${FROM ?? dir}: is it the output of \`nsh package App.tsx --target web -o <dir>\`?`);
   let patched = 0;
   for (const name of readdirSync(built)) {
     if (!/^nsh\.[0-9a-f]+\.js$/.test(name)) continue;
@@ -367,8 +386,15 @@ async function main() {
     });
     await page.call("Page.navigate", { url: `http://127.0.0.1:${port}/` });
     await new Promise((resolve) => setTimeout(resolve, 2500));
-    for (const shot of SHOTS) {
-      if (ONLY ? !ONLY.includes(shot.name) : shot.frames && !args.includes("--menu-frames")) continue;
+    const picked = SHOTS.filter((shot) =>
+      (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")) &&
+      (!SCHEME || shot.scheme === SCHEME) &&
+      (!PAGES || PAGES.includes(shot.page)),
+    );
+    if (!picked.length) throw new Error("no shot matches --only, --scheme and --pages");
+    const shots = picked.filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
+    if (!shots.length) console.log(`shard ${SHARD.join("/")} has none of the ${picked.length} shots`);
+    for (const shot of shots) {
       console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
     }
   } finally {

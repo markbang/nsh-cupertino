@@ -1,0 +1,62 @@
+{
+  "$comment": "Which demo screens a pull request's changes can alter (read by .github/ci/changes.mjs). A path matching `all` reshoots every screen; `map` names the screens of a path; `none` names paths that draw no screen; any other path reshoots every screen. Screens are the pages of tools/check-screenshots.sh; `glassShots` adds the pages tools/glass-shots.mjs drives for a screen. Push to main, the nightly run and a manual run always take every screen.",
+  "always": ["gallery"],
+  "all": [
+    "src/lib.rs",
+    "src/glass.rs",
+    "src/tokens.rs",
+    "src/theme.rs",
+    "src/theme_file.rs",
+    "src/state.rs",
+    "src/icon.rs",
+    "src/icon_view.rs",
+    "src/list.rs",
+    "src/navigation.rs",
+    "src/scroll.rs",
+    "src/scroll_edge.rs",
+    "src/bin/**",
+    "theme/**",
+    "Cargo.toml",
+    "Cargo.lock",
+    "**/Cargo.toml",
+    "**/Cargo.lock",
+    "examples/demo/**",
+    "tools/**",
+    ".github/**"
+  ],
+  "map": {
+    "src/action_sheet.rs": ["actionsheet", "glass"],
+    "src/alert.rs": ["alert"],
+    "src/button.rs": ["buttons", "actionsheet", "alert", "sheet", "glass"],
+    "src/chip.rs": [],
+    "src/context_menu.rs": ["contextmenu"],
+    "src/date_picker.rs": ["datepicker"],
+    "src/field.rs": ["textfields", "search"],
+    "src/glass_menu.rs": ["contextmenu", "glass"],
+    "src/indicator.rs": ["indicators", "switches", "refresh"],
+    "src/overlay.rs": ["sheet", "actionsheet", "alert", "contextmenu", "glass"],
+    "src/picker.rs": ["picker", "datepicker"],
+    "src/refresh.rs": ["refresh"],
+    "src/segmented.rs": ["segmented", "glass"],
+    "src/sheet.rs": ["sheet", "actionsheet", "glass"],
+    "src/slider.rs": ["slider"],
+    "src/swipe.rs": ["swipe"],
+    "src/switch.rs": ["switches", "indicators"],
+    "src/tab_bar.rs": ["tabbar", "bar-materials", "glass"]
+  },
+  "none": [
+    "site/**",
+    "tests/**",
+    "research/**",
+    "docs/**",
+    "**/*.md",
+    "LICENSE*",
+    "NOTICE",
+    ".gitignore"
+  ],
+  "docsOnly": ["docs/**", "**/*.md"],
+  "glassShots": {
+    "glass": ["glass", "glass-rows", "glass-calibration"],
+    "contextmenu": ["contextmenu"]
+  }
+}

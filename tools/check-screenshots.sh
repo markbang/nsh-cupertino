@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # Every demo page has its light and dark screenshot after the web run, plus the
 # two increased-contrast ones and the four overlays open in both appearances.
-# Run from the repository root.
+# Run from the repository root. Pages after the directory check only those
+# (CI's pull requests shoot the pages they touch, .github/ci/screens.json).
+#
+#   tools/check-screenshots.sh [docs/screenshots [page ...]]
 set -euo pipefail
 dir="${1:-docs/screenshots}"
 pages=(gallery navigation lists buttons textfields search switches indicators scroll materials glass colors type sheet actionsheet alert contextmenu picker datepicker segmented slider tabbar swipe refresh bar-materials)
+if [ $# -gt 1 ]; then
+  shift
+  for page in "$@"; do
+    [[ " ${pages[*]} " == *" $page "* ]] || { echo "::error::$page is not a demo page (tools/check-screenshots.sh)"; exit 1; }
+  done
+  pages=("$@")
+fi
+selected() { [[ " ${pages[*]} " == *" $1 "* ]]; }
 missing=0
 for page in "${pages[@]}"; do
   for scheme in light dark; do
@@ -19,11 +30,15 @@ for page in "${pages[@]}"; do
   done
 done
 for scheme in light dark; do
-  file="$dir/gallery-$scheme-contrast.png"
-  [ -s "$file" ] || { echo "::error::missing $file"; missing=1; }
+  if selected gallery; then
+    file="$dir/gallery-$scheme-contrast.png"
+    [ -s "$file" ] || { echo "::error::missing $file"; missing=1; }
+  fi
   for page in sheet actionsheet alert contextmenu; do
+    selected "$page" || continue
     file="$dir/$page-open-$scheme.png"
     [ -s "$file" ] || { echo "::error::missing $file"; missing=1; }
   done
 done
+echo "checked ${#pages[@]} pages in $dir"
 exit "$missing"
