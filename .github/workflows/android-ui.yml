@@ -7,32 +7,29 @@ name: Android UI
 # `tools/glass-pixels.mjs` measures the web ones: the edge under the capsule's
 # rim must move, which a fill cannot do.
 #
+# Acceptance evidence, not a pull request gate: it runs nightly (03:17 UTC, on
+# main), on a tag, by hand, and on a pull request labelled `android`.
+#
 # Known thin margin: the dark rim symmetry reads 0.0196 against the 0.02 limit
 # here (light 0.0157; web 0.0000 / 0.0157). The soft sheen (specular × 0.055 ×
 # along²) leans to the lit side. There is no room left: do not treat the limit
 # as slack. See docs/design-notes.md, "What our renders measure".
 
 on:
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'examples/demo/**'
-      - 'theme/**'
-      - 'tools/**'
-      - '.github/workflows/android-ui.yml'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-  push:
-    branches: [main]
-    tags: ['v*']
+  schedule:
+    - cron: "17 3 * * *"
   workflow_dispatch:
+  push:
+    tags: ['v*']
+  pull_request:
+    types: [labeled, opened, synchronize, reopened]
 
 permissions:
   contents: read
 
 concurrency:
-  group: android-ui-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: android-ui-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NSH_VERSION: v0.5.0
@@ -40,6 +37,9 @@ env:
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_TERM_COLOR: always
   CARGO_BUILD_JOBS: "4"
+  # Nightly and manual runs save the caches; a labelled pull request reads
+  # main's (and saves its own with the `deps` label too).
+  WARM: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'deps') }}
 
 defaults:
   run:
@@ -48,39 +48,28 @@ defaults:
 jobs:
   glass:
     name: glass on an emulator (light, dark, scrolled, capsules, sheet)
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'android')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v7
-      # QuickJS' bindings come from bindgen, which needs libclang; `d8` and
-      # `apksigner` need a JDK.
-      - run: sudo apt-get update && sudo apt-get install -y clang libclang-dev
+      # `d8` and `apksigner` need a JDK.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-      - uses: dtolnay/rust-toolchain@stable
+      - id: setup
+        uses: ./.github/actions/setup
         with:
+          cache: cargo-android
+          lock: ${{ hashFiles('examples/demo/Cargo.lock') }}
+          warm: ${{ env.WARM }}
           targets: |
             x86_64-linux-android
             aarch64-linux-android
-      - uses: actions/cache@v6
-        with:
-          path: |
-            ~/.nsh
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            examples/demo/target
-            target
-          key: android-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('examples/demo/Cargo.lock') }}
-          restore-keys: android-${{ runner.os }}-${{ env.NSH_VERSION }}-
-      - name: Install nsh
-        run: |
-          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
-          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
       - name: Build the demo for Android
         working-directory: examples/demo
         run: |
@@ -137,5 +126,10 @@ jobs:
             ${{ runner.temp }}/arm64/*.apk
           if-no-files-found: error
       - name: Publish the captures to the screenshots branch
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') || startsWith(github.ref, 'refs/tags/v')
         run: tools/publish-shots.sh docs/screenshots
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ env.WARM }}

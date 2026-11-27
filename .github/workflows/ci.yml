@@ -1,18 +1,30 @@
 name: CI
 
+# A pull request's verdict: fmt, clippy -D warnings, tests and the theme; the
+# demo's check and headless tests; one web build of the demo, screenshots of
+# the screens the change touches (.github/ci/screens.json) and the glass pixel
+# checks; the site's check, tests, web build and headless run. A change of
+# docs/** and *.md only runs the markdown link check. Push to main, the nightly
+# run and a manual run shoot every screen and save the caches pull requests
+# read (a pull request's cache miss fails: label it `deps` to warm its own).
+# The Android emulator is android-ui.yml, outside this path.
+
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
     tags: ['v*']
+  schedule:
+    - cron: "41 2 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NSH_VERSION: v0.5.0
@@ -29,115 +41,266 @@ jobs:
   changes:
     name: what is in this commit
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     outputs:
+      code: ${{ steps.check.outputs.docs_only != 'true' }}
+      pages: ${{ steps.check.outputs.pages }}
+      glass_pages: ${{ steps.check.outputs.glass_pages }}
+      glass_pixels: ${{ steps.check.outputs.glass_pixels }}
+      warm: ${{ steps.check.outputs.warm }}
       demo: ${{ steps.check.outputs.demo }}
       theme: ${{ steps.check.outputs.theme }}
     steps:
       - uses: actions/checkout@v7
-      # The scaffold commit has neither; the workflow stays valid there.
+        with:
+          fetch-depth: 2
+      # The scaffold commit has no demo and no theme generator; the workflow
+      # stays valid there.
       - id: check
-        run: |
-          echo "demo=$([ -f examples/demo/nsh.json ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
-          echo "theme=$([ -f src/bin/gen_theme.rs ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node .github/ci/changes.mjs
 
-  check:
-    needs: changes
-    name: fmt, clippy, tests, theme
+  links:
+    name: markdown links
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      # QuickJS' bindings come from bindgen, which needs libclang.
-      - run: sudo apt-get update && sudo apt-get install -y clang libclang-dev
-      - uses: dtolnay/rust-toolchain@stable
+      - run: node .github/ci/md-links.mjs
+
+  check:
+    name: fmt, clippy, tests, theme
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+      - id: setup
+        uses: ./.github/actions/setup
         with:
+          cache: cargo-check
+          lock: ${{ hashFiles('Cargo.lock') }}
+          warm: ${{ needs.changes.outputs.warm }}
           components: rustfmt, clippy
-      - uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: check-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'Cargo.toml') }}
-          restore-keys: check-${{ runner.os }}-
+          nsh: "false"
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       # `theme/` is generated: a token changed without regenerating it fails here.
       - if: needs.changes.outputs.theme == 'yes'
         run: cargo run --bin gen-theme -- --check
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ needs.changes.outputs.warm }}
 
   demo:
     name: demo (check, headless tests)
     needs: changes
-    if: needs.changes.outputs.demo == 'yes'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes'
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
     defaults:
       run:
         working-directory: examples/demo
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y clang libclang-dev libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-        working-directory: .
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v6
+      - id: setup
+        uses: ./.github/actions/setup
         with:
-          path: |
-            ~/.nsh
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            examples/demo/target
-            target
-          key: demo-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('examples/demo/Cargo.lock') }}
-          restore-keys: demo-${{ runner.os }}-${{ env.NSH_VERSION }}-
-      - name: Install nsh
-        run: |
-          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
-          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
-        working-directory: .
+          cache: cargo-demo
+          lock: ${{ hashFiles('examples/demo/Cargo.lock') }}
+          warm: ${{ needs.changes.outputs.warm }}
+          apt: clang libclang-dev libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
       - run: nsh check
       - run: nsh test
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ needs.changes.outputs.warm }}
+          nsh: "true"
 
-  web:
-    name: demo (web build, screenshots)
+  # The demo for the web, built once: the glass shots load this build, and it
+  # is the `web` artifact.
+  web-build:
+    name: web build
     needs: changes
-    if: needs.changes.outputs.demo == 'yes'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes'
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+      - id: setup
+        uses: ./.github/actions/setup
+        with:
+          cache: cargo-demo-web
+          lock: ${{ hashFiles('examples/demo/Cargo.lock') }}
+          warm: ${{ needs.changes.outputs.warm }}
+          apt: clang llvm libclang-dev
+          targets: wasm32-unknown-unknown
+          wasm-bindgen: "true"
+      - name: Package the demo for the web
+        working-directory: examples/demo
+        run: nsh package App.tsx --target web -o "$RUNNER_TEMP/web"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: ${{ runner.temp }}/web
+          if-no-files-found: error
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ needs.changes.outputs.warm }}
+
+  # The pages `nsh test --target web` shoots (screenshots.test.tsx,
+  # separators.test.tsx), one appearance a job. `nsh test` builds its own
+  # development runtime: it cannot load the web build.
+  page-shots:
+    name: web page shots (${{ matrix.scheme }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        scheme: [light, dark]
+    steps:
+      - uses: actions/checkout@v7
+      - id: setup
+        uses: ./.github/actions/setup
+        with:
+          cache: cargo-demo-webdev
+          lock: ${{ hashFiles('examples/demo/Cargo.lock') }}
+          warm: ${{ needs.changes.outputs.warm }}
+          apt: clang llvm libclang-dev
+          targets: wasm32-unknown-unknown
+          wasm-bindgen: "true"
+      # The runner's image has Google Chrome, which `nsh test --target web`
+      # uses. `docs/screenshots/` is not in the repository: the test writes
+      # into it.
+      - name: Screenshots of the pages this change touches
+        env:
+          SCHEME: ${{ matrix.scheme }}
+          PAGES: ${{ needs.changes.outputs.pages }}
+        run: |
+          set -eu
+          mkdir -p docs/screenshots
+          echo "pages: $PAGES"
+          files=$(node .github/ci/subset-tests.mjs --scheme "$SCHEME" --pages "$PAGES")
+          cd examples/demo
+          for file in $files; do
+            nsh test "$file" --target web
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: shots-pages-${{ matrix.scheme }}
+          path: docs/screenshots
+          if-no-files-found: error
+      - if: ${{ !cancelled() && matrix.scheme == 'light' }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ needs.changes.outputs.warm }}
+
+  # The Liquid Glass shots need the shader, which only a packaged build draws:
+  # `tools/glass-shots.mjs` patches the runtime of the web build (see
+  # docs/design-notes.md) and drives Chrome over CDP. No toolchain here.
+  glass-shots:
+    name: web glass shots (${{ matrix.scheme }}, ${{ matrix.shard }}/3)
+    needs: [changes, web-build]
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes' && needs.changes.outputs.glass_pages != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        scheme: [light, dark]
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+          path: ${{ runner.temp }}/web
+      - name: Glass shots
+        env:
+          SCHEME: ${{ matrix.scheme }}
+          SHARD: ${{ matrix.shard }}
+          GLASS_PAGES: ${{ needs.changes.outputs.glass_pages }}
+        run: |
+          node tools/glass-shots.mjs --from "$RUNNER_TEMP/web" --out docs/screenshots \
+            --scheme "$SCHEME" --shard "$SHARD/3" --pages "$GLASS_PAGES" \
+            --chrome "$(command -v google-chrome || command -v google-chrome-stable)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: shots-glass-${{ matrix.scheme }}-${{ matrix.shard }}
+          path: docs/screenshots
+          if-no-files-found: warn
+
+  # The material's pixel checks on the calibration, tab bar and rows stills.
+  glass-pixels:
+    name: web glass pixels
+    needs: [changes, glass-shots]
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes' && needs.changes.outputs.glass_pixels == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: shots-glass-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/glass
+      - run: node tools/glass-pixels.mjs --dir "$RUNNER_TEMP/glass"
+
+  # Every shot of the run in one artifact; on main, the screenshots branch.
+  screenshots:
+    name: web screenshots
+    needs: [changes, page-shots, glass-shots]
+    if: >-
+      !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.demo == 'yes'
+      && needs.page-shots.result == 'success'
+      && (needs.glass-shots.result == 'success' || needs.glass-shots.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-dev
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v8
         with:
-          targets: wasm32-unknown-unknown
-      - uses: actions/cache@v6
+          pattern: shots-pages-*
+          merge-multiple: true
+          path: docs/screenshots
+      # After the pages: the glass shots' context menu replaces the test's.
+      - if: needs.changes.outputs.glass_pages != ''
+        uses: actions/download-artifact@v8
         with:
-          path: |
-            ~/.nsh
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            examples/demo/target
-          key: web-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('examples/demo/Cargo.lock') }}
-          restore-keys: web-${{ runner.os }}-${{ env.NSH_VERSION }}-
-      - name: Install nsh
-        run: |
-          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
-          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-bindgen@0.2.130
-      # The runner's image has Google Chrome, which `nsh test --target web` uses.
-      # `docs/screenshots/` is not in the repository: the script makes it, the
-      # test writes into it.
-      # `tools/shots.sh` also packages the demo for `tools/glass-shots.mjs`, which
-      # patches the runtime (the shader's uniform blocks, see docs/design-notes.md)
-      # and drives Chrome over CDP, then runs the material's pixel checks.
-      - name: Screenshots of every demo page
-        run: tools/shots.sh
-      - run: tools/check-screenshots.sh docs/screenshots
+          pattern: shots-glass-*
+          merge-multiple: true
+          path: docs/screenshots
+      - env:
+          PAGES: ${{ needs.changes.outputs.pages }}
+        # shellcheck disable=SC2086
+        run: tools/check-screenshots.sh docs/screenshots $PAGES
       - uses: actions/upload-artifact@v7
         with:
           name: screenshots
@@ -146,52 +309,65 @@ jobs:
       - name: Publish the screenshots to the screenshots branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: tools/publish-shots.sh docs/screenshots
-      - name: Package the web app
-        working-directory: examples/demo
-        run: nsh package App.tsx --target web -o "$RUNNER_TEMP/web"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: web
-          path: ${{ runner.temp }}/web
-          if-no-files-found: error
 
-  site:
-    name: site (check, tests, web build, headless checks)
+  site-check:
+    name: site (check, tests)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
     defaults:
       run:
         working-directory: site
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y clang llvm libclang-dev
-        working-directory: .
-      - uses: dtolnay/rust-toolchain@stable
+      # The site has no Cargo.lock: nsh resolves its generated workspace from
+      # site/nsh.json's crate (../Cargo.toml, ../Cargo.lock) and nsh's own
+      # crates (NSH_VERSION, in the key).
+      - id: setup
+        uses: ./.github/actions/setup
         with:
-          targets: wasm32-unknown-unknown
-      - uses: actions/cache@v6
-        with:
-          path: |
-            ~/.nsh
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            site/target
-          key: site-${{ runner.os }}-${{ env.NSH_VERSION }}-${{ hashFiles('site/nsh.json', 'Cargo.toml') }}
-          restore-keys: site-${{ runner.os }}-${{ env.NSH_VERSION }}-
-      - name: Install nsh
-        run: |
-          [ -x ~/.nsh/bin/nsh ] || curl -fsSL https://nsh.dev/install.sh | sh
-          echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
-        working-directory: .
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: wasm-bindgen@0.2.130
+          cache: cargo-site
+          lock: ${{ hashFiles('site/nsh.json', 'Cargo.toml', 'Cargo.lock') }}
+          warm: ${{ needs.changes.outputs.warm }}
       # The site shows the crate's version and the docs' own prop tables: both
       # are generated, and a stale commit fails here.
       - run: node ../tools/site-version.mjs --check
       - run: node ../tools/site-api.mjs --check
       - run: nsh check
       - run: nsh test
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ needs.changes.outputs.warm }}
+
+  site-web:
+    name: site (web build, headless checks)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v7
+      - id: setup
+        uses: ./.github/actions/setup
+        with:
+          cache: cargo-site-web
+          lock: ${{ hashFiles('site/nsh.json', 'Cargo.toml', 'Cargo.lock') }}
+          warm: ${{ needs.changes.outputs.warm }}
+          apt: clang llvm libclang-dev
+          targets: wasm32-unknown-unknown
+          wasm-bindgen: "true"
       - name: Package the site for the web
         run: nsh package App.tsx --target web -o "$RUNNER_TEMP/out"
       # `nsh package` writes `<out>/<Name>/`; the site is served from a directory
@@ -233,3 +409,27 @@ jobs:
             ${{ runner.temp }}/screens
             ${{ runner.temp }}/site-check.json
           if-no-files-found: warn
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/save-caches
+        with:
+          setup: ${{ toJSON(steps.setup.outputs) }}
+          warm: ${{ needs.changes.outputs.warm }}
+
+  # One check that is red when any job is: a skipped job (docs only, no glass
+  # screen touched) counts as passed.
+  verdict:
+    name: CI verdict
+    needs: [changes, links, check, demo, web-build, page-shots, glass-shots, glass-pixels, screenshots, site-check, site-web]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.value.result)\t\(.key)"'
+          bad=$(echo "$NEEDS" | jq -r '[to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key] | join(", ")')
+          if [ -n "$bad" ]; then
+            echo "::error::failed: $bad"
+            exit 1
+          fi

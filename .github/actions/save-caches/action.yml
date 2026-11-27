@@ -1,0 +1,56 @@
+name: Save the caches a warm run built
+description: >-
+  Saves the cargo cache (and the nsh install) that `.github/actions/setup`
+  restored, when the run is warm and its exact key was not already there. On
+  main it then deletes main's older caches of the same name, which nothing
+  reads any more, so the repository stays under its cache quota.
+
+inputs:
+  setup:
+    description: The setup step's outputs, as toJSON(steps.<id>.outputs)
+    required: true
+  warm:
+    description: "'true' on runs that save"
+    required: true
+  nsh:
+    description: "'true': this job saves the nsh install (one job per workflow)"
+    default: "false"
+  token:
+    description: A token with actions:write, to delete superseded caches on main
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.warm == 'true' && fromJSON(inputs.setup).cargo-matched != fromJSON(inputs.setup).cargo-key
+      uses: actions/cache/save@v6
+      with:
+        key: ${{ fromJSON(inputs.setup).cargo-key }}
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          ~/.cache/ci-target
+    - if: inputs.warm == 'true' && inputs.nsh == 'true' && fromJSON(inputs.setup).nsh-matched != fromJSON(inputs.setup).nsh-key
+      uses: actions/cache/save@v6
+      with:
+        key: ${{ fromJSON(inputs.setup).nsh-key }}
+        path: ~/.nsh
+    - name: Delete main's superseded caches
+      if: inputs.warm == 'true' && github.ref == 'refs/heads/main'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        KEYS: ${{ inputs.nsh == 'true' && format('{0} {1}', fromJSON(inputs.setup).cargo-key, fromJSON(inputs.setup).nsh-key) || fromJSON(inputs.setup).cargo-key }}
+      run: |
+        set -eu
+        for key in $KEYS; do
+          # The name: what comes before "-<os>-" in the key.
+          prefix="${key%%-"$RUNNER_OS"-*}-$RUNNER_OS-"
+          gh api -X GET "repos/$GITHUB_REPOSITORY/actions/caches" -f ref=refs/heads/main -f key="$prefix" -F per_page=100 \
+            --jq ".actions_caches[] | select(.key != \"$key\") | \"\(.id) \(.key)\"" |
+            while read -r id old; do
+              echo "deleting $old"
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/caches/$id" >/dev/null || echo "::warning::could not delete the cache $old"
+            done
+        done

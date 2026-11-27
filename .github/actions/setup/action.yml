@@ -1,0 +1,138 @@
+name: Set up a Rust and nsh job
+description: >-
+  System packages, the Rust toolchain, the cargo cache (registry and target,
+  keyed on a lock file's hash) and the nsh install (keyed on NSH_VERSION).
+  Unless `warm` is true, a cache miss fails the job: a pull request never
+  builds its dependencies from scratch.
+
+inputs:
+  cache:
+    description: The cargo cache's name, one per job that saves it (cargo-check, cargo-demo, ...)
+    required: true
+  lock:
+    description: The hash of what defines the job's dependencies (hashFiles of its Cargo.lock)
+    required: true
+  warm:
+    description: "'true': a miss builds and the job saves the caches (main, nightly, manual runs, the `deps` label)"
+    required: true
+  apt:
+    description: System packages to install
+    default: clang libclang-dev
+  targets:
+    description: Extra Rust targets
+    default: ""
+  components:
+    description: Extra Rust components
+    default: ""
+  nsh:
+    description: "'true': restore the nsh install too, and put it on PATH"
+    default: "true"
+  wasm-bindgen:
+    description: "'true': install wasm-bindgen (a prebuilt binary)"
+    default: "false"
+
+outputs:
+  cargo-key:
+    value: ${{ steps.key.outputs.cargo }}
+  cargo-matched:
+    value: ${{ steps.cargo.outputs.cache-matched-key }}
+  nsh-key:
+    value: ${{ steps.key.outputs.nsh }}
+  nsh-matched:
+    value: ${{ steps.nsh.outputs.cache-matched-key }}
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ inputs.targets }}
+        components: ${{ inputs.components }}
+    # One target directory for every cargo build of the job, nsh's generated
+    # workspace (`.nsh/rust/`) included, so the cache holds all of it.
+    - id: key
+      name: Cache keys
+      shell: bash
+      env:
+        CACHE: ${{ inputs.cache }}
+        LOCK: ${{ inputs.lock }}
+      run: |
+        set -eu
+        echo "CARGO_TARGET_DIR=$HOME/.cache/ci-target" >> "$GITHUB_ENV"
+        [ -n "$LOCK" ] || { echo "::error::the cache '$CACHE' has no lock hash: hashFiles matched no file"; exit 1; }
+        rust=$(rustc -Vv | sha256sum | cut -c1-12)
+        prefix="$CACHE-$RUNNER_OS-$NSH_VERSION-${LOCK:0:16}-"
+        echo "cargo-prefix=$prefix" >> "$GITHUB_OUTPUT"
+        echo "cargo=$prefix$rust" >> "$GITHUB_OUTPUT"
+        echo "nsh=nsh-$RUNNER_OS-$NSH_VERSION" >> "$GITHUB_OUTPUT"
+    # A new Rust release changes the key's last part only: the restore key
+    # takes the previous toolchain's cache, and the next warm run saves one.
+    - id: cargo
+      name: Restore the cargo cache
+      uses: actions/cache/restore@v6
+      with:
+        key: ${{ steps.key.outputs.cargo }}
+        restore-keys: ${{ steps.key.outputs.cargo-prefix }}
+        fail-on-cache-miss: ${{ inputs.warm != 'true' }}
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          ~/.cache/ci-target
+    - id: nsh
+      name: Restore the nsh install
+      if: inputs.nsh == 'true'
+      uses: actions/cache/restore@v6
+      with:
+        key: ${{ steps.key.outputs.nsh }}
+        fail-on-cache-miss: ${{ inputs.warm != 'true' }}
+        path: ~/.nsh
+    - name: Explain the cache miss
+      if: failure() && (steps.cargo.outcome == 'failure' || steps.nsh.outcome == 'failure')
+      shell: bash
+      env:
+        CARGO_KEY: ${{ steps.key.outputs.cargo }}
+        NSH_KEY: ${{ steps.key.outputs.nsh }}
+        CARGO_OUTCOME: ${{ steps.cargo.outcome }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        if [ "$CARGO_OUTCOME" = failure ]; then what="the cargo cache $CARGO_KEY"; else what="the nsh install $NSH_KEY"; fi
+        echo "::error title=Cache miss::No cache for $what. A pull request only reads caches that runs on main (push, nightly) or this pull request's own warm runs saved, and does not build dependencies from scratch. If this pull request changes a Cargo.lock, site/nsh.json, Cargo.toml or NSH_VERSION, label it 'deps' (gh pr edit $PR --add-label deps): that run builds and saves its caches, later runs read them; remove the label afterwards. If main changed them, re-run this job when main's CI run has finished."
+        exit 1
+    # After the restore, so a miss fails before this minute is spent. QuickJS'
+    # bindings come from bindgen, which needs libclang.
+    - name: System packages
+      if: inputs.apt != ''
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.apt }}
+      run: |
+        # The image's third-party lists (packages.microsoft.com) can refuse a
+        # runner; the packages come from Ubuntu's archive, and the install fails
+        # if they cannot be had.
+        sudo apt-get update -qq || echo "::warning::apt-get update failed for a list; installing from what it fetched"
+        # shellcheck disable=SC2086
+        sudo apt-get install -y -qq --no-install-recommends $PACKAGES
+    - name: Put nsh on PATH
+      if: inputs.nsh == 'true'
+      shell: bash
+      env:
+        WARM: ${{ inputs.warm }}
+      run: |
+        set -eu
+        if [ ! -x ~/.nsh/bin/nsh ]; then
+          [ "$WARM" = true ] || { echo "::error::~/.nsh/bin/nsh is missing from the restored cache"; exit 1; }
+          curl -fsSL https://nsh.dev/install.sh | sh
+        fi
+        echo "$HOME/.nsh/bin" >> "$GITHUB_PATH"
+        version=$("$HOME/.nsh/bin/nsh" --version)
+        echo "$version"
+        # The installer takes the latest release: the cache's key says NSH_VERSION.
+        case "$version" in
+          "nsh ${NSH_VERSION#v} "*|"nsh ${NSH_VERSION#v}") ;;
+          *) echo "::warning::the nsh install is '$version', NSH_VERSION is $NSH_VERSION: bump NSH_VERSION so the cache key names what it holds" ;;
+        esac
+    - if: inputs.wasm-bindgen == 'true'
+      uses: taiki-e/install-action@v2
+      with:
+        tool: wasm-bindgen@0.2.130
