@@ -65,11 +65,13 @@ content, not an edge-to-edge band.
 | `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit's `MinimizeBehavior`: minimise on the way down and expand on the way up. |
 | `scrollOffset` | number | | The page's offset, fed from its `onScroll`; without it the bar never minimises. |
 | `minimized` | boolean | | Forces the state while set. |
-| `material` | `"glass" \| "material"` | `"glass"` | The shader, or the blur-only fill (for comparing the two). |
+| `morph` | number | | Pins the minimise progress while set: 0 the bar, 1 the pill, values between hold the morph there with no spring. The way to drive the morph by hand (a gesture the app tracks, a still); it overrides `minimized` and the scroll. |
+| `material` | `"glass" \| "material" \| "single-blur"` | `"glass"` | The shader, the blur-only fill, or the shader's one-disc body without the web's two-scale layers (for comparing them). |
 | `onChange` | `{ value, index }` | | Another tab was chosen. |
 
 Shape and motion: 64 pt tall, radius 32, 20 pt from the sides and 12 pt above the
-home indicator, 27.5 pt icons and 10 pt labels. The chosen tab has a capsule of
+home indicator, 27.5 pt icons and 10 pt labels. iOS 27's bar measures 62 pt, radius 31,
+21 pt from the sides; ours stays 2 pt taller. The chosen tab has a capsule of
 its own. A downward scroll of 20 pt minimises the bar into a 50 pt pill around
 that tab, an upward scroll of 12 pt expands it, the top of the page always
 expands it, content shorter than 40 pt never minimises, and the spring is
@@ -83,3 +85,14 @@ The minimised pill is a picture of the chosen tab: its icon and its position
 follow the live selection (it springs to the new slot when the tab changes while
 minimised), and it takes no touches, so tapping the chosen tab still reaches the
 tab underneath.
+
+The body is iOS 27's measured two-scale material on the web: a 0.625 pt ghost and
+an 18 pt frost as two CSS backdrop layers under the shader, which draws the tint
+and the rim over them (`tokens::bar`; `tools/tab-bar-pixels.mjs` checks it against
+the iOS frames in CI). As the bar minimises, the shader crossfades its own body in
+over 200 ms while the silhouette shrinks on the spring, and covers the layers
+wherever the silhouette has left their box. The native builds draw the shader's one-disc body. With
+`prefers-reduced-transparency: reduce` (web) the bar is opaque: the shade it has
+over an empty page, read when the bar is built.
+Increased contrast keeps the shader's own body: the near-opaque `glass-regular` is
+not the measured tint, and CI checks that no layers draw then.

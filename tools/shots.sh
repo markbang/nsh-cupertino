@@ -1,3 +1,7 @@
+# The glass pixel checks, the tab bar's among them (`tools/glass-pixels.mjs`
+# runs `tab-bar-pixels.mjs` and `tab-bar-motion.mjs`), as CI's glass-pixels job
+# runs them.
+node tools/glass-pixels.mjs
 #!/usr/bin/env bash
 # Captures docs/screenshots from the web build and checks the separators it
 # drew. Run from the repository root; the demo app has no `fs` capability, so
@@ -13,4 +17,7 @@ nsh test screenshots.test.tsx --target web "$@"
 nsh test separators.test.tsx --target web "$@"
 cd ../..
 node tools/glass-shots.mjs "$@"
+# The glass pixel checks, the tab bar's among them (`tools/glass-pixels.mjs`
+# runs `tab-bar-pixels.mjs` and `tab-bar-motion.mjs`), as CI's glass-pixels job
+# runs them.
 node tools/glass-pixels.mjs

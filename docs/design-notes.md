@@ -351,23 +351,104 @@ do not treat the limit as slack.
   peak ratio reads 0.76 and 1.46 in the iOS 27 simulator stripes clips. Ours
   keeps the two rims equal everywhere. There is no material to set a value
   from, so this is not modelled.
-- **The tab bar has two blur scales, and nsh draws one.** iOS 27's bar material,
-  fitted on the bar's own backdrop (8 frames of the iOS 27 simulator fixture, step 0
-  passed), is a sharp ghost of σ 0.625 pt (k 0.07 light, 0.14 dark) plus a wide frost
-  of σ 18 pt (k 0.27 light, 0.50 dark). Total k is 0.34 light and 0.63 dark. The model
-  predicts the device's settings bar within ±1.8 levels.
-- **nsh cannot draw the frost.** The engine gives a shader one full-resolution
-  backdrop without mips (`nsh-engine` `shader.rs:341`, `mip_level_count` 1; the web
-  runtime `nsh.js` likewise), one draw per shader view, and `sample_backdrop` reads
-  mip 0 only (`nsh-core` `shader.rs:127-130`). An 18 pt frost can then only be a
-  sparse tap estimate: dark needs more than 1000 taps per pixel to reach a residual
-  of 2.5 levels, which cannot ship. A platform `backdrop_blur` layer does not work
-  either. Below the shader, the web painter drops filters, so the shader never sees
-  the frost. Above it, the blur softens the rim, cannot follow the minimise morph, and
-  its kernel differs per platform.
-- **Text under nsh's bar is fainter than iOS's.** Its contrast is 3.8 light and 12.1
-  dark levels, against iOS's 10.1 and 22.2. Tuning `BAR_BLUR` or the fill cannot close
-  the gap.
-- **Waiting on the engine.** The real fix is upstream: a mip chain for shader pictures,
-  or a pre-blurred backdrop input. No upstream issue is filed, and it is not being
-  chased. Revisit when the engine gains either, or when asked.
+- **The tab bar has two blur scales: the web build draws both, the native builds
+  one.** iOS 27's bar material, fitted on the bar's own backdrop (the iOS 27
+  simulator's tab-bar fixture, step 0 passed), is a sharp ghost of σ 0.625 pt
+  (k 0.07 light, 0.14 dark) plus a wide frost of σ 18 pt (k 0.26 light, 0.50
+  dark) over an offset t (167 light, 37 dark levels). Total k is 0.33 light and
+  0.64 dark. The model predicts the device's settings bar within ±1.8 levels.
+- **On the web the body is three layers** (`tokens::bar`, `glass::two_scale_layers`):
+  a CSS `backdrop-filter: blur(0.625px)`, opaque; over it `blur(18px)` at α2;
+  over both the shader, whose body is the measured grey tint at β. CSS `blur(r)`
+  is a Gaussian of σ r and the browser composites in sRGB, so the layers give
+  k2 = (1 − β)·α2, k1 = (1 − β)·(1 − α2), t = β·tint: β 0.668, α2 0.791, tint
+  250 light; β 0.356, α2 0.784, tint 103 dark (the arithmetic is in `tokens.rs`).
+  A filter chain `blur(a) blur(b)` would be one Gaussian of √(a² + b²): the two
+  scales need two stacked layers. The layers sit under the shader, so they do not
+  blur its rim, and the web painter leaves them out of the shader's backdrop
+  picture, which the rim refracts: it reads the page itself, as it should. The
+  shader hands the body to the layers between 1.5 and 6 pt inside the edge; the
+  hairline, the rim light's core and the rim's shade stay its own. The tint is
+  achromatic, as `glass-regular` is, so matching the luma keeps the hue.
+- **`tools/tab-bar-pixels.mjs` measures it in CI** over the fixture's own backdrop
+  (the iOS frames are fetched and checked by sha256, not committed): it refits the
+  two-scale model to our render on the m5b fit mask, compares the render with the
+  iOS frames and with the model's prediction, and reads the readability floor. It
+  first checks its own port against the published fit (`shared.json`) and iOS's
+  floors. First run (CI 45965972295), a+b per theme, light / dark: the refit
+  gives σ1 0.625 / 0.625 pt and σ2 20 / 18 pt (iOS: 0.625 / 0.625, 20 / 17);
+  rms against the iOS frames 2.08 / 2.63 levels, where the two-scale fit leaves
+  1.98 / 2.40 on iOS itself and one Gaussian 3.57 / 6.07; rms against the
+  model's prediction 0.63 / 1.10; readability floor 10.4 / 22.6 levels (iOS
+  10.1 / 22.2). The shader's one-disc body, rendered the same way
+  (`material="single-blur"`), reads 5.11 / 33.8, 4.85 / 33.7 and 2.7 / 12.2.
+- **The minimise morph hands the body back.** A view keeps its box, so the layers
+  cannot follow the silhouette into the 50 pt pill. On the web the silhouette
+  morphs on the minimise spring as it always did, and the body passes from the
+  layers to the shader's one-disc body on a clock of its own: a linear 200 ms
+  crossfade of the shader's hand-over (`GlassTabBar`'s `HANDOVER_MS`). The layers
+  stay whole under the crossfade, so the mix is exact, and while they show the
+  shader draws the page itself, from its backdrop picture, wherever the
+  silhouette has left their box: no layer shows outside the glass. The 200 ms
+  comes from the measurement: the two bodies differ by up to 17 levels (dark,
+  at rest), which over 12 frames is 1.4 levels a frame, half the 3-level budget.
+- **Two designs failed first.** Fading the layers while the silhouette shrank
+  showed them outside the glass (a 10-level jump at their box edge at progress
+  0.25 and 0.5, CI run 45975856837). Handing the body back over the first 20 %
+  of the progress, before the silhouette moved, kept them inside but delayed the
+  minimise by a frame (light settles at 150 ms against the one-disc body's
+  133 ms, +12.5 %), moved the bar down before its edge moved (a 0.4 pt reversal
+  of the dark edge) and stepped the dark body by 3.15 levels in one frame (CI
+  run 45991898528).
+- **CI checks it in pinned stills and in time.** `tools/tab-bar-pixels.mjs` pins
+  the progress at 0.1, 0.25, 0.5 and 0.75 (`GlassTabBar`'s `morph`) and checks the
+  silhouette's edge, the hand-over ramp and the layers' box edge for steps and
+  brightness jumps against the end frames and the one-disc body at the same
+  progress. `tools/tab-bar-motion.mjs` records one minimise at 60 fps on a page
+  clock that only steps when asked, and checks that the hand-over's luma is
+  monotonic (±1 level) and changes at most 3 levels a frame, that the bar settles
+  within 5 % of the one-disc body's time, and that its edge reverses or stalls no
+  more than the one-disc body's.
+- **The page in that ring is nsh's picture of it.** For up to 200 ms the shader
+  shows the page between the shrinking silhouette and the layers' box from the
+  backdrop picture nsh paints, which leaves gradients, rotations and shadows out
+  (see above). Over such content the ring can differ from the page for that
+  time; the fixture's page is an image and text, which the picture holds.
+  nsh redraws a shader a frame after the page moves, so a canvas that moved
+  would show that picture a frame late. On the web the two-scale bar therefore
+  keeps its canvas and layers still: its 6 pt drop is drawn inside the shader
+  (`GlassSpec::lowered`), while its shadow, tabs and pill drop themselves. Two
+  attempts measured why: moving the canvas left the ring's text off by up to 5
+  levels rms at a fraction of a pixel (CI run 45997124152), and dropping it by
+  whole pixels still left it a frame late, 6.7 levels off (CI run 45999666204).
+  The cover is opaque to 0.5 pt past the layers' box, so their own pixel-wide
+  edge never shows, and the shader's hand-over stays inside their box.
+- **The ghost layer's saturation is not measured.** The ghost carries the
+  material's `saturate(2.1)` light / `saturate(1.4)` dark. CSS `saturate()` keeps
+  Rec. 709 luma, and only luma was fitted (the fixture's backdrop is grey text),
+  so the colour of a saturated backdrop under the bar is not checked against iOS.
+- **Our bar is 64 pt tall with radius 32; iOS's is 62 pt with radius 31.** The
+  fixture page centres ours on iOS's position (790–854 against 791–853, the same
+  21 and 381 pt sides) rather than change the shipped component; the fit band
+  starts 9.7 pt inside our top edge where iOS's starts 8.7 pt inside its own.
+- **The native builds still draw one blur.** Their shader reads one backdrop
+  picture without mips (`nsh-engine` `shader.rs:341`, `mip_level_count` 1), one
+  draw per shader view, and `sample_backdrop` reads mip 0 only (`nsh-core`
+  `shader.rs:127-130`). An 18 pt frost can then only be a sparse tap estimate:
+  dark needs more than 1000 taps per pixel to reach a residual of 2.5 levels,
+  which cannot ship. A platform blur layer under the shader, as on the web, is
+  not tried there: whether the native backdrop picture includes it (the rim would
+  then refract a blurred page) and whether each platform's blur is a Gaussian of
+  that σ are unmeasured, and no native fixture exists to measure them. The real
+  fix stays upstream: a mip chain for shader pictures, or a pre-blurred backdrop
+  input.
+- **Text under the native bar is fainter than iOS's.** Its contrast is 3.8 light
+  and 12.1 dark levels (emulated), against iOS's 10.1 and 22.2. Tuning `BAR_BLUR`
+  or the fill cannot close the gap.
+- **Reduce Transparency is read on the web only**, from the browser's
+  `prefers-reduced-transparency`: NSH's environment has no such flag. The bar is
+  then opaque, the shade it has over an empty page (t + (k1 + k2) × page: 252
+  light, 37 dark). It is asked when the bar is built, so a change shows on the
+  next mount. Increased contrast keeps the shader's own body: its near-opaque
+  `glass-regular` is not the measured tint. CI checks it: under increased contrast
+  the still has no backdrop-filtered layers and its bar is the one-disc render.

@@ -1977,10 +1977,12 @@ name = "nsh-cupertino"
 version = "0.4.2"
 dependencies = [
  "chrono",
+ "js-sys",
  "nsh-base",
  "nsh-core",
  "nsh-engine",
  "nsh-testing",
+ "wasm-bindgen",
 ]
 
 [[package]]

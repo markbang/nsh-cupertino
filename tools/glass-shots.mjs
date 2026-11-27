@@ -18,6 +18,7 @@
 // without a GPU, the shader) that `tools/glass-pixels.mjs` asserts on.
 import { spawn, spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -33,6 +34,7 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { FIXTURE, fetchTabBarFixture } from "./fetch-tab-bar-fixture.mjs";
 import { patchRuntimeSource } from "./patch-runtime.mjs";
 import { readPng } from "./png.mjs";
 
@@ -54,6 +56,10 @@ if (!(SHARD[0] >= 1 && SHARD[0] <= SHARD[1])) throw new Error(`--shard must be i
 const WIDTH = 390;
 const HEIGHT = 844;
 const SCALE = 3;
+/** The iOS fixture's screen, in points (1206 × 2622 px at 3x). */
+const IPHONE = [402, 874];
+/** The minimise progress of the morph stills. */
+const MORPHS = [0, 0.1, 0.25, 0.5, 0.75, 1];
 /** The demo's storage namespace: `nsh:<app id>:` (nsh-engine). */
 const PREFIX = "nsh:dev.nsh.cupertino.demo:";
 
@@ -112,6 +118,64 @@ const SHOTS = [
       frames: true,
     })),
   ),
+  // The bar over the iOS 27 tab-bar fixture's own backdrop, at the iPhone's 402 × 874 pt
+  // so the still lines up with the iOS frames pixel for pixel
+  // (`tools/tab-bar-pixels.mjs`): the two-scale body, the shader's one-disc
+  // body it replaces, and the opaque bar of Reduce Transparency.
+  ...["light", "dark"].flatMap((scheme) =>
+    ["a", "b"].flatMap((frame) => [
+      { name: `tab-bar-fixture-${scheme}-${frame}`, page: "tab-bar-fixture", scheme, fixture: `${scheme}-${frame}`, viewport: IPHONE },
+      { name: `tab-bar-fixture-single-${scheme}-${frame}`, page: "tab-bar-fixture", scheme, fixture: `${scheme}-${frame}`, barbody: "single-blur", viewport: IPHONE },
+    ]),
+  ),
+  // The minimise morph pinned at its ends and three middle frames (`morph`),
+  // with the two-scale body and with the one-disc body (no layers), and the
+  // bar under increased contrast, both ways: it must take the one-disc path.
+  ...["light", "dark"].flatMap((scheme) =>
+    MORPHS.flatMap((morph) =>
+      [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+        name: `tab-bar-fixture-morph-${tag}${scheme}-${String(Math.round(morph * 100)).padStart(3, "0")}`,
+        page: "tab-bar-fixture",
+        scheme,
+        fixture: `${scheme}-a`,
+        barbody,
+        morph,
+        viewport: IPHONE,
+      })),
+    ),
+  ),
+  // The two-scale morph stills a second time, from a fresh navigation: two
+  // independent captures of one state, the noise floor of comparing stills
+  // (`tools/tab-bar-frames.mjs`).
+  ...["light", "dark"].flatMap((scheme) =>
+    MORPHS.map((morph) => ({
+      name: `tab-bar-fixture-morph-${scheme}-${String(Math.round(morph * 100)).padStart(3, "0")}-again`,
+      page: "tab-bar-fixture",
+      scheme,
+      fixture: `${scheme}-a`,
+      morph,
+      viewport: IPHONE,
+    })),
+  ),
+  ...["light", "dark"].flatMap((scheme) =>
+    [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+      name: `tab-bar-fixture-contrast-${tag}${scheme}`,
+      page: "tab-bar-fixture",
+      scheme,
+      fixture: `${scheme}-a`,
+      barbody,
+      contrast: "high",
+      viewport: IPHONE,
+    })),
+  ),
+  ...["light", "dark"].map((scheme) => ({
+    name: `tab-bar-fixture-reduced-${scheme}-a`,
+    page: "tab-bar-fixture",
+    scheme,
+    fixture: `${scheme}-a`,
+    reduced: true,
+    viewport: IPHONE,
+  })),
   ...["none", "material", "shader"].flatMap((mode) =>
     ["light", "dark"].map((scheme) => ({
       name: `glass-calibration-${mode}-${scheme}`,
@@ -187,7 +251,14 @@ class Cdp {
     this.id = 0;
     this.pending = new Map();
     this.send = send;
+    this.console = [];
     listen((data) => {
+      // What the page logs: NSH says there when a shader cannot draw or its
+      // WebGL context is lost, which a still alone cannot tell.
+      if (data.method === "Runtime.consoleAPICalled" && ["warning", "error"].includes(data.params.type)) {
+        this.console.push(data.params.args.map((a) => a.value ?? a.description ?? "").join(" "));
+      }
+      if (data.method === "Runtime.exceptionThrown") this.console.push(data.params.exceptionDetails?.exception?.description ?? "exception");
       if (!data.id || !this.pending.has(data.id)) return;
       const { resolve, reject } = this.pending.get(data.id);
       this.pending.delete(data.id);
@@ -331,10 +402,18 @@ async function shoot(page, base, shot) {
     "cupertino.overlay": shot.overlay ?? "",
     "cupertino.menuframe": shot.menuframe === undefined ? "" : String(shot.menuframe),
     "cupertino.menuclose": shot.menuclose === undefined ? "" : String(shot.menuclose),
+    "cupertino.fixture": shot.fixture ?? "",
+    "cupertino.barbody": shot.barbody ?? "",
+    "cupertino.morph": shot.morph === undefined ? "" : String(shot.morph),
   };
   const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
+  const [width, height] = shot.viewport ?? [WIDTH, HEIGHT];
+  await page.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: SCALE, mobile: true });
   await page.call("Emulation.setEmulatedMedia", {
-    features: [{ name: "prefers-color-scheme", value: shot.scheme }],
+    features: [
+      { name: "prefers-color-scheme", value: shot.scheme },
+      { name: "prefers-reduced-transparency", value: shot.reduced ? "reduce" : "no-preference" },
+    ],
   });
   await page.call("Runtime.evaluate", {
     expression: `(() => { localStorage.clear(); const prefix = ${JSON.stringify(PREFIX)}; for (const [key, value] of Object.entries(${seed})) localStorage.setItem(prefix + key, value); })()`,
@@ -349,6 +428,21 @@ async function shoot(page, base, shot) {
       .catch(() => false);
     if (mounted) break;
     await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (shot.fixture) {
+    // The backdrop is a 1206 × 2622 PNG: the still waits until it has decoded.
+    let loaded = false;
+    for (let i = 0; i < 100 && !loaded; i++) {
+      loaded = await page
+        .call("Runtime.evaluate", {
+          expression: "[...document.querySelectorAll('#app img')].some((img) => img.complete && img.naturalWidth === 1206)",
+          returnByValue: true,
+        })
+        .then((result) => result.result.value === true)
+        .catch(() => false);
+      if (!loaded) await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!loaded) throw new Error(`${shot.name}: the fixture backdrop did not load`);
   }
   await new Promise((resolve) => setTimeout(resolve, 1200));
   if (shot.tap) {
@@ -395,6 +489,20 @@ async function shoot(page, base, shot) {
     }
     await new Promise((resolve) => setTimeout(resolve, 900));
   }
+  {
+    // What drew the glass: the shaders' canvases, and the backdrop-filtered views.
+    const drawn = await page
+      .call("Runtime.evaluate", {
+        expression: `JSON.stringify({ shader: [...document.querySelectorAll("canvas.nsh-fx-out")].map((c) => c.width + "x" + c.height), filtered: [...document.querySelectorAll("#app *")].map((el) => getComputedStyle(el).backdropFilter).filter((f) => f && f !== "none") })`,
+        returnByValue: true,
+      })
+      .then((result) => result.result.value)
+      .catch((error) => error.message);
+    console.log(`  ${shot.name}: ${drawn}`);
+    // `tools/tab-bar-pixels.mjs` asserts on the layers a fixture still had.
+    if (shot.fixture) writeFileSync(join(OUT, `${shot.name}.json`), typeof drawn === "string" ? drawn : "{}");
+  }
+  for (const line of page.console.splice(0)) console.log(`  ${shot.name}: page says: ${line.slice(0, 300)}`);
   // A first paint can be the empty page (a white or black frame with no
   // content): take the still again until it holds more than a handful of
   // colours.
@@ -420,14 +528,204 @@ async function shoot(page, base, shot) {
   return file;
 }
 
+// --- Recordings: one minimise, frame by frame ------------------------------
+//
+// The page's own clock: `requestAnimationFrame` and `performance.now` are the
+// browser's until `freeze()`, then time stands still and moves only by
+// `step(ms)`, which runs the animation-frame callbacks queued so far at the new
+// time. NSH steps its animations (the springs of the animated values, the
+// shaders' frames) in animation-frame callbacks at the time they are given
+// (`nsh_frame(now)`), so the still taken after the k-th step is the page after
+// exactly k frames of 16.667 ms, however long the capture takes: frame-exact
+// by construction, with no wall clock in it. A callback queued during a step
+// runs at the next one, as a browser runs it in the next frame.
+const CLOCK = `(() => {
+  const realRaf = window.requestAnimationFrame.bind(window);
+  const realCancel = window.cancelAnimationFrame.bind(window);
+  const realNow = performance.now.bind(performance);
+  let frozen = null;
+  let queue = new Map();
+  const waiting = new Map();
+  let next = 1e9;
+  window.requestAnimationFrame = (callback) => {
+    const id = ++next;
+    if (frozen !== null) {
+      queue.set(id, callback);
+      return id;
+    }
+    waiting.set(id, realRaf((t) => {
+      waiting.delete(id);
+      if (frozen !== null) queue.set(id, callback);
+      else callback(t);
+    }));
+    return id;
+  };
+  window.cancelAnimationFrame = (id) => {
+    queue.delete(id);
+    if (waiting.has(id)) realCancel(waiting.get(id));
+    waiting.delete(id);
+  };
+  performance.now = () => (frozen === null ? realNow() : frozen);
+  window.__nshClock = {
+    freeze() {
+      frozen = realNow();
+      return frozen;
+    },
+    step(ms) {
+      frozen += ms;
+      const due = [...queue.values()];
+      queue = new Map();
+      for (const callback of due) {
+        try {
+          callback(frozen);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      return { t: frozen, ran: due.length };
+    },
+  };
+})();`;
+
+/** The frame step of the recordings: 60 frames a second. */
+const STEP_MS = 1000 / 60;
+/** How many frames a recording holds: one second, past the spring's rest. */
+const FRAMES = 60;
+/** The bar's band of the screen, in points: the stills are this clip at 3x. */
+const MOTION_CLIP = { x: 0, y: 770, width: 402, height: 104, scale: 1 };
+
+/** One minimise of the fixture bar per appearance and body: the two-scale body and the one-disc body before it. */
+// The minimise progress the page shows: 1 minus the effective opacity of the
+// bar's shadow (`tab_bar.rs`, bound to 1 - progress) and the effective opacity
+// of the minimised pill's disc (bound to progress), each the product of the
+// opacities from the view up to the app's root. Two readings of one value.
+const PROGRESS = `(() => {
+  const all = [...document.querySelectorAll("#app *")];
+  const effective = (el) => {
+    let o = 1;
+    for (let n = el; n && n.id !== "app"; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
+    return o;
+  };
+  const shadow = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 7px 10px"));
+  const pill = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 5px 12px"));
+  return { fromShadow: shadow ? 1 - effective(shadow) : null, fromPill: pill ? effective(pill) : null };
+})()`;
+
+const RECORDINGS = ["light", "dark"].flatMap((scheme) => [
+  ...[["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+    name: `tab-bar-motion-${tag}${scheme}`,
+    scheme,
+    barbody,
+    scroll: "1",
+    wheel: [201, 400],
+  })),
+  // The same minimise on the pinned stills' own scene (`App.tsx`
+  // `TabBarFixtureExactPage`): its frames are compared with the stills.
+  { name: `tab-bar-exact-${scheme}`, scheme, barbody: undefined, scroll: "exact", wheel: [201, 870] },
+  // The one-disc body on the same scene and clock: the per-frame reference of
+  // `tools/tab-bar-pixels.mjs`.
+  { name: `tab-bar-exact-single-${scheme}`, scheme, barbody: "single-blur", scroll: "exact", wheel: [201, 870] },
+]);
+
+async function record(page, base, rec) {
+  const values = {
+    "cupertino.page": "tab-bar-fixture",
+    "cupertino.fixture": `${rec.scheme}-a`,
+    "cupertino.fixturescroll": rec.scroll,
+    "cupertino.barbody": rec.barbody ?? "",
+  };
+  const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
+  const [width, height] = IPHONE;
+  await page.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: SCALE, mobile: true });
+  await page.call("Emulation.setEmulatedMedia", {
+    features: [
+      { name: "prefers-color-scheme", value: rec.scheme },
+      { name: "prefers-reduced-transparency", value: "no-preference" },
+    ],
+  });
+  await page.call("Runtime.evaluate", {
+    expression: `(() => { localStorage.clear(); const prefix = ${JSON.stringify(PREFIX)}; for (const [key, value] of Object.entries(${seed})) localStorage.setItem(prefix + key, value); })()`,
+  });
+  await page.call("Page.navigate", { url: `${base}?record=${encodeURIComponent(rec.name)}` });
+  const until = async (expression, what) => {
+    for (let i = 0; i < 100; i++) {
+      const ok = await page
+        .call("Runtime.evaluate", { expression, returnByValue: true })
+        .then((result) => result.result.value === true)
+        .catch(() => false);
+      if (ok) return;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error(`${rec.name}: ${what}`);
+  };
+  await until("document.querySelector('#app')?.childElementCount > 0", "the app did not mount");
+  await until("[...document.querySelectorAll('#app img')].some((img) => img.complete && img.naturalWidth === 1206)", "the backdrop did not load");
+  await until("typeof window.__nshClock === 'object'", "the page clock is not installed");
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const dir = join(OUT, "motion");
+  mkdirSync(dir, { recursive: true });
+  const capture = async (k) => {
+    const { data } = await page.call("Page.captureScreenshot", { format: "png", clip: MOTION_CLIP });
+    writeFileSync(join(dir, `${rec.name}-${String(k).padStart(3, "0")}.png`), Buffer.from(data, "base64"));
+  };
+  const frozen = await page
+    .call("Runtime.evaluate", { expression: "window.__nshClock.freeze()", returnByValue: true })
+    .then((result) => result.result.value);
+  const progressNow = () =>
+    page.call("Runtime.evaluate", { expression: PROGRESS, returnByValue: true }).then((result) => result.result.value);
+  const frames = [{ k: 0, t: 0, ran: 0, progress: await progressNow() }];
+  await capture(0);
+  // A user's scroll: one wheel notch over the page, 60 pt down. The bar
+  // minimises after 20 pt of travel. Real time passes for the scroll to land
+  // and its events to reach the app; the app's frames do not.
+  await page.call("Input.dispatchMouseEvent", { type: "mouseWheel", x: rec.wheel[0], y: rec.wheel[1], deltaX: 0, deltaY: 60 });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  for (let k = 1; k <= FRAMES; k++) {
+    const { t, ran } = await page
+      .call("Runtime.evaluate", { expression: `window.__nshClock.step(${STEP_MS})`, returnByValue: true })
+      .then((result) => result.result.value);
+    frames.push({ k, t: t - frozen, ran, progress: await progressNow() });
+    await capture(k);
+  }
+  for (const line of page.console.splice(0)) console.log(`  ${rec.name}: page says: ${line.slice(0, 300)}`);
+  writeFileSync(join(dir, `${rec.name}.json`), JSON.stringify({ name: rec.name, stepMs: STEP_MS, clip: MOTION_CLIP, frames }, null, 1));
+  return `${dir}/${rec.name}-*.png (${frames.length} frames)`;
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "glass-build-"));
   const built = packageApp(work);
+  const picked = SHOTS.filter((shot) =>
+    (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")) &&
+    (!SCHEME || shot.scheme === SCHEME) &&
+    (!PAGES || PAGES.includes(shot.page)),
+  );
+  // The recordings of a minimise: the fixture's page, spread over the shards
+  // on their own.
+  const recordings = RECORDINGS.filter((rec) =>
+    (ONLY ? ONLY.includes(rec.name) : true) &&
+    (!SCHEME || rec.scheme === SCHEME) &&
+    (!PAGES || PAGES.includes("tab-bar-fixture")),
+  ).filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
+  if (!picked.length && !recordings.length) throw new Error("no shot matches --only, --scheme and --pages");
+  // The fixture's stills last: their 402 × 874 pt viewport and 1206 × 2622
+  // backdrop must not change what the other stills see.
+  const ordered = [...picked.filter((shot) => !shot.fixture), ...picked.filter((shot) => shot.fixture)];
+  const chosen = ordered.filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
+  if (!chosen.length) console.log(`shard ${SHARD.join("/")} has none of the ${picked.length} shots`);
+  if (chosen.some((shot) => shot.fixture) || recordings.length) {
+    // The fixture page's backdrops, served next to the build (same origin, so
+    // the shader's backdrop picture may draw them).
+    const frames = await fetchTabBarFixture();
+    mkdirSync(join(built, "fixtures"), { recursive: true });
+    for (const name of Object.keys(FIXTURE)) copyFileSync(join(frames, name), join(built, "fixtures", name));
+  }
   const { server, port } = await serve(built);
   const { child, profile, page } = await launch();
   try {
     await page.call("Page.enable");
+    await page.call("Runtime.enable");
     await page.call("Network.enable");
     await page.call("Network.setCacheDisabled", { cacheDisabled: true });
     await page.call("Emulation.setDeviceMetricsOverride", {
@@ -438,16 +736,13 @@ async function main() {
     });
     await page.call("Page.navigate", { url: `http://127.0.0.1:${port}/` });
     await new Promise((resolve) => setTimeout(resolve, 2500));
-    const picked = SHOTS.filter((shot) =>
-      (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")) &&
-      (!SCHEME || shot.scheme === SCHEME) &&
-      (!PAGES || PAGES.includes(shot.page)),
-    );
-    if (!picked.length) throw new Error("no shot matches --only, --scheme and --pages");
-    const shots = picked.filter((_, index) => index % SHARD[1] === SHARD[0] - 1);
-    if (!shots.length) console.log(`shard ${SHARD.join("/")} has none of the ${picked.length} shots`);
-    for (const shot of shots) {
+    for (const shot of chosen) {
       console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
+    }
+    if (recordings.length) {
+      // The page clock goes in every page from here on (it is inert until frozen).
+      await page.call("Page.addScriptToEvaluateOnNewDocument", { source: CLOCK });
+      for (const rec of recordings) console.log(await record(page, `http://127.0.0.1:${port}/`, rec));
     }
   } finally {
     child.kill();

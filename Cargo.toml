@@ -23,6 +23,13 @@ nsh-base = "0.5.0"
 # Calendar arithmetic and the month and weekday names of a date picker.
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
+# The web build reads `prefers-reduced-transparency`, which NSH's environment
+# does not carry (`glass::reduce_transparency`). Both crates are already in the
+# web runtime's dependency graph.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+
 [[bin]]
 name = "gen-theme"
 path = "src/bin/gen_theme.rs"

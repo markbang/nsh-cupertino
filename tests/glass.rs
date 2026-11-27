@@ -47,6 +47,10 @@ fn the_glass_shader_compiles_with_the_uniforms_the_components_set() {
         "body",
         "shadow_offset",
         "shadow_sigma",
+        "two_scale_tint",
+        "two_scale_alpha",
+        "two_scale_amount",
+        "lowered",
     ] {
         assert!(
             declared.contains(&name),
@@ -59,4 +63,30 @@ fn the_glass_shader_compiles_with_the_uniforms_the_components_set() {
             .contains(nsh_core::shader::ShaderInput::Backdrop)
     );
     assert!(!shader.animated(), "a static glass draws once");
+}
+
+// The web tab bar's layers (ghost opaque, frost at α2, tint at β) must give back
+// the measured two-scale fit: k2 = (1 − β)·α2, k1 = (1 − β)·(1 − α2), t = β·tint.
+#[test]
+fn the_two_scale_layers_give_back_the_measured_fit() {
+    use nsh_cupertino::tokens::bar;
+    for (fit, beta, alpha, tint) in [
+        (bar::LIGHT, 0.668, 0.791, 250.2),
+        (bar::DARK, 0.356, 0.784, 102.8),
+    ] {
+        let b = fit.tint_alpha();
+        let a = fit.frost_alpha();
+        assert!((b - beta).abs() < 1e-3, "β {b}, expected {beta}");
+        assert!((a - alpha).abs() < 1e-3, "α2 {a}, expected {alpha}");
+        assert!(
+            (fit.tint_level() - tint).abs() < 0.1,
+            "tint {}",
+            fit.tint_level()
+        );
+        assert!(((1.0 - b) * a - fit.frost).abs() < 1e-6);
+        assert!(((1.0 - b) * (1.0 - a) - fit.ghost).abs() < 1e-6);
+        assert!((b * fit.tint_level() - fit.offset).abs() < 1e-3);
+    }
+    assert!((bar::reduced_level(false) - 251.80).abs() < 0.01);
+    assert!((bar::reduced_level(true) - 36.58).abs() < 0.01);
 }

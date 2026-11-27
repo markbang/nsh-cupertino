@@ -57,10 +57,11 @@
 | `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit 的 `MinimizeBehavior`：向下收起、向上展开。 |
 | `scrollOffset` | number | | 页面偏移，由页面的 `onScroll` 提供；不传则永不收起。 |
 | `minimized` | boolean | | 强制状态。 |
-| `material` | `"glass" \| "material"` | `"glass"` | 着色器，或只用模糊的填充（用于对照）。 |
+| `morph` | number | | 设置时固定收起进度：0 为栏，1 为胶囊，中间值让形变停在那里、没有弹簧。这是手动驱动形变的方式（应用自己跟踪的手势、静帧）；设置时覆盖 `minimized` 与滚动。 |
+| `material` | `"glass" \| "material" \| "single-blur"` | `"glass"` | 着色器、只用模糊的填充，或不带 Web 双尺度图层的着色器单圆盘主体（用于对照）。 |
 | `onChange` | `{ value, index }` | | 选择了另一个标签。 |
 
-形状与动效：高 64 pt、圆角 32、两侧内缩 20 pt、home indicator 之上 12 pt，图标 27.5 pt、标签 10 pt。
+形状与动效：高 64 pt、圆角 32、两侧内缩 20 pt、home indicator 之上 12 pt，图标 27.5 pt、标签 10 pt。iOS 27 的栏实测 62 pt、圆角 31、两侧 21 pt；我们的高 2 pt。
 所选标签有自己的胶囊。向下滚动 20 pt 收成环绕该标签的 50 pt 胶囊，向上 12 pt 展开，回到顶部必定展开，
 内容不足 40 pt 永不收起，弹簧阻尼 0.78、刚度 340。放在页面根视图里（它自己定位），并在内容底部留出空间。
 
@@ -68,3 +69,9 @@
 
 最小化胶囊是所选标签的画面：图标与位置都跟随实时选择（最小化时改选标签，它会用弹簧滑到新槽位），
 并且不接收触摸，所以点按当前标签仍然能到它下面的那个标签。
+
+在 Web 上，主体是实测的 iOS 27 双尺度材质：0.625 pt 的 ghost 与 18 pt 的 frost 是着色器之下的两层 CSS
+背景模糊，着色器在其上画色调与边缘（`tokens::bar`；CI 中 `tools/tab-bar-pixels.mjs` 拿它与 iOS 帧对照）。
+栏收起时，轮廓随弹簧收缩，着色器在 200 ms 内交叉淡入自己的主体，并在轮廓离开图层盒子之处盖住图层。原生构建画着色器的单圆盘主体。`prefers-reduced-transparency: reduce`
+（Web）下栏不透明：取它在空白页面上的明度，在栏构建时读取。
+增强对比度沿用着色器自己的主体：近乎不透明的 `glass-regular` 不是实测的色调，CI 检查此时不画图层。
