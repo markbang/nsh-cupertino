@@ -676,6 +676,133 @@ function profilesAt(image, ref, edges, along, flat) {
   return out;
 }
 
+// --- The edge each frame draws -------------------------------------------------
+//
+// The shader draws the minimise a frame behind the page (Stage 4, CI run
+// 46036703523), so in a recorded frame the glass is not where the page's
+// progress puts the model. The detector finds it in the pixels: along each
+// model edge's normal (the scan lines `silhouetteEdges` gives), the position
+// of the largest luma step between adjacent samples (a third of a point
+// apart), refined to sub-pixel by a parabola through that step and its two
+// neighbours. It searches from 3 pt inside the model edge to 16 pt outside:
+// lagging, the drawn glass is larger and, two-scale, higher than the model,
+// never more than 3 pt inside it. A scan line is used only where the
+// backdrop is flat over the whole search range (the same flatness test as the
+// profiles), so the largest step is the glass's, not a glyph's.
+const SEARCH = steps(-3, 16);
+
+/** Whether the backdrop is flat (≤ FLAT levels) along `along` at `edge` and a point to each side. */
+function flatAt(ref, edge, along) {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const t of [-1, 0, 1]) {
+    for (const s of along) {
+      const v = sampleAt(ref, edge.x + s * edge.nx - t * edge.ny, edge.y + s * edge.ny + t * edge.nx);
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+  }
+  return hi - lo <= FLAT;
+}
+
+/** The detected edge on `edge`'s scan line: its offset `s` along the normal (pt, + outward) and its page point. */
+function detectEdge(image, edge) {
+  const v = SEARCH.map((s) => sampleAt(image, edge.x + s * edge.nx, edge.y + s * edge.ny));
+  const grad = (i) => (i >= 1 && i < v.length ? Math.abs(v[i] - v[i - 1]) : 0);
+  let best = 1;
+  for (let i = 2; i < v.length; i++) if (grad(i) > grad(best)) best = i;
+  const a = grad(best - 1);
+  const b = grad(best);
+  const c = grad(best + 1);
+  const den = a - 2 * b + c;
+  const delta = den < 0 ? Math.max(-0.5, Math.min(0.5, (0.5 * (a - c)) / den)) : 0;
+  // Step `best` lies between samples best − 1 and best, a sixth of a point before SEARCH[best].
+  const s = SEARCH[best] - 1 / 6 + delta / 3;
+  return { s, x: edge.x + s * edge.nx, y: edge.y + s * edge.ny, nx: edge.nx, ny: edge.ny, step: b, line: v };
+}
+
+/** The scan lines at progress `m` over a flat backdrop, each with the edge `image` draws on it. */
+function detectedEdges(image, ref, m) {
+  const out = [];
+  for (const edge of silhouetteEdges(m, m)) {
+    if (!flatAt(ref, edge, SEARCH)) continue;
+    out.push({ ...detectEdge(image, edge), scan: edge });
+  }
+  return out;
+}
+
+/** Where a model silhouette (shape at `m`, lowered by `drop` pt) crosses `edge`'s scan line, as an offset along it. */
+function modelCrossing(edge, m, drop) {
+  const sd = (s) => sdSilhouette(edge.x + s * edge.nx - BAR.cx, edge.y + s * edge.ny - BAR.cy - drop, m);
+  let ps = SEARCH[0] - 6;
+  let prev = sd(ps);
+  for (let s = ps + 0.02; s <= SEARCH[SEARCH.length - 1] + 6; s += 0.02) {
+    const v = sd(s);
+    if (prev < 0 && v >= 0) return ps + ((s - ps) * -prev) / (v - prev);
+    prev = v;
+    ps = s;
+  }
+  return null;
+}
+
+const PROOF_LIMIT = 0.5;
+
+/**
+ * Report only: on one recorded frame, each render's detected edges against the
+ * model a frame behind (the silhouette at the previous frame's progress, with
+ * the drop each render draws: the two-scale bar's in the shader, a frame
+ * behind too; the one-disc bar's by its DOM container, at this frame's) and
+ * against the old model at this frame's progress.
+ */
+function proveFrame(proof, k, t, ref, p, renders) {
+  const parts = [];
+  for (const [label, image, m, drop] of renders) {
+    let most = 0;
+    let mostOld = 0;
+    let n = 0;
+    for (const [i, e] of detectedEdges(image, ref, p).entries()) {
+      const model = modelCrossing(e.scan, m, drop);
+      const old = modelCrossing(e.scan, p, BAR.lift * p);
+      const at = (s) => (s === null ? null : { x: e.scan.x + s * e.scan.nx, y: e.scan.y + s * e.scan.ny });
+      const line = { k, t, label, i, s: e.s, model, old, det: { x: e.x, y: e.y }, at: at(model), scan: e.scan, luma: e.line };
+      line.err = model === null ? Infinity : Math.abs(e.s - model);
+      line.errOld = old === null ? Infinity : Math.abs(e.s - old);
+      proof.lines.push(line);
+      most = Math.max(most, line.err);
+      mostOld = Math.max(mostOld, line.errOld);
+      n += 1;
+    }
+    parts.push(`${label} ${n} edges, max |detected − model k−1| ${f(most, 2)} pt (model k ${f(mostOld, 2)})`);
+  }
+  console.log(`  proof ${proof.theme} frame ${String(k).padStart(2, "0")} (t ${f(t, 1)} ms): ${parts.join("; ")}`);
+}
+
+function reportProof(proof) {
+  for (const label of ["two-scale", "one-disc"]) {
+    const lines = proof.lines.filter((l) => l.label === label);
+    const q = (key, v) => {
+      const sorted = lines.map((l) => l[key]).sort((a, b) => a - b);
+      return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(v * sorted.length))] : NaN;
+    };
+    const worst = lines.reduce((a, b) => (b.err > a.err ? b : a), lines[0]);
+    const over = [...new Set(lines.filter((l) => l.err > PROOF_LIMIT).map((l) => l.k))];
+    const framesWithout = [];
+    for (let k = 1; k <= 60; k++) if (!lines.some((l) => l.k === k)) framesWithout.push(k);
+    report(
+      `PROOF ${proof.theme} ${label}: the detected edge lies within ${PROOF_LIMIT} pt of the model a frame behind`,
+      over.length === 0 && framesWithout.length === 0,
+      `${lines.length} edges over 60 frames; max ${f(q("err", 1), 3)} pt, p95 ${f(q("err", 0.95), 3)} pt; the old model at the page's progress: max ${f(q("errOld", 1), 3)}, p95 ${f(q("errOld", 0.95), 3)} pt; frames over ${PROOF_LIMIT} pt: ${over.length ? over.join(", ") : "none"}; frames without an edge: ${framesWithout.length ? framesWithout.join(", ") : "none"}`,
+    );
+    if (worst) {
+      const pt = (v) => (v ? `(${f(v.x, 2)}, ${f(v.y, 2)})` : "—");
+      console.log(
+        `  worst ${proof.theme} ${label}: frame ${worst.k} (t ${f(worst.t, 1)} ms), scan line ${worst.i} from (${f(worst.scan.x, 2)}, ${f(worst.scan.y, 2)}) along (${f(worst.scan.nx, 2)}, ${f(worst.scan.ny, 2)}): detected ${pt(worst.det)} at ${f(worst.s, 2)} pt, model k−1 ${pt(worst.at)} at ${worst.model === null ? "—" : f(worst.model, 2)} pt, model k at ${worst.old === null ? "—" : f(worst.old, 2)} pt`,
+      );
+      console.log(`  its luma from ${SEARCH[0]} to +${SEARCH[SEARCH.length - 1]} pt, every third of a point: ${worst.luma.map((v) => v.toFixed(0)).join(" ")}`);
+    }
+  }
+}
+
 /** The largest step between adjacent samples with offsets in [from, to]. */
 function largestStep(profiles, along, from, to) {
   return worstStep(profiles, along, from, to).most;
@@ -805,6 +932,7 @@ function judgeFrames(theme, ref, measure) {
     return { p: fromShadow, agree: Math.abs(fromShadow - fromPill) };
   };
   const summary = { judged: 0, failing: [], worst: null };
+  const proof = { theme, lines: [] };
   for (let k = 1; k < two.frames.length; k++) {
     const frame = two.frames[k];
     const { p, agree } = progressOf(frame, `tab-bar-exact-${theme}`);
@@ -817,8 +945,16 @@ function judgeFrames(theme, ref, measure) {
       `shadow and pill agree within ${f(agree, 4)}; the one-disc frame's progress ${f(pOne, 4)} (both ≤ 0.01)`,
     );
     const name = String(k).padStart(3, "0");
-    const r = measureAt(lumaClip(join(motion, `tab-bar-exact-${theme}-${name}.png`)), ref, theme, p, "two");
-    const single = measureAt(lumaClip(join(motion, `tab-bar-exact-single-${theme}-${name}.png`)), ref, theme, pOne, "single");
+    const imageTwo = lumaClip(join(motion, `tab-bar-exact-${theme}-${name}.png`));
+    const imageOne = lumaClip(join(motion, `tab-bar-exact-single-${theme}-${name}.png`));
+    const r = measureAt(imageTwo, ref, theme, p, "two");
+    const single = measureAt(imageOne, ref, theme, pOne, "single");
+    // Report only: the detected edges against the model a frame behind.
+    const { p: pBefore } = progressOf(two.frames[k - 1], `tab-bar-exact-${theme}`);
+    proveFrame(proof, k, frame.t, ref, p, [
+      ["two-scale", imageTwo, pBefore, BAR.lift * pBefore],
+      ["one-disc", imageOne, pBefore, BAR.lift * pOne],
+    ]);
     const refs = [...ends, single];
     const limit = (key) => Math.max(...refs.map((x) => Math.abs(x[key]))) + MARGIN[theme];
     summary.judged += 1;
@@ -847,6 +983,7 @@ function judgeFrames(theme, ref, measure) {
     if (failures.length > before) summary.failing.push(k);
     if (!summary.worst || worstRatio > summary.worst.ratio) summary.worst = { k, t: frame.t, p, ratio: worstRatio };
   }
+  reportProof(proof);
   console.log(
     `FRAMES ${theme}: ${summary.judged} frames judged, ${summary.failing.length} failing${summary.failing.length ? ` (${summary.failing.join(", ")})` : ""}; worst frame ${summary.worst.k} (t ${f(summary.worst.t, 1)} ms, progress ${f(summary.worst.p, 4)}) at ${f(summary.worst.ratio, 3)} of its limit`,
   );
