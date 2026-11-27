@@ -386,6 +386,18 @@ do not treat the limit as slack.
   cannot follow the silhouette into the 50 pt pill: they fade out on the same
   progress the silhouette morphs on, while the shader's own one-disc body takes
   over. During the morph and in the pill, the body is the one-disc blur.
+  `tools/tab-bar-pixels.mjs` pins the morph at 0.25, 0.5 and 0.75 (`GlassTabBar`'s
+  `morph`) and checks the silhouette's edge, the hand-over ramp and the fading
+  layers' box edge for steps and brightness jumps against the end frames and the
+  one-disc body at the same morph.
+- **The ghost layer's saturation is not measured.** The ghost carries the
+  material's `saturate(2.1)` light / `saturate(1.4)` dark. CSS `saturate()` keeps
+  Rec. 709 luma, and only luma was fitted (the fixture's backdrop is grey text),
+  so the colour of a saturated backdrop under the bar is not checked against iOS.
+- **Our bar is 64 pt tall with radius 32; iOS's is 62 pt with radius 31.** The
+  fixture page centres ours on iOS's position (790–854 against 791–853, the same
+  21 and 381 pt sides) rather than change the shipped component; the fit band
+  starts 9.7 pt inside our top edge where iOS's starts 8.7 pt inside its own.
 - **The native builds still draw one blur.** Their shader reads one backdrop
   picture without mips (`nsh-engine` `shader.rs:341`, `mip_level_count` 1), one
   draw per shader view, and `sample_backdrop` reads mip 0 only (`nsh-core`
@@ -405,4 +417,5 @@ do not treat the limit as slack.
   then opaque, the shade it has over an empty page (t + (k1 + k2) × page: 252
   light, 37 dark). It is asked when the bar is built, so a change shows on the
   next mount. Increased contrast keeps the shader's own body: its near-opaque
-  `glass-regular` is not the measured tint.
+  `glass-regular` is not the measured tint. CI checks it: under increased contrast
+  the still has no backdrop-filtered layers and its bar is the one-disc render.
