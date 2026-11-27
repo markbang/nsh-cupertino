@@ -65,11 +65,13 @@ content, not an edge-to-edge band.
 | `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit's `MinimizeBehavior`: minimise on the way down and expand on the way up. |
 | `scrollOffset` | number | | The page's offset, fed from its `onScroll`; without it the bar never minimises. |
 | `minimized` | boolean | | Forces the state while set. |
+| `morph` | number | | Pins the minimise progress (0 bar, 1 pill) while set, for stills of the morph. |
 | `material` | `"glass" \| "material" \| "single-blur"` | `"glass"` | The shader, the blur-only fill, or the shader's one-disc body without the web's two-scale layers (for comparing them). |
 | `onChange` | `{ value, index }` | | Another tab was chosen. |
 
 Shape and motion: 64 pt tall, radius 32, 20 pt from the sides and 12 pt above the
-home indicator, 27.5 pt icons and 10 pt labels. The chosen tab has a capsule of
+home indicator, 27.5 pt icons and 10 pt labels. iOS 27's bar measures 62 pt, radius 31,
+21 pt from the sides; ours stays 2 pt taller. The chosen tab has a capsule of
 its own. A downward scroll of 20 pt minimises the bar into a 50 pt pill around
 that tab, an upward scroll of 12 pt expands it, the top of the page always
 expands it, content shorter than 40 pt never minimises, and the spring is
@@ -91,3 +93,5 @@ the iOS frames in CI). As the bar minimises the layers fade out and the shader
 body takes over. The native builds draw the shader's one-disc body. With
 `prefers-reduced-transparency: reduce` (web) the bar is opaque: the shade it has
 over an empty page, read when the bar is built.
+Increased contrast keeps the shader's own body: the near-opaque `glass-regular` is
+not the measured tint, and CI checks that no layers draw then.

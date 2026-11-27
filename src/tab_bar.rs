@@ -258,6 +258,10 @@ pub struct GlassTabBarProps {
     pub scroll_offset: Prop<Option<f32>>,
     /// Forces the bar minimized (or expanded) while set.
     pub minimized: Prop<Option<bool>>,
+    /// Pins the minimise progress while set: 0 is the bar, 1 the pill, and the
+    /// values between hold the morph there, with no spring. For stills of the
+    /// morph's middle frames; it overrides `minimized` and the scroll.
+    pub morph: Prop<Option<f32>>,
     /// `"glass"` (the shader, the default), `"material"` (the blur-only fill
     /// of a platform without a GPU) or `"single-blur"` (the shader's own
     /// one-disc body, without the web's two-scale layers), for comparing them.
@@ -327,11 +331,18 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let enabled = behavior.as_ref() != "never";
     let forced = props.minimized;
     let offset = props.scroll_offset;
+    let pinned = props.morph;
     let accumulator = stored(0.0_f32);
     let baseline = stored(f32::MIN);
     let state = minimized;
     let animator = progress;
     effect(move || {
+        if let Some(value) = pinned.get() {
+            let value = value.clamp(0.0, 1.0);
+            state.set(value >= 0.5);
+            animator.set(value);
+            return;
+        }
         let wanted = match forced.get() {
             Some(value) => value,
             None if !enabled => false,

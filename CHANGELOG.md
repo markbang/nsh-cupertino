@@ -22,6 +22,7 @@ All notable changes to `nsh-cupertino`. The format follows
   keep the one-disc body. `material="single-blur"` shows that body for
   comparison, and `prefers-reduced-transparency: reduce` (web) makes the bar
   opaque. `tools/tab-bar-pixels.mjs` checks the body against the iOS frames in CI.
+  `morph` pins the minimise progress, for stills of the morph's middle frames.
 
 ### Fixed
 
