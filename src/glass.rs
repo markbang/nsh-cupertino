@@ -178,22 +178,30 @@ fn sd_silhouette(at: vec2f) -> f32 {
 }
 
 // The difference across one axis from the SDF at −e, 0 and +e: the central
-// difference, except on a crease (the bar's centre line, which the minimise
+// difference, except on a kink (a capsule's centre line, which the minimise
 // carries into the lens tip), where the one-sided slopes have opposite signs
 // and the central one cancels; there the steeper side, at the same scale.
-fn sd_slope(below: f32, at: f32, above: f32) -> f32 {
+// k is the kink's slope change the three samples imply: 1 on a capsule's
+// centre line, at least 0.48 on the lens axis of the minimise's frames 4-6,
+// at most 0.41 at a smooth extremum (a circle's centre line), which keeps the
+// central difference.
+fn sd_slope(below: f32, at: f32, above: f32, e: f32) -> f32 {
   let forward = above - at;
   let backward = at - below;
   if (forward * backward < 0.0) {
-    return 2.0 * select(backward, forward, abs(forward) > abs(backward));
+    let r = abs(forward + backward) / max(abs(forward), abs(backward));
+    let k = abs(forward - backward) / e / (2.0 - r);
+    if (k >= 0.45) {
+      return 2.0 * select(backward, forward, abs(forward) > abs(backward));
+    }
   }
   return above - below;
 }
 
 fn sd_gradient(p: vec2f, at: f32) -> vec2f {
   let e = 0.6;
-  let gx = sd_slope(sd_silhouette(p - vec2f(e, 0.0)), at, sd_silhouette(p + vec2f(e, 0.0)));
-  let gy = sd_slope(sd_silhouette(p - vec2f(0.0, e)), at, sd_silhouette(p + vec2f(0.0, e)));
+  let gx = sd_slope(sd_silhouette(p - vec2f(e, 0.0)), at, sd_silhouette(p + vec2f(e, 0.0)), e);
+  let gy = sd_slope(sd_silhouette(p - vec2f(0.0, e)), at, sd_silhouette(p + vec2f(0.0, e)), e);
   let g = vec2f(gx, gy);
   let l = length(g);
   return select(vec2f(0.0, -1.0), g / l, l > 1e-5);
