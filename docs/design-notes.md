@@ -402,12 +402,9 @@ do not treat the limit as slack.
   run 45991898528).
 - **CI checks it in pinned stills and in time.** `tools/tab-bar-pixels.mjs` pins
   the progress at 0.1, 0.25, 0.5 and 0.75 (`GlassTabBar`'s `morph`) and checks the
-  hand-over ramp (inside 1.5–6 pt), the glass's outside (+0.5 to +6 pt: the
-  cover, the layers' box edge, the page) and the layers' box edge for steps and
+  silhouette's edge, the hand-over ramp and the layers' box edge for steps and
   brightness jumps against the end frames and the one-disc body at the same
-  progress. The rim between is reported, not judged: both bodies draw it with
-  the same code, and the one-disc reference is resampled there by the browser
-  when its canvas sits a fraction of a pixel off. `tools/tab-bar-motion.mjs` records one minimise at 60 fps on a page
+  progress. `tools/tab-bar-motion.mjs` records one minimise at 60 fps on a page
   clock that only steps when asked, and checks that the hand-over's luma is
   monotonic (±1 level) and changes at most 3 levels a frame, that the bar settles
   within 5 % of the one-disc body's time, and that its edge reverses or stalls no

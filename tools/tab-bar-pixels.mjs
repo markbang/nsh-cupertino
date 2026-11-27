@@ -562,14 +562,7 @@ for (const theme of THEMES) {
 // pixel a step) where the backdrop under the profile is flat (the iOS
 // reference spans ≤ 3 levels there), so a step is the material's, not a
 // glyph's; and across the box edge (−4 to +4 pt) wherever it lies outside the
-// glass. Along a profile three windows, from the mechanism: the hand-over ramp,
-// inside 1.5–6 pt (`hand` = smoothstep(1.5, 6, inside)), and outside the glass,
-// +0.5 to +6 pt (the ring cover, the layers' box edge, the page), are judged;
-// the rim between, −1.5 to +0.5 pt, is reported only: `hand` is 0 there, both
-// bodies draw it with the same code, and a frame whose one-disc reference sits
-// a fraction of a pixel off is resampled there by the browser (CI run
-// 46002572706: the same hairline, one sample 19 levels softer in the
-// reference at progress 0.25).
+// glass.
 //
 // A middle frame passes when each measure is no larger than the largest of its
 // references, the end frames (morph 0 and 1) and the one-disc body at the same
@@ -718,10 +711,9 @@ for (const theme of THEMES) {
         m,
         body,
         n: profiles.length,
-        step: largestStep(profiles, ALONG, 0.5, 6),
-        ramp: largestStep(profiles, ALONG, -6, -1.5),
-        rim: largestStep(profiles, ALONG, -1.5, 0.5),
-        worst: { step: worstStep(profiles, ALONG, 0.5, 6), ramp: worstStep(profiles, ALONG, -6, -1.5) },
+        step: largestStep(profiles, ALONG, -12, 6),
+        ramp: largestStep(profiles, ALONG, -7.5, -1),
+        worst: { step: worstStep(profiles, ALONG, -12, 6), ramp: worstStep(profiles, ALONG, -7.5, -1) },
         profiles,
         inside,
         outside,
@@ -743,7 +735,7 @@ for (const theme of THEMES) {
     for (const body of ["two", "single"]) {
       const r = measure[`${body}-${m}`];
       console.log(
-        `morph ${theme} ${f(m, 2)} ${body.padEnd(6)} silhouette: ${r.n} flat profiles, largest step outside the glass ${f(r.step, 2)}, in the hand-over ramp ${f(r.ramp, 2)}, on the rim (not judged) ${f(r.rim, 2)}, inside ${f(r.inside, 2)} outside ${f(r.outside, 2)} (jump ${f(r.jump, 2)})` +
+        `morph ${theme} ${f(m, 2)} ${body.padEnd(6)} silhouette: ${r.n} flat profiles, largest step ${f(r.step, 2)}, in the hand-over ramp ${f(r.ramp, 2)}, inside ${f(r.inside, 2)} outside ${f(r.outside, 2)} (jump ${f(r.jump, 2)})` +
           (r.box ? ` | layers' box edge: ${r.box.n} profiles, largest step ${f(r.box.step, 2)}, jump ${f(r.box.jump, 2)}` : ""),
       );
     }
@@ -758,7 +750,7 @@ for (const theme of THEMES) {
       `${r.n} silhouette profiles over a flat backdrop (≥ 5)`,
     );
     for (const [key, label] of [
-      ["step", "largest step outside the glass (ring, box edge, page)"],
+      ["step", "largest step across the silhouette edge"],
       ["ramp", "largest step in the hand-over ramp"],
       ["jump", "brightness jump inside against outside"],
     ]) {
