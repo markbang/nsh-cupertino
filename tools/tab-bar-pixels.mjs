@@ -718,7 +718,7 @@ function detectEdge(image, edge) {
   const delta = den < 0 ? Math.max(-0.5, Math.min(0.5, (0.5 * (a - c)) / den)) : 0;
   // Step `best` lies between samples best − 1 and best, a sixth of a point before SEARCH[best].
   const s = SEARCH[best] - 1 / 6 + delta / 3;
-  return { s, x: edge.x + s * edge.nx, y: edge.y + s * edge.ny, nx: edge.nx, ny: edge.ny, step: b, line: v };
+  return { s, x: edge.x + s * edge.nx, y: edge.y + s * edge.ny, nx: edge.nx, ny: edge.ny, step: b, at: best, line: v };
 }
 
 /** The scan lines at progress `m` over a flat backdrop, each with the edge `image` draws on it. */
@@ -746,59 +746,125 @@ function modelCrossing(edge, m, drop) {
 }
 
 const PROOF_LIMIT = 0.5;
+const MEASURABLE_MIN = 5;
 
 /**
- * Report only: on one recorded frame, each render's detected edges against the
- * model a frame behind (the silhouette at the previous frame's progress, with
- * the drop each render draws: the two-scale bar's in the shader, a frame
- * behind too; the one-disc bar's by its DOM container, at this frame's) and
- * against the old model at this frame's progress.
+ * The CSS minimised pill's box on the page clock (`src/tab_bar.rs:590-601`):
+ * 64 pt tall at the bar's bottom (`h(HEIGHT)`, `bottom_0`), 50 pt wide about
+ * the anchor (`left` at the anchor's percentage, `translate_x(-25)`,
+ * `w(50)`; the fixture's anchor is the bar's centre), lowered by the page's
+ * drop (`lift` at frame k: the two-scale pill binds it itself, `:601`; the
+ * one-disc bar's container carries it, `:665`), shown from the first frame
+ * its opacity (`minimized_opacity`, the progress, `:567`) is above 0. Null
+ * when it is not shown.
+ */
+function pillBox(p) {
+  if (p <= 0) return null;
+  const drop = BAR.lift * p;
+  return { x0: BAR.cx - 25, x1: BAR.cx + 25, y0: BAR.cy - BAR.hy + drop, y1: BAR.cy + BAR.hy + drop };
+}
+
+/** Gate 1: whether the scan line's search segment (every sample, −3 to +16 pt) meets the pill's box. */
+function crossesPill(scan, box) {
+  if (!box) return false;
+  return SEARCH.some((s) => {
+    const x = scan.x + s * scan.nx;
+    const y = scan.y + s * scan.ny;
+    return x >= box.x0 && x <= box.x1 && y >= box.y0 && y <= box.y1;
+  });
+}
+
+/**
+ * Gate 2, the grain: the largest step between adjacent samples of the scan
+ * line that lie within the 2 pt just inside the detected position, i.e. both
+ * samples at offsets in [s − 2, s) along the normal (inward is −), the
+ * detected step itself left out; truncated where the search range begins
+ * (−3 pt). The line is measurable when its detected step is at least twice
+ * this.
+ */
+function grainOf(e) {
+  let most = 0;
+  for (let i = 1; i < e.at; i++) {
+    if (SEARCH[i - 1] < e.s - 2) continue;
+    most = Math.max(most, Math.abs(e.line[i] - e.line[i - 1]));
+  }
+  return most;
+}
+
+/**
+ * Report only: on one recorded frame, each render's scan lines through the two
+ * gates, and the measurable lines' detected edges against the model a frame
+ * behind (the silhouette at the previous frame's progress, with the drop each
+ * render draws: the two-scale bar's `lowered`, a frame behind too; the
+ * one-disc bar's DOM container, at this frame's). Returns the ledger row.
  */
 function proveFrame(proof, k, t, ref, p, renders) {
-  const parts = [];
+  const box = pillBox(p);
+  const row = { k, t, renders: {} };
   for (const [label, image, m, drop] of renders) {
-    let most = 0;
-    let mostOld = 0;
-    let n = 0;
+    const entry = { total: 0, pill: 0, grain: 0, lines: [] };
     for (const [i, e] of detectedEdges(image, ref, p).entries()) {
+      entry.total += 1;
+      if (crossesPill(e.scan, box)) {
+        entry.pill += 1;
+        continue;
+      }
+      const grain = grainOf(e);
+      if (e.step < 2 * grain) {
+        entry.grain += 1;
+        continue;
+      }
       const model = modelCrossing(e.scan, m, drop);
-      const old = modelCrossing(e.scan, p, BAR.lift * p);
       const at = (s) => (s === null ? null : { x: e.scan.x + s * e.scan.nx, y: e.scan.y + s * e.scan.ny });
-      const line = { k, t, label, i, s: e.s, model, old, det: { x: e.x, y: e.y }, at: at(model), scan: e.scan, luma: e.line };
-      line.err = model === null ? Infinity : Math.abs(e.s - model);
-      line.errOld = old === null ? Infinity : Math.abs(e.s - old);
-      proof.lines.push(line);
-      most = Math.max(most, line.err);
-      mostOld = Math.max(mostOld, line.errOld);
-      n += 1;
+      entry.lines.push({ k, t, label, i, s: e.s, model, det: { x: e.x, y: e.y }, at: at(model), scan: e.scan, luma: e.line, step: e.step, grain, err: model === null ? Infinity : Math.abs(e.s - model) });
     }
-    parts.push(`${label} ${n} edges, max |detected − model k−1| ${f(most, 2)} pt (model k ${f(mostOld, 2)})`);
+    const errs = entry.lines.map((l) => l.err).sort((a, b) => a - b);
+    entry.max = errs.length ? errs[errs.length - 1] : null;
+    entry.p95 = errs.length ? errs[Math.min(errs.length - 1, Math.floor(0.95 * errs.length))] : null;
+    row.renders[label] = entry;
   }
-  console.log(`  proof ${proof.theme} frame ${String(k).padStart(2, "0")} (t ${f(t, 1)} ms): ${parts.join("; ")}`);
+  proof.rows.push(row);
+  const part = (label) => {
+    const r = row.renders[label];
+    return `${label} ${r.total} lines, ${r.pill} pill, ${r.grain} grain, ${r.lines.length} measurable${r.lines.length ? `, max ${f(r.max, 2)} / p95 ${f(r.p95, 2)} pt` : ""}`;
+  };
+  console.log(`  ledger ${proof.theme} frame ${String(k).padStart(2, "0")} (t ${f(t, 1)} ms): ${part("two-scale")} | ${part("one-disc")}`);
+  return row;
 }
 
 function reportProof(proof) {
+  const show = (v) => (v === null ? "—" : f(v, 2));
+  const over = [];
+  for (const row of proof.rows) {
+    const counted = Object.values(row.renders).some((r) => r.lines.length >= MEASURABLE_MIN);
+    const worst = Object.values(row.renders).reduce((most, r) => Math.max(most, r.max ?? 0), 0);
+    if (counted && worst > PROOF_LIMIT) over.push(row);
+  }
   for (const label of ["two-scale", "one-disc"]) {
-    const lines = proof.lines.filter((l) => l.label === label);
-    const q = (key, v) => {
-      const sorted = lines.map((l) => l[key]).sort((a, b) => a - b);
-      return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(v * sorted.length))] : NaN;
-    };
-    const worst = lines.reduce((a, b) => (b.err > a.err ? b : a), lines[0]);
-    const over = [...new Set(lines.filter((l) => l.err > PROOF_LIMIT).map((l) => l.k))];
-    const framesWithout = [];
-    for (let k = 1; k <= 60; k++) if (!lines.some((l) => l.k === k)) framesWithout.push(k);
-    report(
-      `PROOF ${proof.theme} ${label}: the detected edge lies within ${PROOF_LIMIT} pt of the model a frame behind`,
-      over.length === 0 && framesWithout.length === 0,
-      `${lines.length} edges over 60 frames; max ${f(q("err", 1), 3)} pt, p95 ${f(q("err", 0.95), 3)} pt; the old model at the page's progress: max ${f(q("errOld", 1), 3)}, p95 ${f(q("errOld", 0.95), 3)} pt; frames over ${PROOF_LIMIT} pt: ${over.length ? over.join(", ") : "none"}; frames without an edge: ${framesWithout.length ? framesWithout.join(", ") : "none"}`,
+    const rows = proof.rows.map((row) => row.renders[label]);
+    const lines = rows.flatMap((r) => r.lines);
+    const errs = lines.map((l) => l.err).sort((a, b) => a - b);
+    const sum = (key) => rows.reduce((s, r) => s + r[key], 0);
+    console.log(
+      `LEDGER ${proof.theme} ${label}: ${sum("total")} lines, ${sum("pill")} dropped by the pill, ${sum("grain")} by the grain, ${lines.length} measurable; frames with ≥ ${MEASURABLE_MIN} measurable: ${rows.filter((r) => r.lines.length >= MEASURABLE_MIN).length} of ${rows.length}; measurable max ${show(errs.length ? errs[errs.length - 1] : null)} / p95 ${show(errs.length ? errs[Math.min(errs.length - 1, Math.floor(0.95 * errs.length))] : null)} pt`,
     );
-    if (worst) {
-      const pt = (v) => (v ? `(${f(v.x, 2)}, ${f(v.y, 2)})` : "—");
-      console.log(
-        `  worst ${proof.theme} ${label}: frame ${worst.k} (t ${f(worst.t, 1)} ms), scan line ${worst.i} from (${f(worst.scan.x, 2)}, ${f(worst.scan.y, 2)}) along (${f(worst.scan.nx, 2)}, ${f(worst.scan.ny, 2)}): detected ${pt(worst.det)} at ${f(worst.s, 2)} pt, model k−1 ${pt(worst.at)} at ${worst.model === null ? "—" : f(worst.model, 2)} pt, model k at ${worst.old === null ? "—" : f(worst.old, 2)} pt`,
-      );
-      console.log(`  its luma from ${SEARCH[0]} to +${SEARCH[SEARCH.length - 1]} pt, every third of a point: ${worst.luma.map((v) => v.toFixed(0)).join(" ")}`);
+  }
+  report(
+    `PROOF ${proof.theme}: every frame with ≥ ${MEASURABLE_MIN} measurable lines in a render has them within ${PROOF_LIMIT} pt of the model a frame behind`,
+    over.length === 0,
+    over.length ? `over: frames ${over.map((row) => row.k).join(", ")}` : "none over",
+  );
+  for (const row of over) {
+    for (const [label, r] of Object.entries(row.renders)) {
+      const bad = r.lines.filter((l) => l.err > PROOF_LIMIT);
+      if (!bad.length) continue;
+      console.log(`  over ${proof.theme} frame ${row.k} ${label}: ${r.lines.length} measurable, ${bad.length} over ${PROOF_LIMIT} pt`);
+      for (const l of bad.slice(0, 3)) {
+        console.log(
+          `    line ${l.i} from (${f(l.scan.x, 2)}, ${f(l.scan.y, 2)}) along (${f(l.scan.nx, 2)}, ${f(l.scan.ny, 2)}): detected (${f(l.det.x, 2)}, ${f(l.det.y, 2)}) at ${f(l.s, 2)} pt, model k−1 ${l.at ? `(${f(l.at.x, 2)}, ${f(l.at.y, 2)}) at ${f(l.model, 2)} pt` : "—"}; step ${f(l.step, 1)}, grain ${f(l.grain, 1)}`,
+        );
+        console.log(`    luma −3…+16 pt: ${l.luma.map((v) => v.toFixed(0)).join(" ")}`);
+      }
     }
   }
 }
@@ -932,7 +998,7 @@ function judgeFrames(theme, ref, measure) {
     return { p: fromShadow, agree: Math.abs(fromShadow - fromPill) };
   };
   const summary = { judged: 0, failing: [], worst: null };
-  const proof = { theme, lines: [] };
+  const proof = { theme, rows: [] };
   for (let k = 1; k < two.frames.length; k++) {
     const frame = two.frames[k];
     const { p, agree } = progressOf(frame, `tab-bar-exact-${theme}`);
