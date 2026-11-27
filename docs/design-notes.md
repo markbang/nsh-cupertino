@@ -351,23 +351,52 @@ do not treat the limit as slack.
   peak ratio reads 0.76 and 1.46 in the iOS 27 simulator stripes clips. Ours
   keeps the two rims equal everywhere. There is no material to set a value
   from, so this is not modelled.
-- **The tab bar has two blur scales, and nsh draws one.** iOS 27's bar material,
-  fitted on the bar's own backdrop (8 frames of the iOS 27 simulator fixture, step 0
-  passed), is a sharp ghost of σ 0.625 pt (k 0.07 light, 0.14 dark) plus a wide frost
-  of σ 18 pt (k 0.27 light, 0.50 dark). Total k is 0.34 light and 0.63 dark. The model
-  predicts the device's settings bar within ±1.8 levels.
-- **nsh cannot draw the frost.** The engine gives a shader one full-resolution
-  backdrop without mips (`nsh-engine` `shader.rs:341`, `mip_level_count` 1; the web
-  runtime `nsh.js` likewise), one draw per shader view, and `sample_backdrop` reads
-  mip 0 only (`nsh-core` `shader.rs:127-130`). An 18 pt frost can then only be a
-  sparse tap estimate: dark needs more than 1000 taps per pixel to reach a residual
-  of 2.5 levels, which cannot ship. A platform `backdrop_blur` layer does not work
-  either. Below the shader, the web painter drops filters, so the shader never sees
-  the frost. Above it, the blur softens the rim, cannot follow the minimise morph, and
-  its kernel differs per platform.
-- **Text under nsh's bar is fainter than iOS's.** Its contrast is 3.8 light and 12.1
-  dark levels, against iOS's 10.1 and 22.2. Tuning `BAR_BLUR` or the fill cannot close
-  the gap.
-- **Waiting on the engine.** The real fix is upstream: a mip chain for shader pictures,
-  or a pre-blurred backdrop input. No upstream issue is filed, and it is not being
-  chased. Revisit when the engine gains either, or when asked.
+- **The tab bar has two blur scales: the web build draws both, the native builds
+  one.** iOS 27's bar material, fitted on the bar's own backdrop (the iOS 27
+  simulator's tab-bar fixture, step 0 passed), is a sharp ghost of σ 0.625 pt
+  (k 0.07 light, 0.14 dark) plus a wide frost of σ 18 pt (k 0.26 light, 0.50
+  dark) over an offset t (167 light, 37 dark levels). Total k is 0.33 light and
+  0.64 dark. The model predicts the device's settings bar within ±1.8 levels.
+- **On the web the body is three layers** (`tokens::bar`, `glass::two_scale_layers`):
+  a CSS `backdrop-filter: blur(0.625px)`, opaque; over it `blur(18px)` at α2;
+  over both the shader, whose body is the measured grey tint at β. CSS `blur(r)`
+  is a Gaussian of σ r and the browser composites in sRGB, so the layers give
+  k2 = (1 − β)·α2, k1 = (1 − β)·(1 − α2), t = β·tint: β 0.668, α2 0.791, tint
+  250 light; β 0.356, α2 0.784, tint 103 dark (the arithmetic is in `tokens.rs`).
+  A filter chain `blur(a) blur(b)` would be one Gaussian of √(a² + b²): the two
+  scales need two stacked layers. The layers sit under the shader, so they do not
+  blur its rim, and the web painter leaves them out of the shader's backdrop
+  picture, which the rim refracts: it reads the page itself, as it should. The
+  shader hands the body to the layers between 1.5 and 6 pt inside the edge; the
+  hairline, the rim light's core and the rim's shade stay its own. The tint is
+  achromatic, as `glass-regular` is, so matching the luma keeps the hue.
+- **`tools/tab-bar-pixels.mjs` measures it in CI** over the fixture's own backdrop
+  (the iOS frames are fetched and checked by sha256, not committed): it refits the
+  two-scale model to our render on the m5b fit mask, compares the render with the
+  iOS frames and with the model's prediction, and reads the readability floor. It
+  first checks its own port against the published fit (`shared.json`) and iOS's
+  floors. The numbers are in the CI log and the pull request that added it.
+- **The minimise morph hands the body back.** A view keeps its box, so the layers
+  cannot follow the silhouette into the 50 pt pill: they fade out on the same
+  progress the silhouette morphs on, while the shader's own one-disc body takes
+  over. During the morph and in the pill, the body is the one-disc blur.
+- **The native builds still draw one blur.** Their shader reads one backdrop
+  picture without mips (`nsh-engine` `shader.rs:341`, `mip_level_count` 1), one
+  draw per shader view, and `sample_backdrop` reads mip 0 only (`nsh-core`
+  `shader.rs:127-130`). An 18 pt frost can then only be a sparse tap estimate:
+  dark needs more than 1000 taps per pixel to reach a residual of 2.5 levels,
+  which cannot ship. A platform blur layer under the shader, as on the web, is
+  not tried there: whether the native backdrop picture includes it (the rim would
+  then refract a blurred page) and whether each platform's blur is a Gaussian of
+  that σ are unmeasured, and no native fixture exists to measure them. The real
+  fix stays upstream: a mip chain for shader pictures, or a pre-blurred backdrop
+  input.
+- **Text under the native bar is fainter than iOS's.** Its contrast is 3.8 light
+  and 12.1 dark levels (emulated), against iOS's 10.1 and 22.2. Tuning `BAR_BLUR`
+  or the fill cannot close the gap.
+- **Reduce Transparency is read on the web only**, from the browser's
+  `prefers-reduced-transparency`: NSH's environment has no such flag. The bar is
+  then opaque, the shade it has over an empty page (t + (k1 + k2) × page: 252
+  light, 37 dark). It is asked when the bar is built, so a change shows on the
+  next mount. Increased contrast keeps the shader's own body: its near-opaque
+  `glass-regular` is not the measured tint.
