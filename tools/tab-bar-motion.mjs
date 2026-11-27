@@ -48,14 +48,19 @@ const PILL_X = 201;
 // body. A patch over text, left of the pill, is reported for comparison.
 const PATCH = { x0: 250, x1: 266, y0: 824, y1: 836 };
 const TEXT_PATCH = { x0: 120, x1: 136, y0: 824, y1: 836 };
-// The patch is glass while the silhouette's right edge is at least 6 pt (the
-// rim's shade) right of it.
-const GLASS_UNTIL = PATCH.x1 + 6;
+// The hand-over is judged while the silhouette's right edge is far enough right
+// of the patch for no rim term to reach it: the shader's rim-light tail,
+// 0.05 × 1.15 (dark) × 255 × exp(−(d − 0.7) / 7) levels at d pt inside the edge,
+// is under one level from d = 20 pt. Past that the edge crossing the patch, not
+// the hand-over, moves its luma (the one-disc body shows the same).
+const GLASS_UNTIL = PATCH.x1 + 20;
 // The middle row, where the right edge is read: from x 386 leftwards, the first
-// pixel more than 10 levels off the page beside the bar (x 396–400 on frame 0),
-// which is the rim's hairline. The left edge mirrors it about the pill (x 201).
+// pixel past half-way from the page (x 398–401 on frame 0) to the body at rest
+// (x 290–300 on frame 0), on the body's side: a 50 % edge. The light rim's
+// hairline cancels its own bright edge on the capsule's end, and the bar's
+// shadow lies on the page's side, so neither moves it. The left edge mirrors it
+// about the pill (x 201).
 const EDGE_ROW = 833;
-const EDGE_LEVELS = 10;
 
 const failures = [];
 const check = (label, ok, detail) => {
@@ -81,10 +86,18 @@ function patchMean(image, box) {
   return sum / n;
 }
 
-function rightEdge(image, page) {
+function rowMean(image, x0, x1) {
   const y = Math.round((EDGE_ROW - CLIP_Y) * 3);
+  let sum = 0;
+  for (let x = x0 * 3; x < x1 * 3; x++) sum += lumaOf(image, x, y);
+  return sum / ((x1 - x0) * 3);
+}
+
+function rightEdge(image, page, body) {
+  const y = Math.round((EDGE_ROW - CLIP_Y) * 3);
+  const half = (body - page) / 2;
   for (let x = Math.round(386 * 3); x >= Math.round(150 * 3); x--) {
-    if (Math.abs(lumaOf(image, x, y) - page) > EDGE_LEVELS) return (x + 0.5) / 3;
+    if ((lumaOf(image, x, y) - page) * Math.sign(half) > Math.abs(half)) return (x + 0.5) / 3;
   }
   return null;
 }
@@ -93,19 +106,14 @@ function analyse(name) {
   const meta = JSON.parse(readFileSync(join(DIR, `${name}.json`), "utf8"));
   const rows = [];
   let page = null;
+  let body = null;
   for (const frame of meta.frames) {
     const image = readPng(join(DIR, `${name}-${String(frame.k).padStart(3, "0")}.png`));
     if (page === null) {
-      const y = Math.round((EDGE_ROW - CLIP_Y) * 3);
-      let sum = 0;
-      let n = 0;
-      for (let x = 396 * 3; x < 400 * 3; x++) {
-        sum += lumaOf(image, x, y);
-        n += 1;
-      }
-      page = sum / n;
+      page = rowMean(image, 398, 401);
+      body = rowMean(image, 290, 300);
     }
-    const right = rightEdge(image, page);
+    const right = rightEdge(image, page, body);
     rows.push({
       k: frame.k,
       t: frame.t,
