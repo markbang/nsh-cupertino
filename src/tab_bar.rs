@@ -404,7 +404,8 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
         // A bar over a page of 14 pt rows needs a frosted backdrop: at the
-        // material's 5 pt the strokes stay legible.
+        // material's 5 pt the strokes stay legible. BAR_BLUR is the menu's
+        // blur, not the bar's two-scale material (design-notes: known gaps).
         .blur(crate::tokens::glass::BAR_BLUR)
         .quality(crate::glass::GlassQuality::High)
         .minimized(&morph, anchor())

@@ -351,3 +351,23 @@ do not treat the limit as slack.
   peak ratio reads 0.76 and 1.46 in the iOS 27 simulator stripes clips. Ours
   keeps the two rims equal everywhere. There is no material to set a value
   from, so this is not modelled.
+- **The tab bar has two blur scales, and nsh draws one.** iOS 27's bar material,
+  fitted on the bar's own backdrop (8 frames of the iOS 27 simulator fixture, step 0
+  passed), is a sharp ghost of σ 0.625 pt (k 0.07 light, 0.14 dark) plus a wide frost
+  of σ 18 pt (k 0.27 light, 0.50 dark). Total k is 0.34 light and 0.63 dark. The model
+  predicts the device's settings bar within ±1.8 levels.
+- **nsh cannot draw the frost.** The engine gives a shader one full-resolution
+  backdrop without mips (`nsh-engine` `shader.rs:341`, `mip_level_count` 1; the web
+  runtime `nsh.js` likewise), one draw per shader view, and `sample_backdrop` reads
+  mip 0 only (`nsh-core` `shader.rs:127-130`). An 18 pt frost can then only be a
+  sparse tap estimate: dark needs more than 1000 taps per pixel to reach a residual
+  of 2.5 levels, which cannot ship. A platform `backdrop_blur` layer does not work
+  either. Below the shader, the web painter drops filters, so the shader never sees
+  the frost. Above it, the blur softens the rim, cannot follow the minimise morph, and
+  its kernel differs per platform.
+- **Text under nsh's bar is fainter than iOS's.** Its contrast is 3.8 light and 12.1
+  dark levels, against iOS's 10.1 and 22.2. Tuning `BAR_BLUR` or the fill cannot close
+  the gap.
+- **Waiting on the engine.** The real fix is upstream: a mip chain for shader pictures,
+  or a pre-blurred backdrop input. No upstream issue is filed, and it is not being
+  chased. Revisit when the engine gains either, or when asked.
