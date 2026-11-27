@@ -177,10 +177,23 @@ fn sd_silhouette(at: vec2f) -> f32 {
   return mix(d, min, clamp(uniforms.morph, 0.0, 1.0));
 }
 
-fn sd_gradient(p: vec2f) -> vec2f {
+// The difference across one axis from the SDF at −e, 0 and +e: the central
+// difference, except on a crease (the bar's centre line, which the minimise
+// carries into the lens tip), where the one-sided slopes have opposite signs
+// and the central one cancels; there the steeper side, at the same scale.
+fn sd_slope(below: f32, at: f32, above: f32) -> f32 {
+  let forward = above - at;
+  let backward = at - below;
+  if (forward * backward < 0.0) {
+    return 2.0 * select(backward, forward, abs(forward) > abs(backward));
+  }
+  return above - below;
+}
+
+fn sd_gradient(p: vec2f, at: f32) -> vec2f {
   let e = 0.6;
-  let gx = sd_silhouette(p + vec2f(e, 0.0)) - sd_silhouette(p - vec2f(e, 0.0));
-  let gy = sd_silhouette(p + vec2f(0.0, e)) - sd_silhouette(p - vec2f(0.0, e));
+  let gx = sd_slope(sd_silhouette(p - vec2f(e, 0.0)), at, sd_silhouette(p + vec2f(e, 0.0)));
+  let gy = sd_slope(sd_silhouette(p - vec2f(0.0, e)), at, sd_silhouette(p + vec2f(0.0, e)));
   let g = vec2f(gx, gy);
   let l = length(g);
   return select(vec2f(0.0, -1.0), g / l, l > 1e-5);
@@ -313,7 +326,7 @@ fn shade(uv: vec2f) -> vec4f {
     return vec4f(vec3f(uniforms.two_scale_tint), coverage * uniforms.two_scale_alpha);
   }
 
-  let normal = sd_gradient(p);
+  let normal = sd_gradient(p, sdf);
 
   // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
   // the rim by (n - 1) * thickness * slope; a press also magnifies the sheet.
