@@ -554,7 +554,27 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
 
     let expanded_opacity = progress.interpolate(&[0.0, 1.0], &[1.0, 0.0]);
     let minimized_opacity = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
-    let lift = progress.interpolate(&[0.0, 1.0], &[0.0, 6.0]);
+    // The bar drops 6 pt as it minimises. On the web, while the two-scale
+    // layers can show, it drops by whole device pixels: the shader covers the
+    // layers outside the glass with its picture of the page, which matches
+    // the page only on the pixel grid (a fraction of a pixel off, the picture
+    // is resampled: up to 5 levels rms on text, CI run 45997124152).
+    let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
+    let lift = if two_scale && web {
+        let ratio = nsh_core::element::pixel_ratio().max(1.0);
+        let steps = (6.0 * ratio).round().max(1.0) as usize;
+        let step = 6.0 / steps as f32;
+        let mut input = vec![0.0];
+        let mut output = vec![0.0];
+        for k in 1..=steps {
+            let at = k as f32 / steps as f32;
+            input.extend([at - 1e-4, at]);
+            output.extend([(k - 1) as f32 * step, k as f32 * step]);
+        }
+        progress.interpolate(&input, &output)
+    } else {
+        progress.interpolate(&[0.0, 1.0], &[0.0, 6.0])
+    };
     // One icon per tab, each shown only while that tab is chosen: the pill is a
     // picture of the live selection, not of the one the bar was built with.
     let mut pill = view().absolute().inset_0().items_center().justify_center();

@@ -256,10 +256,11 @@ fn shade(uv: vec2f) -> vec4f {
   // of the body (`two_scale_amount` > 0), and the silhouette may have shrunk
   // inside it: there this canvas draws the page itself over them, from the
   // backdrop picture (which leaves the layers out), so no layer shows outside
-  // the glass.
+  // the glass. Opaque to 0.5 pt past their box, so their own edge, a pixel
+  // wide, is covered whole; then a 1 pt ramp to nothing over the page.
   var ring = 0.0;
   if (uniforms.two_scale_alpha > 0.0 && uniforms.two_scale_amount > 0.0 && uniforms.morph > 0.0) {
-    ring = clamp(0.5 - sd_shape(p), 0.0, 1.0);
+    ring = clamp(1.5 - sd_shape(p), 0.0, 1.0);
   }
   if (coverage <= 0.0 && ring > 0.0) {
     return vec4f(backdrop_at(p).rgb, ring);

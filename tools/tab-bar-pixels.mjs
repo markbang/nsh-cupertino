@@ -695,7 +695,10 @@ for (const theme of THEMES) {
     const tag = String(Math.round(m * 100)).padStart(3, "0");
     for (const body of ["two", "single"]) {
       const image = luma(join(DIR, `tab-bar-fixture-morph-${body === "single" ? "single-" : ""}${theme}-${tag}.png`));
-      const edges = silhouetteEdges(m, m);
+      // The two-scale bar drops by whole device pixels on the web (`tab_bar.rs`):
+      // 6 pt is 18 px at 3x. The one-disc body drops smoothly.
+      const lift = body === "two" ? Math.floor(m * 18 + 1e-9) / 18 : m;
+      const edges = silhouetteEdges(m, lift);
       const profiles = profilesAt(image, ref, edges, ALONG, true);
       const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
       const row = {
@@ -711,7 +714,7 @@ for (const theme of THEMES) {
       };
       // The layers' box edge where the silhouette has left it: the same columns
       // in both renders.
-      const box = boxEdges(m, m);
+      const box = boxEdges(m, lift);
       if (box.length) {
         const across = profilesAt(image, ref, box, ACROSS_BOX, false);
         const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);
