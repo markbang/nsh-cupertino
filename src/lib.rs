@@ -166,3 +166,5 @@ fn native(registry: &mut Registry) {
         .register::<GlassTabBar>()
         .register::<ScrollEdge>();
 }
+
+pub fn   ruleset_throwaway( ){}
