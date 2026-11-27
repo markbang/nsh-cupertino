@@ -20,4 +20,6 @@ node tools/glass-pixels.mjs || status=1
 # fetched the frames and checked their hashes): its body refitted to the
 # two-scale model, against the iOS frames, and its readability floor.
 node tools/tab-bar-pixels.mjs || status=1
+# The minimise recorded frame by frame: the hand-over in time and the motion.
+node tools/tab-bar-motion.mjs || status=1
 exit "$status"

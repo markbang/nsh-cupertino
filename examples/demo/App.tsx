@@ -1661,8 +1661,29 @@ const fixtureBody = signal("glass");
 // The minimise progress the bar is pinned at (`morph`), for the morph's middle
 // frames; unset, the bar is expanded.
 const fixtureMorph = signal<number | undefined>(undefined);
+// The recording of a minimise (`tools/glass-shots.mjs`, `--record`): the same
+// backdrop in a page that scrolls, and the bar minimising as it does for a user.
+const fixtureScrolls = signal(false);
+const fixtureOffset = signal(0);
+
+function TabBarFixtureScrollPage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <NavPage
+        title="Fixture"
+        material="glass"
+        onScroll={(event: { offset: number }) => fixtureOffset.set(event.offset)}
+      >
+        <Image src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`} style={{ width: 402, height: 874 }} />
+        <View style={{ height: 600 }} />
+      </NavPage>
+      <GlassTabBar items={[]} label="Fixture tabs" material={fixtureBody()} scrollOffset={fixtureOffset()} />
+    </View>
+  );
+}
 
 function TabBarFixturePage() {
+  if (fixtureScrolls()) return <TabBarFixtureScrollPage />;
   return (
     <View style={{ flex: 1 }}>
       <Image
@@ -1735,6 +1756,7 @@ function App() {
     if (seedBody) fixtureBody.set(seedBody);
     const seedMorph = await Storage.getItem("cupertino.morph");
     if (seedMorph) fixtureMorph.set(Number(seedMorph));
+    if ((await Storage.getItem("cupertino.fixturescroll")) === "1") fixtureScrolls.set(true);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     const seedFrame = await Storage.getItem("cupertino.menuframe");
     if (seedFrame) menuFrame.set(Number(seedFrame));

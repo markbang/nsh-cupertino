@@ -515,6 +515,144 @@ async function shoot(page, base, shot) {
   return file;
 }
 
+// --- Recordings: one minimise, frame by frame ------------------------------
+//
+// The page's own clock: `requestAnimationFrame` and `performance.now` are the
+// browser's until `freeze()`, then time stands still and moves only by
+// `step(ms)`, which runs the animation-frame callbacks queued so far at the new
+// time. NSH steps its animations (the springs of the animated values, the
+// shaders' frames) in animation-frame callbacks at the time they are given
+// (`nsh_frame(now)`), so the still taken after the k-th step is the page after
+// exactly k frames of 16.667 ms, however long the capture takes: frame-exact
+// by construction, with no wall clock in it. A callback queued during a step
+// runs at the next one, as a browser runs it in the next frame.
+const CLOCK = `(() => {
+  const realRaf = window.requestAnimationFrame.bind(window);
+  const realCancel = window.cancelAnimationFrame.bind(window);
+  const realNow = performance.now.bind(performance);
+  let frozen = null;
+  let queue = new Map();
+  const waiting = new Map();
+  let next = 1e9;
+  window.requestAnimationFrame = (callback) => {
+    const id = ++next;
+    if (frozen !== null) {
+      queue.set(id, callback);
+      return id;
+    }
+    waiting.set(id, realRaf((t) => {
+      waiting.delete(id);
+      if (frozen !== null) queue.set(id, callback);
+      else callback(t);
+    }));
+    return id;
+  };
+  window.cancelAnimationFrame = (id) => {
+    queue.delete(id);
+    if (waiting.has(id)) realCancel(waiting.get(id));
+    waiting.delete(id);
+  };
+  performance.now = () => (frozen === null ? realNow() : frozen);
+  window.__nshClock = {
+    freeze() {
+      frozen = realNow();
+      return frozen;
+    },
+    step(ms) {
+      frozen += ms;
+      const due = [...queue.values()];
+      queue = new Map();
+      for (const callback of due) {
+        try {
+          callback(frozen);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      return { t: frozen, ran: due.length };
+    },
+  };
+})();`;
+
+/** The frame step of the recordings: 60 frames a second. */
+const STEP_MS = 1000 / 60;
+/** How many frames a recording holds: one second, past the spring's rest. */
+const FRAMES = 60;
+/** The bar's band of the screen, in points: the stills are this clip at 3x. */
+const MOTION_CLIP = { x: 0, y: 770, width: 402, height: 104, scale: 1 };
+
+/** One minimise of the fixture bar per appearance and body: the two-scale body and the one-disc body before it. */
+const RECORDINGS = ["light", "dark"].flatMap((scheme) =>
+  [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+    name: `tab-bar-motion-${tag}${scheme}`,
+    scheme,
+    barbody,
+  })),
+);
+
+async function record(page, base, rec) {
+  const values = {
+    "cupertino.page": "tab-bar-fixture",
+    "cupertino.fixture": `${rec.scheme}-a`,
+    "cupertino.fixturescroll": "1",
+    "cupertino.barbody": rec.barbody ?? "",
+  };
+  const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
+  const [width, height] = IPHONE;
+  await page.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: SCALE, mobile: true });
+  await page.call("Emulation.setEmulatedMedia", {
+    features: [
+      { name: "prefers-color-scheme", value: rec.scheme },
+      { name: "prefers-reduced-transparency", value: "no-preference" },
+    ],
+  });
+  await page.call("Runtime.evaluate", {
+    expression: `(() => { localStorage.clear(); const prefix = ${JSON.stringify(PREFIX)}; for (const [key, value] of Object.entries(${seed})) localStorage.setItem(prefix + key, value); })()`,
+  });
+  await page.call("Page.navigate", { url: `${base}?record=${encodeURIComponent(rec.name)}` });
+  const until = async (expression, what) => {
+    for (let i = 0; i < 100; i++) {
+      const ok = await page
+        .call("Runtime.evaluate", { expression, returnByValue: true })
+        .then((result) => result.result.value === true)
+        .catch(() => false);
+      if (ok) return;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error(`${rec.name}: ${what}`);
+  };
+  await until("document.querySelector('#app')?.childElementCount > 0", "the app did not mount");
+  await until("[...document.querySelectorAll('#app img')].some((img) => img.complete && img.naturalWidth === 1206)", "the backdrop did not load");
+  await until("typeof window.__nshClock === 'object'", "the page clock is not installed");
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const dir = join(OUT, "motion");
+  mkdirSync(dir, { recursive: true });
+  const capture = async (k) => {
+    const { data } = await page.call("Page.captureScreenshot", { format: "png", clip: MOTION_CLIP });
+    writeFileSync(join(dir, `${rec.name}-${String(k).padStart(3, "0")}.png`), Buffer.from(data, "base64"));
+  };
+  const frozen = await page
+    .call("Runtime.evaluate", { expression: "window.__nshClock.freeze()", returnByValue: true })
+    .then((result) => result.result.value);
+  const frames = [{ k: 0, t: 0, ran: 0 }];
+  await capture(0);
+  // A user's scroll: one wheel notch over the page, 60 pt down. The bar
+  // minimises after 20 pt of travel. Real time passes for the scroll to land
+  // and its events to reach the app; the app's frames do not.
+  await page.call("Input.dispatchMouseEvent", { type: "mouseWheel", x: 201, y: 400, deltaX: 0, deltaY: 60 });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  for (let k = 1; k <= FRAMES; k++) {
+    const { t, ran } = await page
+      .call("Runtime.evaluate", { expression: `window.__nshClock.step(${STEP_MS})`, returnByValue: true })
+      .then((result) => result.result.value);
+    frames.push({ k, t: t - frozen, ran });
+    await capture(k);
+  }
+  for (const line of page.console.splice(0)) console.log(`  ${rec.name}: page says: ${line.slice(0, 300)}`);
+  writeFileSync(join(dir, `${rec.name}.json`), JSON.stringify({ name: rec.name, stepMs: STEP_MS, clip: MOTION_CLIP, frames }, null, 1));
+  return `${dir}/${rec.name}-*.png (${frames.length} frames)`;
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "glass-build-"));
@@ -555,6 +693,12 @@ async function main() {
     if (!shots.length) console.log(`shard ${SHARD.join("/")} has none of the ${picked.length} shots`);
     for (const shot of shots) {
       console.log(await shoot(page, `http://127.0.0.1:${port}/`, shot));
+    }
+    const recordings = RECORDINGS.filter((rec) => (ONLY ? ONLY.includes(rec.name) : true));
+    if (recordings.length) {
+      // The page clock goes in every page from here on (it is inert until frozen).
+      await page.call("Page.addScriptToEvaluateOnNewDocument", { source: CLOCK });
+      for (const rec of recordings) console.log(await record(page, `http://127.0.0.1:${port}/`, rec));
     }
   } finally {
     child.kill();
