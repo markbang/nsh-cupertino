@@ -58,6 +58,8 @@ const HEIGHT = 844;
 const SCALE = 3;
 /** The iOS fixture's screen, in points (1206 × 2622 px at 3x). */
 const IPHONE = [402, 874];
+/** The minimise progress of the morph stills. */
+const MORPHS = [0, 0.25, 0.5, 0.75, 1];
 /** The demo's storage namespace: `nsh:<app id>:` (nsh-engine). */
 const PREFIX = "nsh:dev.nsh.cupertino.demo:";
 
@@ -125,6 +127,33 @@ const SHOTS = [
       { name: `tab-bar-fixture-${scheme}-${frame}`, page: "tab-bar-fixture", scheme, fixture: `${scheme}-${frame}`, viewport: IPHONE },
       { name: `tab-bar-fixture-single-${scheme}-${frame}`, page: "tab-bar-fixture", scheme, fixture: `${scheme}-${frame}`, barbody: "single-blur", viewport: IPHONE },
     ]),
+  ),
+  // The minimise morph pinned at its ends and three middle frames (`morph`),
+  // with the two-scale body and with the one-disc body (no layers), and the
+  // bar under increased contrast, both ways: it must take the one-disc path.
+  ...["light", "dark"].flatMap((scheme) =>
+    MORPHS.flatMap((morph) =>
+      [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+        name: `tab-bar-fixture-morph-${tag}${scheme}-${String(Math.round(morph * 100)).padStart(3, "0")}`,
+        page: "tab-bar-fixture",
+        scheme,
+        fixture: `${scheme}-a`,
+        barbody,
+        morph,
+        viewport: IPHONE,
+      })),
+    ),
+  ),
+  ...["light", "dark"].flatMap((scheme) =>
+    [["", undefined], ["single-", "single-blur"]].map(([tag, barbody]) => ({
+      name: `tab-bar-fixture-contrast-${tag}${scheme}`,
+      page: "tab-bar-fixture",
+      scheme,
+      fixture: `${scheme}-a`,
+      barbody,
+      contrast: "high",
+      viewport: IPHONE,
+    })),
   ),
   ...["light", "dark"].map((scheme) => ({
     name: `tab-bar-fixture-reduced-${scheme}-a`,
@@ -362,6 +391,7 @@ async function shoot(page, base, shot) {
     "cupertino.menuclose": shot.menuclose === undefined ? "" : String(shot.menuclose),
     "cupertino.fixture": shot.fixture ?? "",
     "cupertino.barbody": shot.barbody ?? "",
+    "cupertino.morph": shot.morph === undefined ? "" : String(shot.morph),
   };
   const seed = JSON.stringify(Object.fromEntries(Object.entries(values).filter(([, value]) => value)));
   const [width, height] = shot.viewport ?? [WIDTH, HEIGHT];
@@ -456,6 +486,8 @@ async function shoot(page, base, shot) {
       .then((result) => result.result.value)
       .catch((error) => error.message);
     console.log(`  ${shot.name}: ${drawn}`);
+    // `tools/tab-bar-pixels.mjs` asserts on the layers a fixture still had.
+    if (shot.fixture) writeFileSync(join(OUT, `${shot.name}.json`), typeof drawn === "string" ? drawn : "{}");
   }
   for (const line of page.console.splice(0)) console.log(`  ${shot.name}: page says: ${line.slice(0, 300)}`);
   // A first paint can be the empty page (a white or black frame with no

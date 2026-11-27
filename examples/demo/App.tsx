@@ -1658,6 +1658,9 @@ function GlassRowsPage() {
 const fixtureFrame = signal("light-a");
 // `"glass"`, or `"single-blur"` for the shader's own one-disc body.
 const fixtureBody = signal("glass");
+// The minimise progress the bar is pinned at (`morph`), for the morph's middle
+// frames; unset, the bar is expanded.
+const fixtureMorph = signal<number | undefined>(undefined);
 
 function TabBarFixturePage() {
   return (
@@ -1667,7 +1670,13 @@ function TabBarFixturePage() {
         style={{ position: "absolute", left: 0, top: 0, width: 402, height: 874 }}
       />
       <View style={{ position: "absolute", left: 1, right: 1, top: 0, height: 866 }}>
-        <GlassTabBar items={[]} label="Fixture tabs" behavior="never" material={fixtureBody()} />
+        <GlassTabBar
+          items={[]}
+          label="Fixture tabs"
+          behavior="never"
+          material={fixtureBody()}
+          morph={fixtureMorph()}
+        />
       </View>
     </View>
   );
@@ -1724,6 +1733,8 @@ function App() {
     if (seedFixture) fixtureFrame.set(seedFixture);
     const seedBody = await Storage.getItem("cupertino.barbody");
     if (seedBody) fixtureBody.set(seedBody);
+    const seedMorph = await Storage.getItem("cupertino.morph");
+    if (seedMorph) fixtureMorph.set(Number(seedMorph));
     if (seedOverlay) overlaySeed.set(seedOverlay);
     const seedFrame = await Storage.getItem("cupertino.menuframe");
     if (seedFrame) menuFrame.set(Number(seedFrame));

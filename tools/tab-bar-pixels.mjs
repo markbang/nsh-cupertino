@@ -21,6 +21,7 @@
 // published with the measurement: https://public.cohub.live/p/ead34bb8-3796-4c07-8f80-2ecc7b8e9411/nsh-cupertino/tab-bar-measured/m5b-scripts/
 // Each function below names the Python lines it mirrors. Left out: the 12 px
 // tile bootstrap (`fit2.py:54-61`), which gives confidence intervals, not fits.
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -540,6 +541,270 @@ for (const theme of THEMES) {
     `Reduce Transparency draws an opaque ${theme} bar`,
     hi - lo <= REDUCED.spread && Math.abs(mean - REDUCED[theme]) <= REDUCED.off,
     `the fit band reads ${f(lo, 1)}–${f(hi, 1)} (spread ≤ ${REDUCED.spread}), mean ${f(mean, 2)} (fill ${REDUCED[theme]} ± ${REDUCED.off}); the backdrop under it spans ${f(Math.min(...frames[key].values.ios), 0)}–${f(Math.max(...frames[key].values.ios), 0)} through iOS's bar`,
+  );
+}
+
+// --- The minimise morph's middle frames ------------------------------------
+//
+// The fixture bar pinned at morph 0, 0.25, 0.5, 0.75 and 1 (`GlassTabBar`'s
+// `morph`), with the two-scale body and with the one-disc body (no layers).
+// Where the shader's silhouette shrinks inside the layers' box, two seams
+// could show: the shader's hand-over ramp (smoothstep(1.5, 6, inside), scaled
+// by 1 − morph) between its own body and the tint over the layers, and the
+// layers' box edge, where the fading layers end outside the glass. Luma is
+// read along the silhouette's normals (inside −12 pt to outside +6 pt, one
+// pixel a step) where the backdrop under the profile is flat (the iOS
+// reference spans ≤ 3 levels there), so a step is the material's, not a
+// glyph's; and across the box edge (−4 to +4 pt) wherever it lies outside the
+// glass.
+//
+// A middle frame passes when each measure is no larger than the largest of its
+// references, the end frames (morph 0 and 1) and the one-disc body at the same
+// morph, plus the two-scale model's own residual on iOS (1.98 light, 2.40 dark
+// levels): a difference below that is below what the measurement resolves.
+const BAR = { cx: 201, cy: 822, hx: 180, hy: 32, radius: 32, lift: 6, pill: 25 };
+const MORPHS = [0, 0.25, 0.5, 0.75, 1];
+const MARGIN = { light: 1.98, dark: 2.4 };
+const FLAT = 3;
+
+function smin(a, b, k) {
+  const h = Math.max(k - Math.abs(a - b), 0) / k;
+  return Math.min(a, b) - h * h * k * 0.25;
+}
+
+/** The bar's rounded rect (`glass.rs` `sd_one`, radii ≥ 0, its smooth max of 2.5). */
+function sdBar(x, y) {
+  const r = Math.min(BAR.radius, BAR.hx, BAR.hy);
+  const qx = Math.abs(x) - (BAR.hx - r);
+  const qy = Math.abs(y) - (BAR.hy - r);
+  const inner = -smin(-qx, -qy, 2.5);
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(inner, 0) - r;
+}
+
+/** `sd_silhouette` with no tabs (anchor 0.5): the bar mixed toward a circle of `MIN_RADIUS` at its centre. */
+function sdSilhouette(x, y, m) {
+  const d = sdBar(x, y);
+  if (m <= 0) return d;
+  return d + (Math.hypot(x, y) - BAR.pill - d) * Math.min(m, 1);
+}
+
+/** Bilinear luma of a band image at a point of the page, in points. */
+function sampleAt(image, x, y) {
+  const px = x * 3 - 0.5;
+  const py = y * 3 - 0.5 - BAND[0];
+  const x0 = Math.floor(px);
+  const y0 = Math.floor(py);
+  const fx = px - x0;
+  const fy = py - y0;
+  const v = (xx, yy) => image[Math.min(Math.max(yy, 0), BH - 1) * W + Math.min(Math.max(xx, 0), W - 1)];
+  return (v(x0, y0) * (1 - fx) + v(x0 + 1, y0) * fx) * (1 - fy) + (v(x0, y0 + 1) * (1 - fx) + v(x0 + 1, y0 + 1) * fx) * fy;
+}
+
+const steps = (from, to) => Array.from({ length: Math.round((to - from) * 3) + 1 }, (_, i) => from + i / 3);
+const ALONG = steps(-12, 6);
+const ACROSS_BOX = steps(-4, 4);
+
+/** The silhouette's top boundary at each column, with its outward normal, in page points. */
+function silhouetteEdges(m) {
+  const cy = BAR.cy + BAR.lift * m;
+  const edges = [];
+  for (let dx = -175; dx <= 175; dx += 1) {
+    if (sdSilhouette(dx, 0, m) >= 0) continue;
+    let inside = 0;
+    let outside = -40;
+    for (let i = 0; i < 50; i++) {
+      const mid = (inside + outside) / 2;
+      if (sdSilhouette(dx, mid, m) < 0) inside = mid;
+      else outside = mid;
+    }
+    const dy = (inside + outside) / 2;
+    const e = 0.01;
+    const gx = sdSilhouette(dx + e, dy, m) - sdSilhouette(dx - e, dy, m);
+    const gy = sdSilhouette(dx, dy + e, m) - sdSilhouette(dx, dy - e, m);
+    const g = Math.hypot(gx, gy);
+    edges.push({ x: BAR.cx + dx, y: cy + dy, nx: gx / g, ny: gy / g });
+  }
+  return edges;
+}
+
+/** The layers' box's top edge where it lies more than 4 pt outside the glass. */
+function boxEdges(m) {
+  const cy = BAR.cy + BAR.lift * m;
+  const edges = [];
+  for (let dx = -145; dx <= 145; dx += 1) {
+    if (sdSilhouette(dx, -BAR.hy, m) > 4) edges.push({ x: BAR.cx + dx, y: cy - BAR.hy, nx: 0, ny: -1 });
+  }
+  return edges;
+}
+
+const mean = (list) => list.reduce((s, v) => s + v, 0) / Math.max(list.length, 1);
+
+/** Luma along each edge's normal at the offsets `along`, kept where the backdrop is flat if `flat`. */
+function profilesAt(image, ref, edges, along, flat) {
+  const out = [];
+  for (const edge of edges) {
+    if (flat) {
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (const t of [-1, 0, 1]) {
+        for (const s of along) {
+          const v = sampleAt(ref, edge.x + s * edge.nx - t * edge.ny, edge.y + s * edge.ny + t * edge.nx);
+          lo = Math.min(lo, v);
+          hi = Math.max(hi, v);
+        }
+      }
+      if (hi - lo > FLAT) continue;
+    }
+    out.push(along.map((s) => sampleAt(image, edge.x + s * edge.nx, edge.y + s * edge.ny)));
+  }
+  return out;
+}
+
+/** The largest step between adjacent samples with offsets in [from, to]. */
+function largestStep(profiles, along, from, to) {
+  let most = 0;
+  for (const profile of profiles) {
+    for (let i = 1; i < along.length; i++) {
+      if (along[i - 1] < from || along[i] > to) continue;
+      most = Math.max(most, Math.abs(profile[i] - profile[i - 1]));
+    }
+  }
+  return most;
+}
+
+/** Mean luma at offsets in [inFrom, inTo] minus [outFrom, outTo], over the profiles. */
+function jump(profiles, along, [inFrom, inTo], [outFrom, outTo]) {
+  const band = (profile, from, to) => mean(profile.filter((_, i) => along[i] >= from && along[i] <= to));
+  return {
+    inside: mean(profiles.map((p) => band(p, inFrom, inTo))),
+    outside: mean(profiles.map((p) => band(p, outFrom, outTo))),
+  };
+}
+
+const morphRows = [];
+for (const theme of THEMES) {
+  const ref = luma(join(FIXTURE_DIR, `tab-bar-ref-${theme}-a.png`));
+  const measure = {};
+  for (const m of MORPHS) {
+    const tag = String(Math.round(m * 100)).padStart(3, "0");
+    for (const body of ["two", "single"]) {
+      const image = luma(join(DIR, `tab-bar-fixture-morph-${body === "single" ? "single-" : ""}${theme}-${tag}.png`));
+      const edges = silhouetteEdges(m);
+      const profiles = profilesAt(image, ref, edges, ALONG, true);
+      const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
+      const row = {
+        theme,
+        m,
+        body,
+        n: profiles.length,
+        step: largestStep(profiles, ALONG, -12, 6),
+        ramp: largestStep(profiles, ALONG, -7.5, -1),
+        inside,
+        outside,
+        jump: inside - outside,
+      };
+      const box = boxEdges(m);
+      if (box.length) {
+        const across = profilesAt(image, ref, box, ACROSS_BOX, false);
+        const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);
+        row.box = { n: across.length, step: largestStep(across, ACROSS_BOX, -4, 4), jump: j.inside - j.outside, profiles: across };
+      }
+      measure[`${body}-${m}`] = row;
+      morphRows.push(row);
+    }
+  }
+  for (const m of MORPHS) {
+    for (const body of ["two", "single"]) {
+      const r = measure[`${body}-${m}`];
+      console.log(
+        `morph ${theme} ${f(m, 2)} ${body.padEnd(6)} silhouette: ${r.n} flat profiles, largest step ${f(r.step, 2)}, in the hand-over ramp ${f(r.ramp, 2)}, inside ${f(r.inside, 2)} outside ${f(r.outside, 2)} (jump ${f(r.jump, 2)})` +
+          (r.box ? ` | layers' box edge: ${r.box.n} profiles, largest step ${f(r.box.step, 2)}, jump ${f(r.box.jump, 2)}` : ""),
+      );
+    }
+  }
+  for (const m of MORPHS.filter((v) => v > 0 && v < 1)) {
+    const r = measure[`two-${m}`];
+    const refs = [measure["two-0"], measure["two-1"], measure[`single-${m}`]];
+    const limit = (key) => Math.max(...refs.map((x) => Math.abs(x[key]))) + MARGIN[theme];
+    check(
+      `the ${theme} bar at morph ${m} has flat backdrop to measure on`,
+      r.n >= 5,
+      `${r.n} silhouette profiles over a flat backdrop (≥ 5)`,
+    );
+    for (const [key, label] of [
+      ["step", "largest step across the silhouette edge"],
+      ["ramp", "largest step in the hand-over ramp"],
+      ["jump", "brightness jump inside against outside"],
+    ]) {
+      check(
+        `${label}, ${theme}, morph ${m}`,
+        Math.abs(r[key]) <= limit(key),
+        `${f(Math.abs(r[key]), 2)} levels (≤ ${f(limit(key), 2)}: the largest of morph 0 ${f(Math.abs(refs[0][key]), 2)}, morph 1 ${f(Math.abs(refs[1][key]), 2)}, the one-disc body ${f(Math.abs(refs[2][key]), 2)}, plus ${MARGIN[theme]})`,
+      );
+    }
+    // The layers' box edge outside the glass: its step and jump against the
+    // one-disc body at the same morph, which has no layers there.
+    const single = measure[`single-${m}`];
+    const diff = mean(r.box.profiles.map((p, i) => Math.sqrt(mean(p.map((v, k) => (v - single.box.profiles[i][k]) ** 2)))));
+    for (const key of ["step", "jump"]) {
+      const lim = Math.abs(single.box[key]) + MARGIN[theme];
+      check(
+        `the fading layers' box edge, ${key}, ${theme}, morph ${m}`,
+        Math.abs(r.box[key]) <= lim,
+        `${f(Math.abs(r.box[key]), 2)} levels over ${r.box.n} profiles (≤ ${f(lim, 2)}: the one-disc body ${f(Math.abs(single.box[key]), 2)} plus ${MARGIN[theme]}); the layers differ from the one-disc frame there by ${f(diff, 2)} levels rms`,
+      );
+    }
+  }
+}
+
+// --- Increased contrast ------------------------------------------------------
+//
+// With `contrast="high"` the theme swaps in the near-opaque `glass-regular`, so
+// `two_scale_active()` is false and the bar takes the one-disc path: the
+// still has the shader and no backdrop-filtered layers (the DOM, as
+// `glass-shots` recorded it), and its bar is the one-disc render of the same
+// frame (`material="single-blur"`), pixel for pixel up to 8-bit rounding.
+// The two-scale still of the same frame in standard contrast is the positive
+// control: it has the two layers.
+const CONTRAST_SAME = 1;
+const contrastRows = [];
+for (const theme of THEMES) {
+  const dom = (name) => JSON.parse(readFileSync(join(DIR, `${name}.json`), "utf8"));
+  const high = dom(`tab-bar-fixture-contrast-${theme}`);
+  const control = dom(`tab-bar-fixture-${theme}-a`);
+  check(
+    `the two-scale ${theme} bar has its two layers (control)`,
+    control.filtered.length === 2 && control.shader.length === 1,
+    `standard contrast: ${control.shader.length} shader canvas, backdrop filters ${JSON.stringify(control.filtered)}`,
+  );
+  check(
+    `increased contrast draws no layers (${theme})`,
+    high.filtered.length === 0 && high.shader.length === 1,
+    `increased contrast: ${high.shader.length} shader canvas, backdrop filters ${JSON.stringify(high.filtered)}`,
+  );
+  const two = luma(join(DIR, `tab-bar-fixture-contrast-${theme}.png`));
+  const single = luma(join(DIR, `tab-bar-fixture-contrast-single-${theme}.png`));
+  const standard = luma(join(DIR, `tab-bar-fixture-${theme}-a.png`));
+  let most = 0;
+  let sum = 0;
+  let away = 0;
+  let n = 0;
+  for (let y = 790; y < 854; y += 1 / 3) {
+    for (let x = 21; x < 381; x += 1 / 3) {
+      if (sdBar(x + 1 / 6 - BAR.cx, y + 1 / 6 - BAR.cy) > -2) continue;
+      const i = Math.round((y * 3) - BAND[0]) * W + Math.round(x * 3);
+      const d = Math.abs(two[i] - single[i]);
+      most = Math.max(most, d);
+      sum += d;
+      away += Math.abs(two[i] - standard[i]);
+      n += 1;
+    }
+  }
+  contrastRows.push({ theme, layers: high.filtered.length, most, mean: sum / n, away: away / n });
+  check(
+    `increased contrast takes the one-disc path (${theme})`,
+    most <= CONTRAST_SAME,
+    `inside the bar (${n} px) it differs from the one-disc render by at most ${f(most, 2)} levels, mean ${f(sum / n, 3)} (≤ ${CONTRAST_SAME}, 8-bit rounding); from the standard-contrast two-scale still by ${f(away / n, 2)} on average`,
   );
 }
 
