@@ -778,11 +778,13 @@ function crossesPill(scan, box) {
  * Gate 2, the grain: the largest step between adjacent samples of the scan
  * line that lie within the 2 pt just inside the detected position, i.e. both
  * samples at offsets in [s − 2, s) along the normal (inward is −), the
- * detected step itself left out; truncated where the search range begins
- * (−3 pt). The line is measurable when its detected step is at least twice
- * this.
+ * detected step itself left out. The line is measurable when its detected
+ * step is at least twice this. A window that would begin before the search
+ * range (−3 pt) is not complete: the grain is unknown (null) and the line is
+ * not measurable, never passed by default.
  */
 function grainOf(e) {
+  if (e.s - 2 < SEARCH[0]) return null;
   let most = 0;
   for (let i = 1; i < e.at; i++) {
     if (SEARCH[i - 1] < e.s - 2) continue;
@@ -802,7 +804,7 @@ function proveFrame(proof, k, t, ref, p, renders) {
   const box = pillBox(p);
   const row = { k, t, renders: {} };
   for (const [label, image, m, drop] of renders) {
-    const entry = { total: 0, pill: 0, grain: 0, lines: [] };
+    const entry = { total: 0, pill: 0, grain: 0, cut: 0, lines: [] };
     for (const [i, e] of detectedEdges(image, ref, p).entries()) {
       entry.total += 1;
       if (crossesPill(e.scan, box)) {
@@ -810,8 +812,9 @@ function proveFrame(proof, k, t, ref, p, renders) {
         continue;
       }
       const grain = grainOf(e);
-      if (e.step < 2 * grain) {
+      if (grain === null || e.step < 2 * grain) {
         entry.grain += 1;
+        if (grain === null) entry.cut += 1;
         continue;
       }
       const model = modelCrossing(e.scan, m, drop);
@@ -826,7 +829,7 @@ function proveFrame(proof, k, t, ref, p, renders) {
   proof.rows.push(row);
   const part = (label) => {
     const r = row.renders[label];
-    return `${label} ${r.total} lines, ${r.pill} pill, ${r.grain} grain, ${r.lines.length} measurable${r.lines.length ? `, max ${f(r.max, 2)} / p95 ${f(r.p95, 2)} pt` : ""}`;
+    return `${label} ${r.total} lines, ${r.pill} pill, ${r.grain} grain (${r.cut} of them a cut window), ${r.lines.length} measurable${r.lines.length ? `, max ${f(r.max, 2)} / p95 ${f(r.p95, 2)} pt` : ""}`;
   };
   console.log(`  ledger ${proof.theme} frame ${String(k).padStart(2, "0")} (t ${f(t, 1)} ms): ${part("two-scale")} | ${part("one-disc")}`);
   return row;
@@ -846,7 +849,7 @@ function reportProof(proof) {
     const errs = lines.map((l) => l.err).sort((a, b) => a - b);
     const sum = (key) => rows.reduce((s, r) => s + r[key], 0);
     console.log(
-      `LEDGER ${proof.theme} ${label}: ${sum("total")} lines, ${sum("pill")} dropped by the pill, ${sum("grain")} by the grain, ${lines.length} measurable; frames with ≥ ${MEASURABLE_MIN} measurable: ${rows.filter((r) => r.lines.length >= MEASURABLE_MIN).length} of ${rows.length}; measurable max ${show(errs.length ? errs[errs.length - 1] : null)} / p95 ${show(errs.length ? errs[Math.min(errs.length - 1, Math.floor(0.95 * errs.length))] : null)} pt`,
+      `LEDGER ${proof.theme} ${label}: ${sum("total")} lines, ${sum("pill")} dropped by the pill, ${sum("grain")} by the grain (${sum("cut")} of them a cut window), ${lines.length} measurable; frames with ≥ ${MEASURABLE_MIN} measurable: ${rows.filter((r) => r.lines.length >= MEASURABLE_MIN).length} of ${rows.length}; measurable max ${show(errs.length ? errs[errs.length - 1] : null)} / p95 ${show(errs.length ? errs[Math.min(errs.length - 1, Math.floor(0.95 * errs.length))] : null)} pt`,
     );
   }
   report(
