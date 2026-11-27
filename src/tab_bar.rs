@@ -292,6 +292,11 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     const HEIGHT: f32 = 64.0;
     const INSET: f32 = 20.0;
     const LIFT: f32 = 12.0;
+    // The part of the minimise progress in which the two-scale layers hand the
+    // body back to the shader, in place: the silhouette holds the bar's shape
+    // until it is done, so the layers (a view keeps its box) never show
+    // outside the glass. About 30 ms of the spring.
+    const HANDOVER: f32 = 0.2;
 
     let items = props.items;
     let values = items.get_untracked();
@@ -417,7 +422,11 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         }
     });
     let anchor_node = anchor_value.animated_node();
-    let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
+    // Only where the layers can draw (the web): the native morph is unchanged.
+    let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
+    let handover = if two_scale && web { HANDOVER } else { 0.0 };
+    let morph = progress.interpolate(&[handover, 1.0], &[0.0, 1.0]);
+    let carried = progress.interpolate(&[0.0, HANDOVER], &[1.0, 0.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
         // Where the two-scale body does not draw (the native builds, increased
         // contrast, the minimised pill), the shader's own body: a bar over a
@@ -428,7 +437,8 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .minimized(&morph, anchor())
         .anchor(&anchor_node)
         .material_only(!glass)
-        .two_scale(two_scale);
+        .two_scale(two_scale)
+        .two_scale_amount(&carried);
 
     let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
     for (index, item) in values.iter().enumerate() {
@@ -659,7 +669,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
             bar.child(crate::glass::two_scale_layers(
                 two_scale,
                 32.0,
-                expanded_opacity,
+                carried,
             ))
             .child(crate::glass::layer(spec, None))
         })

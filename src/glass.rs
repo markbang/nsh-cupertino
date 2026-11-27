@@ -72,6 +72,7 @@ struct Uniforms {
   shadow_sigma: f32,
   two_scale_tint: f32,
   two_scale_alpha: f32,
+  two_scale_amount: f32,
 }
 
 // A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
@@ -282,11 +283,11 @@ fn shade(uv: vec2f) -> vec4f {
   // body here is the measured tint alone, at `two_scale_alpha` over them.
   // `hand` gives the body to the layers between 1.5 and 6 pt inside the edge,
   // past the hairline, the rim light's core and the rim's shade, which stay
-  // the glass's; as the bar minimises it gives the body back, while the layers
-  // fade out on the same `morph`.
+  // the glass's; `two_scale_amount` takes it back (the layers fade out with
+  // the same value) before the silhouette starts to minimise.
   var hand = 0.0;
   if (uniforms.two_scale_alpha > 0.0) {
-    hand = smoothstep(1.5, 6.0, inside) * (1.0 - clamp(uniforms.morph, 0.0, 1.0));
+    hand = smoothstep(1.5, 6.0, inside) * clamp(uniforms.two_scale_amount, 0.0, 1.0);
   }
   if (hand >= 1.0) {
     return vec4f(vec3f(uniforms.two_scale_tint), coverage * uniforms.two_scale_alpha);
@@ -547,6 +548,7 @@ pub struct GlassSpec {
     soft_shadow: Option<(f32, f32)>,
     shadow_amount: Option<AnimatedNode>,
     two_scale: bool,
+    two_scale_amount: Option<AnimatedNode>,
 }
 
 /// A menu's flat body ([`GlassSpec::menu_body`]).
@@ -596,6 +598,7 @@ impl GlassSpec {
             soft_shadow: None,
             shadow_amount: None,
             two_scale: false,
+            two_scale_amount: None,
         }
     }
 
@@ -744,6 +747,14 @@ impl GlassSpec {
     /// the bar minimises, the shader's own body.
     pub(crate) fn two_scale(mut self, on: bool) -> Self {
         self.two_scale = on;
+        self
+    }
+
+    /// How much of the body the two-scale layers carry, 0 to 1, as an animated
+    /// value: the bar hands its body back to the shader with it as it starts
+    /// to minimise. 1 unless set.
+    pub(crate) fn two_scale_amount(mut self, amount: &AnimatedNode) -> Self {
+        self.two_scale_amount = Some(*amount);
         self
     }
 
@@ -1049,7 +1060,8 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
             } else {
                 0.0
             }
-        });
+        })
+        .uniform("two_scale_amount", 1.0_f32);
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
@@ -1067,6 +1079,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     };
     if let Some(morph) = &spec.morph {
         glass = glass.uniform("morph", morph);
+    }
+    if let Some(amount) = &spec.two_scale_amount {
+        glass = glass.uniform("two_scale_amount", amount);
     }
     if let Some(anchor) = &spec.anchor_node {
         glass = glass.uniform("anchor", anchor);
@@ -1164,11 +1179,12 @@ fn media_matches(query: &str) -> bool {
 /// [`GlassSpec::two_scale`]`(on)`, which draws the tint over them, and show
 /// only with `on` and while [`two_scale_active`] holds.
 ///
-/// `shown` is the bar's expanded amount (1 expanded, 0 minimised), the same
-/// progress the shader's silhouette morphs on: the layers fade out as the
-/// shader takes the body back, since a view keeps its box and cannot follow
-/// the silhouette into the pill. The opacity is the layers' own: on an
-/// ancestor it would make a Backdrop Root and blank the filters.
+/// `shown` is the spec's [`GlassSpec::two_scale_amount`] (1 the layers carry
+/// the body, 0 the shader does): a view keeps its box and cannot follow the
+/// silhouette into the pill, so the bar hands the body back in place, while
+/// its silhouette is still the layers' box, and only then minimises. The
+/// opacity is the layers' own: on an ancestor it would make a Backdrop Root
+/// and blank the filters.
 pub(crate) fn two_scale_layers(on: bool, radius: f32, shown: AnimatedNode) -> impl IntoElement {
     view()
         .absolute()
