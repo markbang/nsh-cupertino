@@ -383,9 +383,9 @@ fn shade(uv: vec2f) -> vec4f {
   // hand·(β·tint + (1 − β)·L) + (1 − hand)·surface: alpha 1 − hand·(1 − β)
   // and the straight colour that gives it.
   let beta = uniforms.two_scale_alpha;
-  let alpha = 1.0 - hand * (1.0 - beta);
-  let colour = (hand * beta * vec3f(uniforms.two_scale_tint) + (1.0 - hand) * surface) / alpha;
-  return vec4f(clamp(colour, vec3f(0.0), vec3f(1.0)), coverage * alpha);
+  let opacity = 1.0 - hand * (1.0 - beta);
+  let colour = (hand * beta * vec3f(uniforms.two_scale_tint) + (1.0 - hand) * surface) / opacity;
+  return vec4f(clamp(colour, vec3f(0.0), vec3f(1.0)), coverage * opacity);
 }
 "#;
 
