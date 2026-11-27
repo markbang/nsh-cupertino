@@ -906,8 +906,8 @@ function jump(profiles, along, [inFrom, inTo], [outFrom, outTo]) {
  * box edge's step and jump. Pinned stills and recorded frames are measured
  * alike.
  */
-function measureAt(image, ref, theme, m, body) {
-  const edges = silhouetteEdges(m, m);
+function measureAt(image, ref, theme, m, body, drop = m) {
+  const edges = silhouetteEdges(m, drop);
   const profiles = profilesAt(image, ref, edges, ALONG, true);
   const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
   const row = {
@@ -925,7 +925,7 @@ function measureAt(image, ref, theme, m, body) {
   };
   // The layers' box edge where the silhouette has left it: the same columns
   // in both renders.
-  const box = boxEdges(m, m);
+  const box = boxEdges(m, drop);
   if (box.length) {
     const across = profilesAt(image, ref, box, ACROSS_BOX, false);
     const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);
@@ -985,7 +985,12 @@ function explainWorst(key, r, single) {
  * clock); the end frames are the pinned two-scale stills at progress 0 and 1,
  * the same scene (Stage 1, CI run 46008914329: the progress-1 still equals
  * the settled frame, max |diff| 0). Each frame's progress is the one the page
- * showed (`glass-shots.mjs` PROGRESS).
+ * showed (`glass-shots.mjs` PROGRESS). Since Stage 7 each frame is measured on
+ * the geometry the shader draws, a frame behind the page (Stage 4, CI run
+ * 46036703523): the silhouette at the previous frame's progress, the two-scale
+ * bar's drop (`lowered`, in the shader) at it too, the one-disc bar's drop (its
+ * DOM container) at this frame's; the box-edge columns follow it. The edges
+ * detected in the pixels are printed beside it as evidence only.
  */
 function judgeFrames(theme, ref, measure) {
   const motion = join(DIR, "motion");
@@ -1016,10 +1021,16 @@ function judgeFrames(theme, ref, measure) {
     const name = String(k).padStart(3, "0");
     const imageTwo = lumaClip(join(motion, `tab-bar-exact-${theme}-${name}.png`));
     const imageOne = lumaClip(join(motion, `tab-bar-exact-single-${theme}-${name}.png`));
-    const r = measureAt(imageTwo, ref, theme, p, "two");
-    const single = measureAt(imageOne, ref, theme, pOne, "single");
-    // Report only: the detected edges against the model a frame behind.
+    // The geometry the shader draws, a frame behind the page: the silhouette
+    // at the previous frame's progress; the two-scale bar's drop (`lowered`,
+    // drawn in the shader) a frame behind too, the one-disc bar's (its DOM
+    // container) at this frame's.
     const { p: pBefore } = progressOf(two.frames[k - 1], `tab-bar-exact-${theme}`);
+    const { p: pOneBefore } = progressOf(one.frames[k - 1], `tab-bar-exact-single-${theme}`);
+    const r = measureAt(imageTwo, ref, theme, pBefore, "two", pBefore);
+    const single = measureAt(imageOne, ref, theme, pOneBefore, "single", pOne);
+    console.log(`  ${tag}: placement model (silhouette at ${f(pBefore, 4)}; drop two-scale ${f(BAR.lift * pBefore, 2)} pt, one-disc ${f(BAR.lift * pOne, 2)} pt)`);
+    // Evidence only, not a proof: the detected edges through the two gates.
     proveFrame(proof, k, frame.t, ref, p, [
       ["two-scale", imageTwo, pBefore, BAR.lift * pBefore],
       ["one-disc", imageOne, pBefore, BAR.lift * pOne],
