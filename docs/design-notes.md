@@ -455,7 +455,7 @@ do not treat the limit as slack.
 
 ### The web two-scale minimise: known limits
 
-PR #43 (not merged) gives the web tab bar iOS's two-scale body. Two CSS backdrop layers (0.625 pt and
+PR #43 (not merged; its work continues in PR #50) gives the web tab bar iOS's two-scale body. Two CSS backdrop layers (0.625 pt and
 18 pt) sit under the shader, which draws the measured tint over them. Its minimise was checked frame by frame
 against the shader's one-disc body. These are the limits that check met.
 
@@ -485,20 +485,54 @@ against the shader's one-disc body. These are the limits that check met.
   so the steepest step lands on the inner flank, 0.6–1.1 pt inside the edge. A pixel detector therefore cannot place
   the light edge within 0.5 pt.
 
-**What stays red.** Judged on the geometry the shader draws (run 46054638029: silhouette at frame k − 1's progress,
+- **The silhouette crease (fixed in PR #50).** The bar is a capsule (radius = half its height), so `sd_one` gives
+  q.y = |y| along its centre line: a kink in the SDF. The minimise's mix toward the disc carries that kink into the
+  lens tip, at slope change k = 1 − morph. On a kink the central difference of `sd_gradient` (±0.6 pt) cancels, the
+  normal turns horizontal, and the rim light (axis³) and the bright hairline (0.18 + 0.35·axis) vanish on a line
+  one pixel wide. It was in both renders, two-scale and one-disc. Each showed it at full depth only when the axis
+  fell near a pixel centre; the judge compares frames of the same index, so on frame 4 only the two-scale render
+  failed (dark 117 → 56 → 154 against one-disc 110 → 90 → 137).
+  - **The rule.** `sd_slope` keeps the central difference unless the forward and backward differences have
+    opposite signs and the slope change the three samples imply, k = (s/e)/(2 − r) with
+    s = |f − b| and r = |f + b| / max(|f|, |b|), is at least 0.45. There it takes the steeper one-sided difference.
+    Everywhere else the expression is the old central difference, bit for bit.
+  - **The calibration** (the shader's own SDF at e = 0.6, at the recorded pixel phases):
+    - the lens axis at the tip of frames 4–6: k 0.484–0.741;
+    - capsule centre lines (the tab bar at rest, the calibration capsule, the top bar): k = 1.000 at every phase;
+    - smooth extrema (a circle's centre lines at 1 pt or more from its centre, the disc's vertical line): k 0.006–0.410.
+  - **Scope.** Capsule centre lines are the same kink, so the rule applies there too. In a capsule's straight part
+    the SDF does not vary along the line, the normal stays (0, ±1), and the output changes by at most 1 level at
+    isolated pixels (CI run 46076542940 against 46054638029: calibration capsule 5 px, top bar 10–14 px, the tab
+    bar at rest 1 px under increased contrast, its standard stills byte-identical).
+  - **What it is not.** It does not cover the lens axis of frame 7 (k 0.37–0.38), and frame 7's red items are not
+    on the axis anyway. Within about 0.8 pt of a circle's centre (a cone point of the SDF) k exceeds 0.45; the
+    40 pt circle button's vertical centre line changes there by at most 1 level at a few pixels.
+  - **Numbers** (CI run 46076542940, against 46054638029):
+    - 24 of 941 items changed, all on the lens axis of frames 4–6 and of the pinned 0.25 / 0.5 stills;
+    - light 4 step and ramp 13.92 → 9.37 (limits 13.70 / 12.83);
+    - dark 4 step 98.15 → 74.45 (/ 87.36), ramp 71.05 → 41.52 (/ 43.88, the one-disc reference lost its line too);
+    - no item went from ok to FAIL; two margins shrank by 0.05 and 0.07;
+    - the time criteria, increased contrast (0.00 levels), the iOS checks and Reduce Transparency are unchanged.
+
+**What stays red.** Judged on the geometry the shader draws (run 46076542940: silhouette at frame k − 1's progress,
 each bar's own drop), with the limits unchanged (the larger of the two-scale end frames and the one-disc frame of
 the same index, + 1.98 light / 2.40 dark):
 
 | theme | frame | criterion | value / limit | where |
 |---|---|---|---|---|
 | light | 2 | box-edge jump | 8.06 / 7.48 | the layers' box top, 62 columns beside the lens tips |
-| light | 4 | step, ramp | 13.92 / 13.70, 13.92 / 12.83 | cap tip (313.0, 822.2): a one-pixel notch 251 → 241 → 255 in the two-scale render only |
-| light | 7 | step, ramp | 15.53 / 13.70, 15.53 / 8.44 | (160.0, 821.8), 2.7–3 pt inside the edge: 233 → 218 in the two-scale body |
-| light | 11 | step, ramp | 25.42 / 24.75 (both) | cap tip (175.0, 820.3): 241 → 215 (one-disc 241 → 218) |
+| light | 7 | step, ramp | 15.53 / 13.70, 15.53 / 8.44 | (160.0, 821.8), 3 pt inside the edge, 2.3 pt above the lens axis: 223 → 218 → 233 in the two-scale body |
+| light | 11 | step, ramp | 25.42 / 24.75 (both) | the disc's edge at (175.0, 820.3), 7.3 pt above the axis, beside the pill's edge |
 | dark | 2 | box-edge jump | 11.76 / 11.20 | as light 2 |
 | dark | 3 | ramp; box-edge step | 45.67 / 34.84; 99.07 / 98.01 | (73.0, 807.3), 1–1.3 pt inside: 147 → 193 (one-disc 159 → 185); the box top, 218 columns |
-| dark | 4 | step, ramp | 98.15 / 87.36, 71.05 / 57.52 | cap tip (313–314, 822.2–822.6): a notch 117 → 56 → 154 in the two-scale render only (one-disc 110 → 90 → 137) |
-| dark | 11 | ramp | 67.28 / 65.95 | cap tip (175.0, 820.3): 35 → 103 (one-disc 34 → 97) |
+| dark | 11 | ramp | 67.28 / 65.95 | as light 11: 35 → 103 → 143 (one-disc 34 → 97 → 131) |
+
+- **Frame 11 is a separate defect,** not the crease: no frame 11 item changed with the fix.
+  - **What differs:** at (175, 820.3) the two-scale rim is about 8 % brighter than the one-disc rim (peak 141
+    against 130). Its largest step stays 4–5 levels higher at every sampling phase across a third of a point (two-scale
+    55.7–84.4, one-disc 52.0–79.6).
+  - **What does not:** the two-scale terms are inert at that pixel (cover ring 1 with coverage 1, hand ramp 0).
+  - **Unexplained:** the cause lies in what the shared surface reads there, and is not yet found.
 
 The four time criteria pass, as do increased contrast (0.00 levels from the one-disc body) and the two-scale checks
 against iOS.
