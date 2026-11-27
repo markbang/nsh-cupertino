@@ -375,7 +375,13 @@ do not treat the limit as slack.
   two-scale model to our render on the m5b fit mask, compares the render with the
   iOS frames and with the model's prediction, and reads the readability floor. It
   first checks its own port against the published fit (`shared.json`) and iOS's
-  floors. The numbers are in the CI log and the pull request that added it.
+  floors. First run (CI 45965972295), a+b per theme, light / dark: the refit
+  gives σ1 0.625 / 0.625 pt and σ2 20 / 18 pt (iOS: 0.625 / 0.625, 20 / 17);
+  rms against the iOS frames 2.08 / 2.63 levels, where the two-scale fit leaves
+  1.98 / 2.40 on iOS itself and one Gaussian 3.57 / 6.07; rms against the
+  model's prediction 0.63 / 1.10; readability floor 10.4 / 22.6 levels (iOS
+  10.1 / 22.2). The shader's one-disc body, rendered the same way
+  (`material="single-blur"`), reads 5.11 / 33.8, 4.85 / 33.7 and 2.7 / 12.2.
 - **The minimise morph hands the body back.** A view keeps its box, so the layers
   cannot follow the silhouette into the 50 pt pill: they fade out on the same
   progress the silhouette morphs on, while the shader's own one-disc body takes
