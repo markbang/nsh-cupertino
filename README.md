@@ -1,6 +1,6 @@
 # nsh-cupertino
 
-[简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) · [![Android UI nightly](https://github.com/markbang/nsh-cupertino/actions/workflows/android-ui.yml/badge.svg?event=schedule)](https://github.com/markbang/nsh-cupertino/actions/workflows/android-ui.yml?query=event%3Aschedule)
 
 **[Documentation site: markbang.github.io/nsh-cupertino](https://markbang.github.io/nsh-cupertino/)** —
 every component with a live demo, the TSX that draws it and the props it takes.
@@ -279,7 +279,7 @@ CI (`.github/workflows/ci.yml`): fmt, clippy `-D warnings`, tests, the theme
 drift check, `nsh check` + `nsh test` of the demo, the web package, a screenshot
 job that publishes the captures to the `screenshots` branch, and the site's own
 check, tests, web build and headless run. `pages.yml` deploys the site to GitHub
-Pages on every push to `main` and on every tag.
+Pages on every push to `main` and on every tag. A pull request runs only the screens it touches and fails on a cache miss (label it `deps` when it changes a lock file); the Android emulator runs nightly, by hand, or with the `android` label.
 
 ## License
 
