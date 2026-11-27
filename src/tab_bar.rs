@@ -436,6 +436,16 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     // passes to the shader on `carried`'s clock meanwhile, and the shader covers
     // the layers wherever the silhouette has left their box (`glass.rs`).
     let morph = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
+    // The bar drops 6 pt as it minimises. On the web, with the two-scale body
+    // (and not the opaque bar of Reduce Transparency), the shader draws the
+    // drop inside its canvas, and the canvas and the layers stay where they
+    // are: nsh redraws a shader a frame after the page moves, so a canvas that
+    // moved would show its picture of the page, the cover over the layers
+    // outside the glass, a frame late (up to 6.7 levels off on text, CI run
+    // 45999666204). The shadow, the tabs and the pill drop themselves.
+    let lift = progress.interpolate(&[0.0, 1.0], &[0.0, 6.0]);
+    let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
+    let lowered = two_scale && web && !reduced;
     // The layers show, whole, while they carry any of the body.
     let layers_on = carried.interpolate(&[0.0, 0.001], &[0.0, 1.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)
@@ -450,6 +460,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .material_only(!glass)
         .two_scale(two_scale)
         .two_scale_amount(&carried.animated_node());
+    let spec = if lowered { spec.lowered(&lift) } else { spec };
 
     let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
     for (index, item) in values.iter().enumerate() {
@@ -554,27 +565,6 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
 
     let expanded_opacity = progress.interpolate(&[0.0, 1.0], &[1.0, 0.0]);
     let minimized_opacity = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
-    // The bar drops 6 pt as it minimises. On the web, while the two-scale
-    // layers can show, it drops by whole device pixels: the shader covers the
-    // layers outside the glass with its picture of the page, which matches
-    // the page only on the pixel grid (a fraction of a pixel off, the picture
-    // is resampled: up to 5 levels rms on text, CI run 45997124152).
-    let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
-    let lift = if two_scale && web {
-        let ratio = nsh_core::element::pixel_ratio().max(1.0);
-        let steps = (6.0 * ratio).round().max(1.0) as usize;
-        let step = 6.0 / steps as f32;
-        let mut input = vec![0.0];
-        let mut output = vec![0.0];
-        for k in 1..=steps {
-            let at = k as f32 / steps as f32;
-            input.extend([at - 1e-4, at]);
-            output.extend([(k - 1) as f32 * step, k as f32 * step]);
-        }
-        progress.interpolate(&input, &output)
-    } else {
-        progress.interpolate(&[0.0, 1.0], &[0.0, 6.0])
-    };
     // One icon per tab, each shown only while that tab is chosen: the pill is a
     // picture of the live selection, not of the one the bar was built with.
     let mut pill = view().absolute().inset_0().items_center().justify_center();
@@ -608,6 +598,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .items_center()
         .justify_center()
         .bind_opacity(&minimized_opacity)
+        .when(lowered, |v| v.bind_translate_y(&lift))
         // The pill is a picture of the chosen tab: a page-coloured disc with a
         // hairline and the iOS 27 shadow, so it reads as a surface on white
         // rows without its icon.
@@ -661,7 +652,8 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
             color: rgba(0x0000_000a).into(),
             inset: false,
         }])
-        .bind_opacity(&expanded_opacity);
+        .bind_opacity(&expanded_opacity)
+        .when(lowered, |v| v.bind_translate_y(&lift));
 
     view()
         .absolute()
@@ -670,7 +662,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .right(px(INSET))
         .bottom(px(nsh_core::element::safe_area().bottom.0 + LIFT))
         .h(px(HEIGHT))
-        .bind_translate_y(&lift)
+        .when(!lowered, |v| v.bind_translate_y(&lift))
         .role(AccessibilityRole::Tablist)
         .label(props.label.get_untracked().unwrap_or_else(|| "Tabs".into()))
         .child(shadow)
@@ -710,7 +702,8 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 .flex_row()
                 .items_center()
                 .child(tabs)
-                .bind_opacity(&expanded_opacity),
+                .bind_opacity(&expanded_opacity)
+                .when(lowered, |v| v.bind_translate_y(&lift)),
         )
         .child(minimized_view)
 }

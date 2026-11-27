@@ -633,12 +633,14 @@ function silhouetteEdges(m, progress) {
   return edges;
 }
 
-/** The layers' box's top edge where it lies more than 4 pt outside the glass. */
+/** The layers' box's top edge where it lies more than 4 pt outside the glass.
+ * The layers do not drop with the bar (`tab_bar.rs`, `lowered`): their box stays
+ * at rest, while the silhouette is lowered by the progress. */
 function boxEdges(m, progress) {
-  const cy = BAR.cy + BAR.lift * progress;
+  const cy = BAR.cy;
   const edges = [];
   for (let dx = -145; dx <= 145; dx += 1) {
-    if (sdSilhouette(dx, -BAR.hy, m) > 4) edges.push({ x: BAR.cx + dx, y: cy - BAR.hy, nx: 0, ny: -1 });
+    if (sdSilhouette(dx, -BAR.hy - BAR.lift * progress, m) > 4) edges.push({ x: BAR.cx + dx, y: cy - BAR.hy, nx: 0, ny: -1 });
   }
   return edges;
 }
@@ -695,10 +697,7 @@ for (const theme of THEMES) {
     const tag = String(Math.round(m * 100)).padStart(3, "0");
     for (const body of ["two", "single"]) {
       const image = luma(join(DIR, `tab-bar-fixture-morph-${body === "single" ? "single-" : ""}${theme}-${tag}.png`));
-      // The two-scale bar drops by whole device pixels on the web (`tab_bar.rs`):
-      // 6 pt is 18 px at 3x. The one-disc body drops smoothly.
-      const lift = body === "two" ? Math.floor(m * 18 + 1e-9) / 18 : m;
-      const edges = silhouetteEdges(m, lift);
+      const edges = silhouetteEdges(m, m);
       const profiles = profilesAt(image, ref, edges, ALONG, true);
       const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
       const row = {
@@ -714,7 +713,7 @@ for (const theme of THEMES) {
       };
       // The layers' box edge where the silhouette has left it: the same columns
       // in both renders.
-      const box = boxEdges(m, lift);
+      const box = boxEdges(m, m);
       if (box.length) {
         const across = profilesAt(image, ref, box, ACROSS_BOX, false);
         const j = jump(across, ACROSS_BOX, [-4, -1], [1, 4]);

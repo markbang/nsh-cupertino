@@ -50,6 +50,7 @@ fn the_glass_shader_compiles_with_the_uniforms_the_components_set() {
         "two_scale_tint",
         "two_scale_alpha",
         "two_scale_amount",
+        "lowered",
     ] {
         assert!(
             declared.contains(&name),

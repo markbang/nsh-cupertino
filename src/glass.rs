@@ -73,6 +73,7 @@ struct Uniforms {
   two_scale_tint: f32,
   two_scale_alpha: f32,
   two_scale_amount: f32,
+  lowered: f32,
 }
 
 // A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
@@ -163,7 +164,10 @@ fn sd_shape(p: vec2f) -> f32 {
 
 // The floating bar's minimized silhouette: a small pill around the selected
 // tab, blended into the bar's own as `morph` runs.
-fn sd_silhouette(p: vec2f) -> f32 {
+fn sd_silhouette(at: vec2f) -> f32 {
+  // `lowered` drops the silhouette inside the canvas (a web tab bar that keeps
+  // its canvas still, `GlassSpec::lowered`).
+  let p = at - vec2f(0.0, uniforms.lowered);
   let d = sd_shape(p);
   if (uniforms.morph <= 0.0 || uniforms.min_radius <= 0.0) {
     return d;
@@ -301,7 +305,9 @@ fn shade(uv: vec2f) -> vec4f {
   // whole under it.
   var hand = 0.0;
   if (uniforms.two_scale_alpha > 0.0) {
-    hand = smoothstep(1.5, 6.0, inside) * clamp(uniforms.two_scale_amount, 0.0, 1.0);
+    // Only over the layers: a lowered silhouette leaves their box at its foot.
+    let over = min(inside, -sd_shape(p));
+    hand = smoothstep(1.5, 6.0, over) * clamp(uniforms.two_scale_amount, 0.0, 1.0);
   }
   if (hand >= 1.0) {
     return vec4f(vec3f(uniforms.two_scale_tint), coverage * uniforms.two_scale_alpha);
@@ -374,7 +380,7 @@ fn shade(uv: vec2f) -> vec4f {
   let core = exp(-max(inside - 0.7, 0.0) / 1.4);
   let tail = exp(-max(inside - 0.7, 0.0) / 7.0);
   rgb = rgb + vec3f(1.0) * uniforms.rim_light * lobe * ease * (0.30 * core + 0.05 * tail);
-  let along = clamp(0.5 + 0.5 * dot(p / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
+  let along = clamp(0.5 + 0.5 * dot((p - vec2f(0.0, uniforms.lowered)) / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
   rgb = rgb + vec3f(1.0) * select(uniforms.specular, 0.0, flat) * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
   // The hairline: the backdrop at its own position, darkened; strongest at
@@ -574,6 +580,7 @@ pub struct GlassSpec {
     shadow_amount: Option<AnimatedNode>,
     two_scale: bool,
     two_scale_amount: Option<AnimatedNode>,
+    lowered: Option<AnimatedNode>,
 }
 
 /// A menu's flat body ([`GlassSpec::menu_body`]).
@@ -624,6 +631,7 @@ impl GlassSpec {
             shadow_amount: None,
             two_scale: false,
             two_scale_amount: None,
+            lowered: None,
         }
     }
 
@@ -781,6 +789,14 @@ impl GlassSpec {
     /// left their box. 1 unless set.
     pub(crate) fn two_scale_amount(mut self, amount: &AnimatedNode) -> Self {
         self.two_scale_amount = Some(*amount);
+        self
+    }
+
+    /// Drops the silhouette by `amount` points inside the canvas, as an
+    /// animated value, where the surface's own box would otherwise move: the
+    /// canvas and what lies under it stay where they are.
+    pub(crate) fn lowered(mut self, amount: &AnimatedNode) -> Self {
+        self.lowered = Some(*amount);
         self
     }
 
@@ -1087,7 +1103,8 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
                 0.0
             }
         })
-        .uniform("two_scale_amount", 1.0_f32);
+        .uniform("two_scale_amount", 1.0_f32)
+        .uniform("lowered", 0.0_f32);
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
@@ -1108,6 +1125,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     }
     if let Some(amount) = &spec.two_scale_amount {
         glass = glass.uniform("two_scale_amount", amount);
+    }
+    if let Some(lowered) = &spec.lowered {
+        glass = glass.uniform("lowered", lowered);
     }
     if let Some(anchor) = &spec.anchor_node {
         glass = glass.uniform("anchor", anchor);
