@@ -193,12 +193,15 @@ const meta = (dir, name) => JSON.parse(readFileSync(need(join(dir, "motion", `${
 
 const failed = [];
 for (const [theme, k] of FAILED) {
-  const frame = meta(DIR, `tab-bar-exact-${theme}`).frames.find((fr) => fr.k === k);
+  const all = meta(DIR, `tab-bar-exact-${theme}`).frames;
+  const frame = all.find((fr) => fr.k === k);
+  // The shader draws a frame behind the page: the mask is the previous frame's silhouette.
+  const drawn = all.find((fr) => fr.k === k - 1).progress.fromShadow;
   const sources = [];
   if (BEFORE) sources.push([`${BEFORE_LABEL} two-scale`, readPng(need(frameFile(BEFORE, `tab-bar-exact-${theme}`, k))), 770 * SCALE]);
   sources.push(["two-scale", readPng(need(frameFile(DIR, `tab-bar-exact-${theme}`, k))), 770 * SCALE]);
   sources.push(["one-disc, the same frame", readPng(need(frameFile(DIR, `tab-bar-exact-single-${theme}`, k))), 770 * SCALE]);
-  failed.push({ t: frame.t, image: item(`${theme} frame ${k}, t ${frame.t.toFixed(1)} ms, progress ${frame.progress.fromShadow.toFixed(4)}`, sources, frame.progress.fromShadow) });
+  failed.push({ t: frame.t, image: item(`${theme} frame ${k}, t ${frame.t.toFixed(1)} ms, progress ${frame.progress.fromShadow.toFixed(4)}`, sources, drawn) });
 }
 failed.sort((a, b) => a.t - b.t);
 

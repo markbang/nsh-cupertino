@@ -11,21 +11,20 @@
 // CSS shadow (`src/tab_bar.rs` `shadow`) and anything the picture leaves out
 // show there. For frames 1-60 of the exact recordings (`glass-shots.mjs`
 // `tab-bar-exact-<theme>` and `tab-bar-exact-single-<theme>`, the same scene
-// and page clock, the progress per frame in their JSON, `progress.fromShadow`) this compares the two
-// over the covered region: inside the layers' box at rest and at least half a
-// point outside the lowered silhouette (where the glass covers none of the
-// pixel). Per frame and pooled: the |difference| of luma (max, mean, p50, p95,
-// p99, the share over 2 levels) and the signed mean (two-scale minus
-// one-disc).
+// and page clock) this compares the two over the covered region: inside the
+// layers' box at rest and at least half a point outside the silhouette as the
+// shader draws it, a frame behind the page (at the previous frame's
+// `progress.fromShadow`). Per frame and pooled: the |difference| of luma
+// (max, mean, p50, p95, p99, the share over 2 levels) and the signed mean
+// (two-scale minus one-disc), also split into the band within 1.5 pt of the
+// box edge, the deeper part, and the cover's ramp 0-1.5 pt outside the box.
 //
-// Two references tell what a difference is:
-// - the bar's CSS shadow there, modelled (its box lowered with the bar,
-//   offset 7 pt, blur 10 pt as a Gaussian of σ 5, black at 10/255, fading as
-//   the bar minimises; drawn only outside its box, its fill white at 1/255
-//   inside), as the largest darkening it can cause, in levels;
-// - the one-disc frame before (k − 1): a cover one frame behind the page
-//   reads as that frame, and the page above the bar (y 771-786 pt) shows
-//   whether it moved between the two.
+// The bar's CSS shadow there is modelled as a reference (its box lowered with
+// the bar, offset 7 pt, blur 10 pt as a Gaussian of σ 5, black at 10/255,
+// fading as the bar minimises; drawn only outside its box, its fill white at
+// 1/255 inside): the largest darkening it can cause, in levels. The page
+// above the bar (y 771-786 pt) tells whether the page moved since the frame
+// before.
 //
 // Report only: it fails only on a missing input.
 import { existsSync, readFileSync } from "node:fs";
@@ -55,14 +54,14 @@ const need = (file) => {
   return file;
 };
 
-/** The page points of the covered region at `progress`, as frame pixels. */
+/** The covered region at the drawn `progress`, as frame pixels and page points: the layers' box and the cover's ramp 1.5 pt past it, outside the glass. */
 function covered(progress) {
   const out = [];
-  for (let py = BOX.y0 * SCALE; py < BOX.y1 * SCALE; py++) {
-    for (let px = BOX.x0 * SCALE; px < BOX.x1 * SCALE; px++) {
+  for (let py = (BOX.y0 - 2) * SCALE; py < (BOX.y1 + 2) * SCALE; py++) {
+    for (let px = (BOX.x0 - 2) * SCALE; px < (BOX.x1 + 2) * SCALE; px++) {
       const x = (px + 0.5) / SCALE;
       const y = (py + 0.5) / SCALE;
-      if (sdLayers(x, y) <= 0 && sdGlass(x, y, progress) >= 0.5) out.push([px, py - CLIP_TOP * SCALE, x, y]);
+      if (sdLayers(x, y) <= 1.5 && sdGlass(x, y, progress) >= 0.5) out.push([px, py - CLIP_TOP * SCALE, x, y]);
     }
   }
   return out;
@@ -110,41 +109,49 @@ for (const theme of ["light", "dark"]) {
   const two = frames(`tab-bar-exact-${theme}`);
   const one = frames(`tab-bar-exact-single-${theme}`);
   if (missing.length) continue;
-  console.log(`\n== cover ${theme}: two-scale against one-disc over the covered region (inside the layers' box, ≥ 0.5 pt outside the silhouette), luma levels`);
-  const pooled = [];
-  const pooledLag = [];
+  console.log(`\n== cover ${theme}: two-scale against one-disc over the covered region (inside the layers' box, ≥ 0.5 pt outside the drawn silhouette), luma levels`);
+  const pooled = { all: [], edge: [], inner: [], ramp: [], deep: [] };
   let previous = readPng(one[0].file);
   for (let i = 1; i < two.length && i < one.length; i++) {
     const a = readPng(two[i].file);
     const b = readPng(one[i].file);
-    const progress = two[i].progress.fromShadow;
+    // The shader draws a frame behind the page (Stage 1's edges per frame:
+    // dark frame 3 at 359.8 pt is the silhouette at frame 2's progress): its
+    // silhouette and drop in frame k are at the progress of frame k − 1. The
+    // CSS shadow is the page's, at frame k's.
+    const progress = two[i - 1].progress.fromShadow;
+    const page = two[i].progress.fromShadow;
+    const moved = [];
+    for (let py = (PAGE_BAND.y0 - CLIP_TOP) * SCALE; py < (PAGE_BAND.y1 - CLIP_TOP) * SCALE; py++) {
+      for (let px = 0; px < b.width; px++) moved.push(luma(b, px, py) - luma(previous, px, py));
+    }
+    const motion = stats(moved);
+    previous = b;
+    const tag = `frame ${two[i].k} (t ${f(two[i].t, 1)} ms, page progress ${f(page, 4)}, drawn at ${f(progress, 4)}; page moved since the frame before: mean ${f(motion.mean, 3)})`;
     const region = covered(progress);
     if (!region.length) {
-      console.log(`  frame ${two[i].k} (t ${f(two[i].t, 1)} ms, progress ${f(progress, 4)}): no covered region`);
-      previous = b;
+      console.log(`  ${tag}: no covered region`);
       continue;
     }
-    const diff = region.map(([px, py]) => luma(a, px, py) - luma(b, px, py));
+    const parts = { all: [], edge: [], inner: [], ramp: [], deep: [] };
     let shadow = 0;
-    for (const [px, py, x, y] of region) shadow = Math.max(shadow, shadowAt(x, y, progress) * luma(b, px, py));
-    for (const v of diff) pooled.push(v);
-    let lag = "";
-    if (previous) {
-      const behind = region.map(([px, py]) => luma(a, px, py) - luma(previous, px, py));
-      for (const v of behind) pooledLag.push(v);
-      const moved = [];
-      for (let py = (PAGE_BAND.y0 - CLIP_TOP) * SCALE; py < (PAGE_BAND.y1 - CLIP_TOP) * SCALE; py++) {
-        for (let px = 0; px < b.width; px++) moved.push(luma(b, px, py) - luma(previous, px, py));
-      }
-      const page = stats(moved);
-      const vs = stats(behind);
-      lag = ` | against one-disc frame ${two[i].k - 1}: mean ${f(vs.mean, 3)}, p99 ${f(vs.p99)} | page moved: mean ${f(page.mean, 3)}, max ${f(page.max)}`;
+    for (const [px, py, x, y] of region) {
+      const d = luma(a, px, py) - luma(b, px, py);
+      const box = sdLayers(x, y);
+      parts[box > 0 ? "ramp" : "all"].push(d);
+      if (box <= 0) parts[box > -1.5 ? "edge" : "inner"].push(d);
+      if (box <= 0 && sdGlass(x, y, progress) >= 2) parts.deep.push(d);
+      if (box <= 0) shadow = Math.max(shadow, shadowAt(x, y, page) * luma(b, px, py));
     }
-    console.log(`  frame ${two[i].k} (t ${f(two[i].t, 1)} ms, progress ${f(progress, 4)}): ${show(stats(diff))} | CSS shadow at most ${f(shadow)} levels${lag}`);
-    previous = b;
+    for (const key of Object.keys(parts)) for (const v of parts[key]) pooled[key].push(v);
+    console.log(`  ${tag}: ${show(stats(parts.all))} | CSS shadow there at most ${f(shadow)} levels`);
+    console.log(`      within 1.5 pt of the box edge: ${show(stats(parts.edge))}; the ramp 0-1.5 pt outside the box: ${show(stats(parts.ramp))}`);
   }
-  console.log(`  COVER ${theme}, frames 1-60 pooled: ${show(stats(pooled))}`);
-  if (pooledLag.length) console.log(`  COVER ${theme}, against the one-disc frame before, pooled: ${show(stats(pooledLag))}`);
+  console.log(`  COVER ${theme}, frames 1-60 pooled: ${show(stats(pooled.all))}`);
+  console.log(`  COVER ${theme}, pooled, ≥ 2 pt outside the silhouette: ${show(stats(pooled.deep))}`);
+  console.log(`  COVER ${theme}, pooled, within 1.5 pt inside the box edge: ${show(stats(pooled.edge))}`);
+  console.log(`  COVER ${theme}, pooled, deeper than 1.5 pt inside the box: ${show(stats(pooled.inner))}`);
+  console.log(`  COVER ${theme}, pooled, the ramp 0-1.5 pt outside the box: ${show(stats(pooled.ramp))}`);
 }
 
 if (missing.length) {
