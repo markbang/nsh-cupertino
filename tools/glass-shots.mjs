@@ -209,7 +209,14 @@ class Cdp {
     this.id = 0;
     this.pending = new Map();
     this.send = send;
+    this.console = [];
     listen((data) => {
+      // What the page logs: NSH says there when a shader cannot draw or its
+      // WebGL context is lost, which a still alone cannot tell.
+      if (data.method === "Runtime.consoleAPICalled" && ["warning", "error"].includes(data.params.type)) {
+        this.console.push(data.params.args.map((a) => a.value ?? a.description ?? "").join(" "));
+      }
+      if (data.method === "Runtime.exceptionThrown") this.console.push(data.params.exceptionDetails?.exception?.description ?? "exception");
       if (!data.id || !this.pending.has(data.id)) return;
       const { resolve, reject } = this.pending.get(data.id);
       this.pending.delete(data.id);
@@ -439,6 +446,18 @@ async function shoot(page, base, shot) {
     }
     await new Promise((resolve) => setTimeout(resolve, 900));
   }
+  {
+    // What drew the glass: the shaders' canvases, and the backdrop-filtered views.
+    const drawn = await page
+      .call("Runtime.evaluate", {
+        expression: `JSON.stringify({ shader: [...document.querySelectorAll("canvas.nsh-fx-out")].map((c) => c.width + "x" + c.height), filtered: [...document.querySelectorAll("#app *")].map((el) => getComputedStyle(el).backdropFilter).filter((f) => f && f !== "none") })`,
+        returnByValue: true,
+      })
+      .then((result) => result.result.value)
+      .catch((error) => error.message);
+    console.log(`  ${shot.name}: ${drawn}`);
+  }
+  for (const line of page.console.splice(0)) console.log(`  ${shot.name}: page says: ${line.slice(0, 300)}`);
   // A first paint can be the empty page (a white or black frame with no
   // content): take the still again until it holds more than a handful of
   // colours.
@@ -468,7 +487,10 @@ async function main() {
   mkdirSync(OUT, { recursive: true });
   const work = mkdtempSync(join(tmpdir(), "glass-build-"));
   const built = packageApp(work);
-  const chosen = SHOTS.filter((shot) => (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")));
+  // The fixture's stills last: their 402 × 874 pt viewport and 1206 × 2622
+  // backdrop must not change what the other stills see.
+  const picked = SHOTS.filter((shot) => (ONLY ? ONLY.includes(shot.name) : !shot.frames || args.includes("--menu-frames")));
+  const chosen = [...picked.filter((shot) => !shot.fixture), ...picked.filter((shot) => shot.fixture)];
   if (chosen.some((shot) => shot.fixture)) {
     // The fixture page's backdrops, served next to the build (same origin, so
     // the shader's backdrop picture may draw them).
@@ -480,6 +502,7 @@ async function main() {
   const { child, profile, page } = await launch();
   try {
     await page.call("Page.enable");
+    await page.call("Runtime.enable");
     await page.call("Network.enable");
     await page.call("Network.setCacheDisabled", { cacheDisabled: true });
     await page.call("Emulation.setDeviceMetricsOverride", {

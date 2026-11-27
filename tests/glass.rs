@@ -76,7 +76,11 @@ fn the_two_scale_layers_give_back_the_measured_fit() {
         let a = fit.frost_alpha();
         assert!((b - beta).abs() < 1e-3, "β {b}, expected {beta}");
         assert!((a - alpha).abs() < 1e-3, "α2 {a}, expected {alpha}");
-        assert!((fit.tint_level() - tint).abs() < 0.1, "tint {}", fit.tint_level());
+        assert!(
+            (fit.tint_level() - tint).abs() < 0.1,
+            "tint {}",
+            fit.tint_level()
+        );
         assert!(((1.0 - b) * a - fit.frost).abs() < 1e-6);
         assert!(((1.0 - b) * (1.0 - a) - fit.ghost).abs() < 1e-6);
         assert!((b * fit.tint_level() - fit.offset).abs() < 1e-3);

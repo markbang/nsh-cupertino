@@ -645,8 +645,12 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .when(!reduced, |bar| {
             // The two-scale layers go right under the shader, which draws the
             // tint and the rim over them.
-            bar.child(crate::glass::two_scale_layers(two_scale, 32.0, expanded_opacity))
-                .child(crate::glass::layer(spec, None))
+            bar.child(crate::glass::two_scale_layers(
+                two_scale,
+                32.0,
+                expanded_opacity,
+            ))
+            .child(crate::glass::layer(spec, None))
         })
         .child(
             view()
