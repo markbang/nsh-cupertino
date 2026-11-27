@@ -10,6 +10,10 @@
 // after. "Before" is `tools/fixtures/tab-bar-tip-before`, the same crops cut
 // byte for byte from CI run 46054638029's `screenshots` artifact (sources and
 // their sha256 in `before.json`); "after" is this run's `motion` recordings.
+// `glass-crease-crops.png`: 24 × 24 pt of three capsule centre lines, ×6, before
+// (`tools/fixtures/glass-crease-before`, from the same run) and after: the
+// calibration capsule (x 218-242, y 140-164 pt), the top bar (x 353-377, y 10-34)
+// and the tab bar at rest (x 18-42, y 810-834), light and dark.
 //
 // It writes PNGs only; it judges nothing.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -26,7 +30,9 @@ const arg = (name, fallback) => {
 };
 const DIR = arg("dir", "docs/screenshots");
 const OUT = arg("out", join(DIR, "compare"));
-const BEFORE = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "tab-bar-tip-before");
+const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const BEFORE = join(FIXTURES, "tab-bar-tip-before");
+const CREASE_BEFORE = join(FIXTURES, "glass-crease-before");
 const SCALE = 3;
 const CROP = 24 * SCALE;
 const ZOOM = 6;
@@ -56,9 +62,11 @@ const GLYPHS = {
   m: [".....", ".....", "##.#.", "#.#.#", "#.#.#", "#.#.#", "#.#.#"],
   n: [".....", ".....", "####.", "#...#", "#...#", "#...#", "#...#"],
   o: [".....", ".....", ".###.", "#...#", "#...#", "#...#", ".###."],
+  p: [".....", "####.", "#...#", "#...#", "####.", "#....", "#...."],
   r: [".....", ".....", "#.##.", "##..#", "#....", "#....", "#...."],
   s: [".....", ".....", ".####", "#....", ".###.", "....#", "####."],
   t: [".#...", ".#...", "####.", ".#...", ".#...", ".#..#", "..##."],
+  u: [".....", ".....", "#...#", "#...#", "#...#", "#..##", ".##.#"],
   w: [".....", ".....", "#...#", "#...#", "#.#.#", "#.#.#", ".#.#."],
   "-": [".....", ".....", ".....", "#####", ".....", ".....", "....."],
   "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
@@ -144,20 +152,40 @@ for (const theme of ["light", "dark"]) {
   }
 }
 
-const width = columns.length * (TILE + GAP) + GAP;
-const height = rows.length * (TILE + 2 * STRIP + GAP) + GAP;
-const out = canvas(width, height);
-rows.forEach((row, r) => {
-  const y0 = GAP + r * (TILE + 2 * STRIP + GAP);
-  text(out, GAP, y0 + 4, row.label);
-  row.tiles.forEach((pixel, c) => {
-    const x0 = GAP + c * (TILE + GAP);
-    text(out, x0, y0 + STRIP + 4, columns[c]);
-    for (let y = 0; y < TILE; y++) {
-      for (let x = 0; x < TILE; x++) out.set(x0 + x, y0 + 2 * STRIP + y, pixel(Math.floor(x / ZOOM), Math.floor(y / ZOOM)));
-    }
+const crease = [];
+for (const [title, file, xPt, yPt] of [
+  ["calibration capsule", "glass-calibration-shader", 218, 140],
+  ["top bar", "glass-top", 353, 10],
+  ["rest tab bar", "tab-bar-fixture", 18, 810],
+]) {
+  for (const theme of ["light", "dark"]) {
+    const name = `${file}-${theme}${file === "tab-bar-fixture" ? "-a" : ""}.png`;
+    crease.push({
+      label: `${title} ${theme}`,
+      tiles: [crop(join(CREASE_BEFORE, name), 0, 0), crop(join(DIR, name), xPt * SCALE, yPt * SCALE)],
+    });
+  }
+}
+
+function sheet(file, columns, rows) {
+  const width = columns.length * (TILE + GAP) + GAP;
+  const height = rows.length * (TILE + 2 * STRIP + GAP) + GAP;
+  const out = canvas(width, height);
+  rows.forEach((row, r) => {
+    const y0 = GAP + r * (TILE + 2 * STRIP + GAP);
+    text(out, GAP, y0 + 4, row.label);
+    row.tiles.forEach((pixel, c) => {
+      const x0 = GAP + c * (TILE + GAP);
+      text(out, x0, y0 + STRIP + 4, columns[c]);
+      for (let y = 0; y < TILE; y++) {
+        for (let x = 0; x < TILE; x++) out.set(x0 + x, y0 + 2 * STRIP + y, pixel(Math.floor(x / ZOOM), Math.floor(y / ZOOM)));
+      }
+    });
   });
-});
-mkdirSync(OUT, { recursive: true });
-writePng(join(OUT, "tab-bar-tip-crops.png"), out);
-console.log(`wrote ${join(OUT, "tab-bar-tip-crops.png")} (${width} × ${height}, before: ${JSON.parse(readFileSync(join(BEFORE, "before.json"), "utf8")).run})`);
+  mkdirSync(OUT, { recursive: true });
+  writePng(join(OUT, file), out);
+  console.log(`wrote ${join(OUT, file)} (${width} × ${height}, before: ${JSON.parse(readFileSync(join(BEFORE, "before.json"), "utf8")).run})`);
+}
+
+sheet("tab-bar-tip-crops.png", columns, rows);
+sheet("glass-crease-crops.png", ["before", "after"], crease);
