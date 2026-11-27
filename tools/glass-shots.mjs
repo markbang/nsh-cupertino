@@ -70,8 +70,8 @@ const SHOTS = [
   // The chosen tab changes after mount, then the page scrolls: the minimised
   // pill has to be Settings' at Settings' slot, not the Inbox one it was built
   // with (0.4.1).
-  { name: "glass-tabmin-settings-light", page: "glass", scheme: "light", tap: [326, 786], scroll: 900, steps: 9 },
-  { name: "glass-tabmin-settings-dark", page: "glass", scheme: "dark", tap: [326, 786], scroll: 900, steps: 9 },
+  { name: "glass-tabmin-settings-light", page: "glass", scheme: "light", tap: { at: [326, 786], tab: "Settings" }, scroll: 900, steps: 9 },
+  { name: "glass-tabmin-settings-dark", page: "glass", scheme: "dark", tap: { at: [326, 786], tab: "Settings" }, scroll: 900, steps: 9 },
   // A white page of 14 pt rows: the surface the bars actually float over.
   { name: "glass-rows-top-light", page: "glass-rows", scheme: "light" },
   { name: "glass-rows-top-dark", page: "glass-rows", scheme: "dark" },
@@ -269,6 +269,59 @@ async function launch() {
   return { child, profile, page };
 }
 
+/** How long a tap waits for its tab to be hit-testable, then chosen. */
+const TAP_TIMEOUT = 10000;
+
+/** Polls `expression` in the page until it returns `{ ok: true }`; the last `seen` goes into the error. */
+async function waitFor(page, expression, timeout, message) {
+  const deadline = Date.now() + timeout;
+  let seen = "nothing";
+  while (Date.now() < deadline) {
+    const value = await page
+      .call("Runtime.evaluate", { expression, returnByValue: true })
+      .then((result) => result.result.value)
+      .catch((error) => ({ ok: false, seen: error.message }));
+    if (value?.ok) return;
+    seen = value?.seen ?? seen;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`${message} within ${timeout} ms (saw ${seen})`);
+}
+
+/** A tab's button, described for an error: its tag, role, label and ARIA state. */
+const DESCRIBE = `(element) => element
+  ? \`<\${element.tagName.toLowerCase()} \${[...element.attributes].filter((a) => a.name === "role" || a.name.startsWith("aria-")).map((a) => \`\${a.name}="\${a.value}"\`).join(" ")}>\`
+  : "no element"`;
+
+/** Taps the tab named `tab` at `at`, once it is the button there, and waits until it is chosen. */
+async function tapTab(page, shot) {
+  const [x, y] = shot.tap.at;
+  const tab = JSON.stringify(shot.tap.tab);
+  await waitFor(
+    page,
+    `(() => {
+      const describe = ${DESCRIBE};
+      const hit = document.elementFromPoint(${x}, ${y});
+      const button = hit?.closest('[role="button"]');
+      return { ok: button?.getAttribute("aria-label") === ${tab}, seen: describe(button ?? hit) };
+    })()`,
+    TAP_TIMEOUT,
+    `${shot.name}: the ${tab} tab is not the button at (${x}, ${y})`,
+  );
+  await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+  await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+  await waitFor(
+    page,
+    `(() => {
+      const describe = ${DESCRIBE};
+      const buttons = [...document.querySelectorAll('[role="button"][aria-label=' + JSON.stringify(${tab}) + ']')];
+      return { ok: buttons.some((button) => button.getAttribute("aria-selected") === "true"), seen: buttons.map(describe).join(", ") || "no element" };
+    })()`,
+    TAP_TIMEOUT,
+    `${shot.name}: the tap at (${x}, ${y}) did not choose the ${tab} tab`,
+  );
+}
+
 async function shoot(page, base, shot) {
   const values = {
     "cupertino.page": shot.page,
@@ -300,9 +353,7 @@ async function shoot(page, base, shot) {
   await new Promise((resolve) => setTimeout(resolve, 1200));
   if (shot.tap) {
     // A finger on the tab bar: the chosen tab changes before the scroll.
-    const [x, y] = shot.tap;
-    await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
-    await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+    await tapTab(page, shot);
     await new Promise((resolve) => setTimeout(resolve, 600));
   }
   if (shot.context) {
