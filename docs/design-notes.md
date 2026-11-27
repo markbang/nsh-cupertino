@@ -371,3 +371,4 @@ do not treat the limit as slack.
 - **Waiting on the engine.** The real fix is upstream: a mip chain for shader pictures,
   or a pre-blurred backdrop input. No upstream issue is filed, and it is not being
   chased. Revisit when the engine gains either, or when asked.
+
