@@ -65,7 +65,7 @@ content, not an edge-to-edge band.
 | `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit's `MinimizeBehavior`: minimise on the way down and expand on the way up. |
 | `scrollOffset` | number | | The page's offset, fed from its `onScroll`; without it the bar never minimises. |
 | `minimized` | boolean | | Forces the state while set. |
-| `morph` | number | | Pins the minimise progress (0 bar, 1 pill) while set, for stills of the morph. |
+| `morph` | number | | Pins the minimise progress while set: 0 the bar, 1 the pill, values between hold the morph there with no spring. The way to drive the morph by hand (a gesture the app tracks, a still); it overrides `minimized` and the scroll. |
 | `material` | `"glass" \| "material" \| "single-blur"` | `"glass"` | The shader, the blur-only fill, or the shader's one-disc body without the web's two-scale layers (for comparing them). |
 | `onChange` | `{ value, index }` | | Another tab was chosen. |
 

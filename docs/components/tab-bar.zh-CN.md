@@ -57,7 +57,7 @@
 | `behavior` | `"on-scroll-down" \| "on-scroll-up" \| "never"` | `"on-scroll-down"` | UIKit 的 `MinimizeBehavior`：向下收起、向上展开。 |
 | `scrollOffset` | number | | 页面偏移，由页面的 `onScroll` 提供；不传则永不收起。 |
 | `minimized` | boolean | | 强制状态。 |
-| `morph` | number | | 设置时固定收起进度（0 为栏，1 为胶囊），用于形变的静帧。 |
+| `morph` | number | | 设置时固定收起进度：0 为栏，1 为胶囊，中间值让形变停在那里、没有弹簧。这是手动驱动形变的方式（应用自己跟踪的手势、静帧）；设置时覆盖 `minimized` 与滚动。 |
 | `material` | `"glass" \| "material" \| "single-blur"` | `"glass"` | 着色器、只用模糊的填充，或不带 Web 双尺度图层的着色器单圆盘主体（用于对照）。 |
 | `onChange` | `{ value, index }` | | 选择了另一个标签。 |
 
