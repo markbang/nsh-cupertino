@@ -259,8 +259,9 @@ pub struct GlassTabBarProps {
     /// Forces the bar minimized (or expanded) while set.
     pub minimized: Prop<Option<bool>>,
     /// Pins the minimise progress while set: 0 is the bar, 1 the pill, and the
-    /// values between hold the morph there, with no spring. For stills of the
-    /// morph's middle frames; it overrides `minimized` and the scroll.
+    /// values between hold the morph there, with no spring. The way to drive
+    /// the morph by hand (a gesture the app tracks itself, a still of a middle
+    /// frame); it overrides `minimized` and the scroll while set.
     pub morph: Prop<Option<f32>>,
     /// `"glass"` (the shader, the default), `"material"` (the blur-only fill
     /// of a platform without a GPU) or `"single-blur"` (the shader's own
@@ -422,10 +423,10 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         }
     });
     let anchor_node = anchor_value.animated_node();
-    // On the web, for every shader body (`single-blur` too, so the two can be
-    // compared at the same silhouette); the native morph is unchanged.
+    // Only where the layers can draw (the web): the native morph, and the
+    // one-disc body's (`single-blur`, the motion before the layers), are unchanged.
     let web = matches!(nsh_core::element::os(), nsh_core::platform::Os::Web);
-    let handover = if glass && web { HANDOVER } else { 0.0 };
+    let handover = if two_scale && web { HANDOVER } else { 0.0 };
     let morph = progress.interpolate(&[handover, 1.0], &[0.0, 1.0]);
     let carried = progress.interpolate(&[0.0, HANDOVER], &[1.0, 0.0]);
     let spec = crate::glass::GlassSpec::rounded(32.0)

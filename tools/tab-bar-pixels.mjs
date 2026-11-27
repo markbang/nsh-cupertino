@@ -694,7 +694,10 @@ for (const theme of THEMES) {
     const tag = String(Math.round(m * 100)).padStart(3, "0");
     for (const body of ["two", "single"]) {
       const image = luma(join(DIR, `tab-bar-fixture-morph-${body === "single" ? "single-" : ""}${theme}-${tag}.png`));
-      const edges = silhouetteEdges(silhouetteMorph(m), m);
+      // The one-disc body (`single-blur`) morphs as before the layers, with no
+      // hand-over: its silhouette follows the progress itself.
+      const shape = body === "two" ? silhouetteMorph(m) : m;
+      const edges = silhouetteEdges(shape, m);
       const profiles = profilesAt(image, ref, edges, ALONG, true);
       const { inside, outside } = jump(profiles, ALONG, [-9, -3], [2, 5]);
       const row = {
@@ -708,6 +711,8 @@ for (const theme of THEMES) {
         outside,
         jump: inside - outside,
       };
+      // The layers' box edge where the two-scale silhouette has left it: both
+      // renders are read at the same places.
       const box = boxEdges(silhouetteMorph(m), m);
       if (box.length) {
         const across = profilesAt(image, ref, box, ACROSS_BOX, false);
