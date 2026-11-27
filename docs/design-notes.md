@@ -414,11 +414,15 @@ do not treat the limit as slack.
   backdrop picture nsh paints, which leaves gradients, rotations and shadows out
   (see above). Over such content the ring can differ from the page for that
   time; the fixture's page is an image and text, which the picture holds.
-  The picture matches the page only on the pixel grid, so on the web, while the
-  layers can show, the bar's 6 pt drop moves in whole device pixels (18 steps at
-  3x); a fraction of a pixel off, the resampled picture differed from the page by
-  up to 5 levels rms on text (CI run 45997124152). The cover is opaque to 0.5 pt
-  past the layers' box, so their own pixel-wide edge never shows.
+  nsh redraws a shader a frame after the page moves, so a canvas that moved
+  would show that picture a frame late. On the web the two-scale bar therefore
+  keeps its canvas and layers still: its 6 pt drop is drawn inside the shader
+  (`GlassSpec::lowered`), while its shadow, tabs and pill drop themselves. Two
+  attempts measured why: moving the canvas left the ring's text off by up to 5
+  levels rms at a fraction of a pixel (CI run 45997124152), and dropping it by
+  whole pixels still left it a frame late, 6.7 levels off (CI run 45999666204).
+  The cover is opaque to 0.5 pt past the layers' box, so their own pixel-wide
+  edge never shows, and the shader's hand-over stays inside their box.
 - **The ghost layer's saturation is not measured.** The ghost carries the
   material's `saturate(2.1)` light / `saturate(1.4)` dark. CSS `saturate()` keeps
   Rec. 709 luma, and only luma was fitted (the fixture's backdrop is grey text),
