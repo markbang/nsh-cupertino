@@ -1692,6 +1692,40 @@ function TabBarFixtureExactPage() {
   );
 }
 
+// `"exact-tabs"`: the exact scene with a bar that has tabs, Me selected as in
+// the iOS reference frames, for filming a press and the minimised pill's icon.
+const fixtureTab = signal("me");
+
+function TabBarFixtureExactTabsPage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Scroll
+        style={{ position: "absolute", left: 0, top: 0, width: 402, height: 874 }}
+        onScroll={(event: { offset: { x: number; y: number } }) => fixtureOffset.set(event.offset.y)}
+      >
+        <View style={{ height: 60 }} />
+        <Image src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`} style={{ width: 402, height: 874 }} />
+        <View style={{ height: 600 }} />
+      </Scroll>
+      <View style={{ position: "absolute", left: 1, right: 1, top: 0, height: 866 }}>
+        <GlassTabBar
+          items={[
+            { value: "chats", title: "Chats", icon: "paperplane" },
+            { value: "spaces", title: "Spaces", icon: "square.grid.2x2" },
+            { value: "activity", title: "Activity", icon: "bell" },
+            { value: "me", title: "Me", icon: "person.crop.circle" },
+          ]}
+          value={fixtureTab()}
+          label="Fixture tabs"
+          material={fixtureBody()}
+          scrollOffset={fixtureOffset()}
+          onChange={(event: { value: string; index: number }) => fixtureTab.set(event.value)}
+        />
+      </View>
+    </View>
+  );
+}
+
 function TabBarFixtureScrollPage() {
   return (
     <View style={{ flex: 1 }}>
@@ -1710,6 +1744,7 @@ function TabBarFixtureScrollPage() {
 
 function TabBarFixturePage() {
   if (fixtureScrolls() === "exact") return <TabBarFixtureExactPage />;
+  if (fixtureScrolls() === "exact-tabs") return <TabBarFixtureExactTabsPage />;
   if (fixtureScrolls() === "1") return <TabBarFixtureScrollPage />;
   return (
     <View style={{ flex: 1 }}>
@@ -1784,7 +1819,7 @@ function App() {
     const seedMorph = await Storage.getItem("cupertino.morph");
     if (seedMorph) fixtureMorph.set(Number(seedMorph));
     const seedScroll = await Storage.getItem("cupertino.fixturescroll");
-    if (seedScroll === "1" || seedScroll === "exact") fixtureScrolls.set(seedScroll);
+    if (seedScroll === "1" || seedScroll === "exact" || seedScroll === "exact-tabs") fixtureScrolls.set(seedScroll);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     const seedFrame = await Storage.getItem("cupertino.menuframe");
     if (seedFrame) menuFrame.set(Number(seedFrame));

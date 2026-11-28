@@ -5,13 +5,22 @@ name: Film
 # artifact (MP4s at normal and quarter speed, 4-up stills, the frames and their
 # progress). Nothing is judged. Run it by hand:
 #
-#   gh workflow run film.yml --ref <branch>
+#   gh workflow run film.yml --ref <branch> [-f scene=tabs|bare]
+#
+# `scene`: `tabs` (the default) films the bar with four tabs and uploads
+# `tab-bar-film-tabs`; `bare` films the tabless fixture bar as `tab-bar-film`.
 #
 # It reads the caches CI saved (a miss fails, as on a pull request) and saves
 # none.
 
 on:
   workflow_dispatch:
+    inputs:
+      scene:
+        description: The bar to film
+        type: choice
+        options: [tabs, bare]
+        default: tabs
 
 permissions:
   contents: read
@@ -50,11 +59,14 @@ jobs:
         working-directory: examples/demo
         run: nsh package App.tsx --target web -o "$RUNNER_TEMP/web"
       - name: Film the tab bar
+        env:
+          SCENE: ${{ inputs.scene }}
         run: |
-          node tools/tab-bar-film.mjs --from "$RUNNER_TEMP/web" --out "$RUNNER_TEMP/film" \
+          node tools/tab-bar-film.mjs --from "$RUNNER_TEMP/web" --out "$RUNNER_TEMP/film" --scene "$SCENE" \
             --chrome "$(command -v google-chrome || command -v google-chrome-stable)"
+          find "$RUNNER_TEMP/film" -maxdepth 1 -type f -printf '%f %s\n' | sort
       - uses: actions/upload-artifact@v7
         with:
-          name: tab-bar-film
+          name: ${{ inputs.scene == 'bare' && 'tab-bar-film' || 'tab-bar-film-tabs' }}
           path: ${{ runner.temp }}/film
           if-no-files-found: error
