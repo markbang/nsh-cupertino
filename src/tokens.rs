@@ -1009,6 +1009,29 @@ pub mod bar {
         }
     }
 
+    /// The pane a press lifts over the glass tab bar, light: Cohub Mobile's
+    /// `--color-surface-pressed` (`global.css`), `#e6e1d8`. Its tab bar draws
+    /// it where there is no Liquid Glass, "a solid pane rather than a tint".
+    pub const PRESSED_PANE_LIGHT: u32 = 0xe6e1_d8ff;
+    /// Dark: `--color-surface-pressed`, `#3a3a3c`.
+    pub const PRESSED_PANE_DARK: u32 = 0x3a3a_3cff;
+    /// The pane's shadow, `--shadow-float` in both appearances:
+    /// `0 6px 20px rgba(0, 0, 0, 0.14)`. Offset and blur in points.
+    pub const PRESSED_PANE_SHADOW_Y: f32 = 6.0;
+    /// The shadow's blur.
+    pub const PRESSED_PANE_SHADOW_BLUR: f32 = 20.0;
+    /// The shadow's opacity.
+    pub const PRESSED_PANE_SHADOW_ALPHA: f32 = 0.14;
+
+    /// The pressed pane's fill for the appearance, packed `0xRRGGBBAA`.
+    pub const fn pressed_pane(dark: bool) -> u32 {
+        if dark {
+            PRESSED_PANE_DARK
+        } else {
+            PRESSED_PANE_LIGHT
+        }
+    }
+
     /// The opaque fill of Reduce Transparency, in levels: [`TwoScale::over`]
     /// the page, 255 × 0.33200 + 167.14 = 251.80 light, 36.58 dark.
     pub const fn reduced_level(dark: bool) -> f32 {

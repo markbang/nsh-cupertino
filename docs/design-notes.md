@@ -634,6 +634,13 @@ or the pull.
   - It lifts: lift springs to 1 on `dockLift` (250 ms, ratio 1). Lifted, it grows by `LENS_GROWTH_X` 11.5 pt and
     `LENS_GROWTH_Y` 10 pt on each side (size = base + 2 · growth · lift), and the glyph under it scales by
     1 + `LENS_MAGNIFY` 0.16 · lift. "Under it" is 1 − |lens − index|, clamped to 0.
+- **Two layers, the reference's path without Liquid Glass** (`FloatingTabBar` :409–410, :432–438). Both share the
+  travel and the growth, and both sit over the glass and under the tab items.
+  - The neutral capsule (the black overlay above) has opacity (1 − lift) · its collapse fade, so it fades out as
+    the capsule lifts.
+  - The lifted pane has opacity lift · the collapse fade. It is "a solid pane rather than a tint": the reference's
+    `bg-surface-pressed` (`#e6e1d8` light, `#3a3a3c` dark) with `shadow-float` (0 6 20, black at 0.14), both from
+    Cohub Mobile's `global.css` (`tokens::bar::PRESSED_PANE_*`). It is rounded to half its height.
 - **Release:**
   - swell springs back to 0 on `dockPress`;
   - lift goes back to 0 on `dockLift`, no earlier than `LIFT_MIN_MS` 230 ms after the press began;
@@ -642,13 +649,15 @@ or the pull.
 - **Duration springs:** for mass 1, stiffness = (2π / duration)², as `Spring::new` builds it: 246.7 for `dockTravel`
   and 631.7 for `dockLift`. The damping ratio is then applied.
 - **What differs from the reference:**
-  - The reference's lifted lens turns into clear Liquid Glass (native only). Ours stays the neutral capsule, with no
-    new glass layer.
+  - On iOS the reference's lifted lens is clear Liquid Glass. That is native only and not drawn here: no new glass
+    layer, only the pane.
   - The swell scales the tabs and the capsule but not the glass or its shadow. On the web the shader redraws a frame
     after its canvas moves (see the one-frame lag above), so a scaled canvas would show its picture a frame late. The
     shader is unchanged.
-  - Lifted and swollen, the capsule reaches past the glass, as the reference's lens does. Ours is drawn over the
-    page there, not merged into the glass.
-- **Reduce Motion:** no swell, lift or magnification. A press still moves the capsule, at once.
+  - Lifted and swollen, the pane reaches past the glass, as the reference's lens does, and stands over the page
+    there on its shadow.
+- **Reduce Motion:** no swell, lift or magnification, so the pane never shows. A press still moves the capsule, at
+  once.
 - **At rest:** once the press is released and has settled, the frame is identical to the frame before the press. The
-  capsule is laid out at the chosen tab and moved only by (lens − chosen) · tab width.
+  capsule is laid out at the chosen tab and moved only by (lens − chosen) · tab width. At lift 0 the pane's opacity
+  is 0 and the neutral capsule is as it was before the press existed.

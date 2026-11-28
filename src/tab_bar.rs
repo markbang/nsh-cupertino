@@ -329,9 +329,10 @@ pub enum GlassTabBarEvent {
 /// `UITabBarController.MinimizeBehavior`: the bar minimizes only when the app
 /// asks for it, and always comes back at the top of the page.
 ///
-/// A press swells the tabs, and the capsule travels to the pressed tab, lifts
-/// and magnifies its glyph; the tab is chosen on release. With Reduce Motion
-/// the capsule only moves.
+/// A press swells the tabs, and the capsule travels to the pressed tab and
+/// lifts: it grows, a solid pane takes the neutral capsule's place, and the
+/// glyph under it is magnified; the tab is chosen on release. With Reduce
+/// Motion the capsule only moves.
 #[component]
 pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl IntoElement {
     const HEIGHT: f32 = 64.0;
@@ -520,10 +521,12 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let chosen_icon_opacity = progress.interpolate(&[0.0, 0.001], &[1.0, 0.0]);
 
     // The press, as in `FloatingTabBar`: the capsule is one view on `lens`, a
-    // tab index, which travels to the pressed tab and back to the chosen one;
-    // `capsule_lift` grows it and magnifies the glyph under it, and `swell`
-    // scales the tabs and the capsule. The glass does not swell: its canvas
-    // would be redrawn a frame after it scaled (see `lowered` above).
+    // tab index, which travels to the pressed tab and back to the chosen one.
+    // `capsule_lift` grows it, fades the neutral capsule out and a solid pane
+    // in (the reference's lens without Liquid Glass), and magnifies the glyph
+    // under it; `swell` scales the tabs and the capsule. The glass does not
+    // swell: its canvas would be redrawn a frame after it scaled (see
+    // `lowered` above).
     let has_tabs = !values.is_empty();
     let pressed = signal(None::<usize>);
     let swell = animated_value(0.0);
@@ -591,6 +594,12 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     let capsule_scale_y = capsule_lift
         .mul(2.0 * press::LENS_GROWTH_Y / (HEIGHT - 8.0))
         .add(1.0);
+    let resting_opacity = capsule_opacity.mul(&capsule_lift.mul(-1.0).add(1.0));
+    let pane_opacity = capsule_lift.mul(&capsule_opacity);
+    let pane_shadow = Hsla {
+        a: tokens::bar::PRESSED_PANE_SHADOW_ALPHA,
+        ..rgba(0x0000_00ff).into()
+    };
     // As iOS draws it: a neutral capsule darker than the glass, in the tab's
     // box (`tokens::bar::capsule_alpha`).
     let capsule = move || {
@@ -627,7 +636,30 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                                     ..black
                                 }
                             })
-                            .bind_opacity(&capsule_opacity)
+                            .bind_opacity(&resting_opacity)
+                            .bind_transform(TransformKind::ScaleX, &capsule_scale_x)
+                            .bind_transform(TransformKind::ScaleY, &capsule_scale_y),
+                    )
+                    .child(
+                        // Lifted, "a solid pane rather than a tint", standing
+                        // off the bar on its float shadow.
+                        view()
+                            .absolute()
+                            .inset_0()
+                            .rounded_full()
+                            .bg(move || {
+                                let dark = nsh_core::element::dark();
+                                rgba(tokens::bar::pressed_pane(dark))
+                            })
+                            .shadow(vec![BoxShadow {
+                                offset_x: px(0.0),
+                                offset_y: px(tokens::bar::PRESSED_PANE_SHADOW_Y),
+                                blur: px(tokens::bar::PRESSED_PANE_SHADOW_BLUR),
+                                spread: px(0.0),
+                                color: pane_shadow.into(),
+                                inset: false,
+                            }])
+                            .bind_opacity(&pane_opacity)
                             .bind_transform(TransformKind::ScaleX, &capsule_scale_x)
                             .bind_transform(TransformKind::ScaleY, &capsule_scale_y),
                     ),
