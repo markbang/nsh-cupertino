@@ -1,0 +1,60 @@
+name: Film
+
+# A film of the tab bar's minimise and restore, for review: one web build of
+# the demo, `tools/tab-bar-film.mjs` for light and dark, and the `tab-bar-film`
+# artifact (MP4s at normal and quarter speed, 4-up stills, the frames and their
+# progress). Nothing is judged. Run it by hand:
+#
+#   gh workflow run film.yml --ref <branch>
+#
+# It reads the caches CI saved (a miss fails, as on a pull request) and saves
+# none.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: film-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NSH_VERSION: v0.5.0
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "4"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  film:
+    name: tab bar film
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          cache: cargo-demo-web
+          lock: ${{ hashFiles('examples/demo/Cargo.lock') }}
+          warm: "false"
+          apt: clang llvm libclang-dev ffmpeg fonts-dejavu-core
+          targets: wasm32-unknown-unknown
+          wasm-bindgen: "true"
+      - name: Package the demo for the web
+        working-directory: examples/demo
+        run: nsh package App.tsx --target web -o "$RUNNER_TEMP/web"
+      - name: Film the tab bar
+        run: |
+          node tools/tab-bar-film.mjs --from "$RUNNER_TEMP/web" --out "$RUNNER_TEMP/film" \
+            --chrome "$(command -v google-chrome || command -v google-chrome-stable)"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tab-bar-film
+          path: ${{ runner.temp }}/film
+          if-no-files-found: error

@@ -1,0 +1,226 @@
+#!/usr/bin/env node
+// A film of the tab bar's minimise and restore, for review: the pinned stills'
+// scene (`tab-bar-fixture`, `{theme}-a`, the exact scroll scene), the
+// two-scale body, frame by frame on the frozen page clock at 60 fps.
+//
+//   node tools/tab-bar-film.mjs --from <dir> --out <dir> [--scheme light|dark]
+//     [--chrome <path>]
+//
+// `--from` is what `nsh package App.tsx --target web -o <dir>` wrote for
+// `examples/demo`. The path, per theme: rest 0.5 s; a press held 0.2 s on the
+// bar's selected tab (the fixture bar has no tabs: then on the bar's body);
+// one wheel notch down (60 pt), until the spring rests, plus 0.5 s; minimised
+// 0.5 s; one notch back up, until it rests, plus 0.5 s. Writes, in `--out`:
+//
+//   frames/{theme}/NNNN.png       the bar band (402 × 174 pt from y 700) at 3x
+//   frames/{theme}/progress.json  each frame's progress (`PROGRESS`), the beats
+//   tab-bar-morph-{theme}.mp4, tab-bar-morph-{theme}-quarter.mp4
+//   tab-bar-morph-{theme}-4up.png, tab-bar-morph-4up.png (light above dark)
+//
+// Needs ffmpeg (with libx264 and drawtext) and the DejaVu Sans font.
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { CLOCK, IPHONE, PROGRESS, SCALE, STEP_MS, installFixtures, launch, openRecording, packageApp, serve } from "./glass-browser.mjs";
+
+const args = process.argv.slice(2);
+const arg = (name, fallback) => {
+  const index = args.indexOf(`--${name}`);
+  return index >= 0 ? args[index + 1] : fallback;
+};
+const FROM = arg("from", null);
+const OUT = arg("out", null);
+const CHROME = arg("chrome", process.env.CHROME ?? "google-chrome");
+const SCHEMES = arg("scheme", null) ? [arg("scheme")] : ["light", "dark"];
+
+const FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+/** The bar band with some page above it, in points. */
+const CLIP = { x: 0, y: 700, width: IPHONE[0], height: 174, scale: 1 };
+/** The wheel of the exact recording (`glass-shots.mjs`): over the scroll view, below the bar's container. */
+const WHEEL = [201, 870];
+const HOLD = 30;
+const PRESS = 12;
+/** A spring that has not rested after this many frames ends its beat anyway, and the json says so. */
+const CAP = 300;
+const WIDTH = 1080;
+
+function ffmpeg(...params) {
+  const run = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...params], { stdio: "inherit" });
+  if (run.error) throw new Error(`ffmpeg did not start (${run.error.message}): install it (apt-get install ffmpeg)`);
+  if (run.status !== 0) throw new Error(`ffmpeg ${params.join(" ")} exited with ${run.status}`);
+}
+
+const evaluate = (page, expression) =>
+  page.call("Runtime.evaluate", { expression, returnByValue: true }).then((result) => result.result.value);
+
+/** The point to press: the centre of the bar's selected tab, else of the bar's body (its shadow's box). */
+const PRESS_TARGET = `(() => {
+  const centre = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const all = [...document.querySelectorAll("#app *")];
+  const bar = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 7px 10px"));
+  const tab = document.querySelector('#app [role="button"][aria-selected="true"]');
+  if (tab) return { at: centre(tab), target: "selected tab " + JSON.stringify(tab.getAttribute("aria-label")) };
+  if (bar) return { at: centre(bar), target: "bar body (the bar has no tab buttons)" };
+  return null;
+})()`;
+
+async function film(page, base, scheme) {
+  const name = `tab-bar-film-${scheme}`;
+  const dir = join(OUT, "frames", scheme);
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  await openRecording(page, base, { name, scheme, scroll: "exact" });
+
+  const frames = [];
+  const beats = [];
+  let previous = null;
+  const frozen = await evaluate(page, "window.__nshClock.freeze()");
+  const capture = async (beat, step) => {
+    const k = frames.length;
+    const { t, ran } = step ? await evaluate(page, `window.__nshClock.step(${STEP_MS})`) : { t: frozen, ran: 0 };
+    const progress = await evaluate(page, PROGRESS);
+    const { data } = await page.call("Page.captureScreenshot", { format: "png", clip: CLIP });
+    writeFileSync(join(dir, `${String(k).padStart(4, "0")}.png`), Buffer.from(data, "base64"));
+    const same = data === previous;
+    previous = data;
+    frames.push({ k, t: t - frozen, ran, beat, progress });
+    return { k, data, same, progress };
+  };
+  const hold = async (beat, count) => {
+    const from = frames.length;
+    for (let i = 0; i < count; i++) await capture(beat, frames.length > 0);
+    beats.push({ beat, from, to: frames.length - 1 });
+  };
+  const readings = (progress) => [progress?.fromShadow, progress?.fromPill].filter((value) => typeof value === "number");
+  // Until the progress sits at `target` and the frame is the one before it,
+  // pixel for pixel; then half a second more.
+  const untilRest = async (beat, target) => {
+    const from = frames.length;
+    let restAt = null;
+    while (restAt === null && frames.length - from < CAP) {
+      const { k, same, progress } = await capture(beat, true);
+      const values = readings(progress);
+      if (same && values.length && values.every((value) => Math.abs(value - target) < 1e-3)) restAt = k;
+    }
+    for (let i = 0; i < HOLD; i++) await capture(beat, true);
+    beats.push({ beat, from, to: frames.length - 1, restAt: restAt ?? frames.length - 1 - HOLD, restBy: restAt === null ? `cap of ${CAP} frames` : "progress at target, frame unchanged" });
+  };
+  const wheel = async (deltaY) => {
+    // Real time passes for the scroll to land and reach the app; the app's frames do not.
+    await page.call("Input.dispatchMouseEvent", { type: "mouseWheel", x: WHEEL[0], y: WHEEL[1], deltaX: 0, deltaY });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  };
+
+  await hold("rest", HOLD);
+  const restFrame = previous;
+
+  const target = await evaluate(page, PRESS_TARGET);
+  if (!target) throw new Error(`${name}: no tab and no bar to press`);
+  const [x, y] = target.at;
+  await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+  const pressFrom = frames.length;
+  let differing = 0;
+  for (let i = 0; i < PRESS; i++) if ((await capture("press", true)).data !== restFrame) differing += 1;
+  await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+  beats.push({ beat: "press", from: pressFrom, to: frames.length - 1 });
+  const press = { at: [x, y], target: target.target, heldFrames: PRESS, framesDifferingFromRest: differing };
+  console.log(`  ${name}: press on the ${target.target} at (${x.toFixed(1)}, ${y.toFixed(1)}): ${differing} of ${PRESS} held frames differ from rest`);
+
+  await wheel(60);
+  await untilRest("minimise", 1);
+  await hold("minimised", HOLD);
+  await wheel(-60);
+  await untilRest("restore", 0);
+
+  for (const line of page.console.splice(0)) console.log(`  ${name}: page says: ${line.slice(0, 300)}`);
+  const beat = (which) => beats.find((b) => b.beat === which);
+  const value = (frame) => {
+    const values = readings(frame.progress);
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+  };
+  const drop = beat("minimise");
+  const read = frames.slice(drop.from, drop.restAt + 1).filter((frame) => value(frame) !== null);
+  if (!read.length) throw new Error(`${name}: no frame of the minimise has a progress (PROGRESS found neither the bar's shadow nor the pill)`);
+  const dropping = read.reduce((best, frame) => (Math.abs(value(frame) - 0.3) < Math.abs(value(best) - 0.3) ? frame : best));
+  const stills = { rest: beat("rest").to, dropping: dropping.k, minimised: drop.restAt, restored: beat("restore").restAt };
+  writeFileSync(
+    join(dir, "progress.json"),
+    JSON.stringify({ name, scheme, stepMs: STEP_MS, clip: CLIP, deviceScale: SCALE, wheel: WHEEL, press, beats, stills, frames }, null, 1),
+  );
+  for (const b of beats) console.log(`  ${name}: ${b.beat} frames ${b.from}-${b.to}${b.restAt === undefined ? "" : `, at rest from ${b.restAt} (${b.restBy})`}`);
+  return { dir, stills, progress: { dropping: value(dropping) } };
+}
+
+const SCALED = `scale=${WIDTH}:-2:flags=lanczos`;
+
+function encode(scheme, { dir, stills, progress }) {
+  const input = join(dir, "%04d.png");
+  const video = [`${SCALED}:out_color_matrix=bt709,format=yuv420p`];
+  const x264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-r", "60", "-movflags", "+faststart"];
+  ffmpeg("-framerate", "60", "-start_number", "0", "-i", input, "-vf", video.join(","), ...x264, join(OUT, `tab-bar-morph-${scheme}.mp4`));
+  // The same frames at 15 a second, shown 4 times each at 60.
+  ffmpeg("-framerate", "15", "-start_number", "0", "-i", input, "-vf", video.join(","), ...x264, join(OUT, `tab-bar-morph-${scheme}-quarter.mp4`));
+
+  const [bg, fg] = scheme === "dark" ? ["black", "white"] : ["white", "black"];
+  const panels = [
+    ["rest", stills.rest],
+    [`dropping ${progress.dropping.toFixed(2)}`, stills.dropping],
+    ["minimised", stills.minimised],
+    ["restored", stills.restored],
+  ];
+  const inputs = panels.flatMap(([, k]) => ["-i", join(dir, `${String(k).padStart(4, "0")}.png`)]);
+  const labelled = panels
+    .map(([label], i) => `[${i}:v]${SCALED},pad=iw:ih+80:0:80:color=${bg},drawtext=fontfile=${FONT}:text='${scheme} · ${label}':x=32:y=22:fontsize=40:fontcolor=${fg}[p${i}]`)
+    .join(";");
+  ffmpeg(...inputs, "-filter_complex", `${labelled};[p0][p1][p2][p3]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0`, "-frames:v", "1", join(OUT, `tab-bar-morph-${scheme}-4up.png`));
+}
+
+async function main() {
+  if (!FROM || !OUT) throw new Error("usage: node tools/tab-bar-film.mjs --from <web build> --out <dir> [--scheme light|dark]");
+  for (const scheme of SCHEMES) if (!["light", "dark"].includes(scheme)) throw new Error(`--scheme must be light or dark, not ${scheme}`);
+  if (!existsSync(FONT)) throw new Error(`no ${FONT}: install it (apt-get install fonts-dejavu-core)`);
+  mkdirSync(OUT, { recursive: true });
+  const work = mkdtempSync(join(tmpdir(), "film-build-"));
+  const built = packageApp(work, FROM);
+  await installFixtures(built);
+  const { server, port } = await serve(built);
+  const { child, profile, page } = await launch(CHROME);
+  const base = `http://127.0.0.1:${port}/`;
+  const filmed = {};
+  try {
+    await page.call("Page.enable");
+    await page.call("Runtime.enable");
+    await page.call("Network.enable");
+    await page.call("Network.setCacheDisabled", { cacheDisabled: true });
+    await page.call("Emulation.setDeviceMetricsOverride", { width: IPHONE[0], height: IPHONE[1], deviceScaleFactor: SCALE, mobile: true });
+    await page.call("Page.navigate", { url: base });
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await page.call("Page.addScriptToEvaluateOnNewDocument", { source: CLOCK });
+    for (const scheme of SCHEMES) filmed[scheme] = await film(page, base, scheme);
+  } finally {
+    child.kill();
+    server.close();
+    for (const dir of [profile, work]) {
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // A browser still closing its profile: the temp directory goes anyway.
+      }
+    }
+  }
+  for (const [scheme, result] of Object.entries(filmed)) encode(scheme, result);
+  if (filmed.light && filmed.dark) {
+    ffmpeg("-i", join(OUT, "tab-bar-morph-light-4up.png"), "-i", join(OUT, "tab-bar-morph-dark-4up.png"), "-filter_complex", "vstack=inputs=2", "-frames:v", "1", join(OUT, "tab-bar-morph-4up.png"));
+  }
+  for (const scheme of Object.keys(filmed)) {
+    const { frames } = JSON.parse(readFileSync(join(OUT, "frames", scheme, "progress.json"), "utf8"));
+    console.log(`${scheme}: ${frames.length} frames, ${(frames.length / 60).toFixed(2)} s at 60 fps`);
+  }
+}
+
+main().catch((error) => {
+  console.error(error.message ?? error);
+  process.exit(1);
+});
