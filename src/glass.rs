@@ -184,11 +184,12 @@ fn sd_silhouette(at: vec2f) -> f32 {
 // k is the kink's slope change the three samples imply: 1 on a capsule's
 // centre line, at least 0.48 on the lens axis of the minimise's frames 4-6,
 // at most 0.41 at a smooth extremum (a circle's centre line), which keeps the
-// central difference.
-fn sd_slope(below: f32, at: f32, above: f32, e: f32) -> f32 {
+// central difference. `straddles` is `sd_gradient`'s test that the stencil
+// sits across a kink at all.
+fn sd_slope(below: f32, at: f32, above: f32, e: f32, straddles: bool) -> f32 {
   let forward = above - at;
   let backward = at - below;
-  if (forward * backward < 0.0) {
+  if (straddles && forward * backward < 0.0) {
     let r = abs(forward + backward) / max(abs(forward), abs(backward));
     let k = abs(forward - backward) / e / (2.0 - r);
     if (k >= 0.45) {
@@ -198,10 +199,22 @@ fn sd_slope(below: f32, at: f32, above: f32, e: f32) -> f32 {
   return above - below;
 }
 
+// A distance field has a gradient of length 1 almost everywhere (the eikonal
+// equation); a central-difference gradient well below 1 means the stencil
+// straddles a kink, where the two sides' slopes cancel. 0.68 sits in the
+// measured gap: at most 0.567 at the lens tip of frames 4-6 (both renders),
+// at least 0.794 on a circle's centre line 0.5-0.83 pt from its centre,
+// where the slope test alone also fires (up to 0.639 at a capsule's cap
+// centre).
 fn sd_gradient(p: vec2f, at: f32) -> vec2f {
   let e = 0.6;
-  let gx = sd_slope(sd_silhouette(p - vec2f(e, 0.0)), at, sd_silhouette(p + vec2f(e, 0.0)), e);
-  let gy = sd_slope(sd_silhouette(p - vec2f(0.0, e)), at, sd_silhouette(p + vec2f(0.0, e)), e);
+  let left = sd_silhouette(p - vec2f(e, 0.0));
+  let right = sd_silhouette(p + vec2f(e, 0.0));
+  let up = sd_silhouette(p - vec2f(0.0, e));
+  let down = sd_silhouette(p + vec2f(0.0, e));
+  let straddles = length(vec2f(right - left, down - up)) / (2.0 * e) < 0.68;
+  let gx = sd_slope(left, at, right, e, straddles);
+  let gy = sd_slope(up, at, down, e, straddles);
   let g = vec2f(gx, gy);
   let l = length(g);
   return select(vec2f(0.0, -1.0), g / l, l > 1e-5);
