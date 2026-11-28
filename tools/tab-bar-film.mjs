@@ -38,6 +38,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { CLOCK, IPHONE, PROGRESS, SCALE, STEP_MS, installFixtures, launch, openRecording, packageApp, serve } from "./glass-browser.mjs";
+import { GEOMETRY, RIM_BAND, TOLERANCE, measurePress } from "./tab-bar-press-geometry.mjs";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -121,11 +122,12 @@ async function film(page, base, scheme) {
     const k = frames.length;
     const { t, ran } = step ? await evaluate(page, `window.__nshClock.step(${STEP_MS})`) : { t: frozen, ran: 0 };
     const progress = await evaluate(page, PROGRESS);
+    const geometry = SCENE === "tabs" ? await evaluate(page, GEOMETRY) : undefined;
     const { data } = await page.call("Page.captureScreenshot", { format: "png", clip: CLIP });
     writeFileSync(join(dir, `${String(k).padStart(4, "0")}.png`), Buffer.from(data, "base64"));
     const same = data === previous;
     previous = data;
-    frames.push({ k, t: t - frozen, ran, beat, progress });
+    frames.push({ k, t: t - frozen, ran, beat, progress, ...(geometry === undefined ? {} : { geometry }) });
     return { k, data, same, progress };
   };
   const hold = async (beat, count) => {
@@ -229,6 +231,18 @@ async function film(page, base, scheme) {
 
   for (const line of page.console.splice(0)) console.log(`  ${name}: page says: ${line.slice(0, 300)}`);
   const beat = (which) => beats.find((b) => b.beat === which);
+  // Each press's geometry, frame by frame (`tab-bar-press-geometry.mjs`).
+  const geometry = [];
+  for (const p of presses ?? []) {
+    const file = (k) => join(dir, `${String(k).padStart(4, "0")}.png`);
+    const { rows, summary } = measurePress(frames, file, CLIP, SCALE, p, beat(`press ${p.tab} ${p.pass}`));
+    p.geometry = summary;
+    geometry.push({ tab: p.tab, pass: p.pass, summary, rows });
+    console.log(
+      `  ${name}: geometry ${p.tab} ${p.pass}: ${summary.framesChecked} frames (${summary.framesWithPane} with the pane); max |glass − content| ${summary.maxGlassMinusContent} pt (glass ${summary.maxGlassSwell}, content ${summary.maxContentSwell}); lag in ${summary.lagFrames.length} frames; min clearance ${summary.minClearance} pt; pane ≤ ${summary.maxPaneHeight} pt tall, right ≤ ${summary.maxPaneRight}; flagged ${summary.flagged.length ? summary.flagged.join(" ") : "none"}`,
+    );
+  }
+  if (geometry.length) writeFileSync(join(dir, "press-geometry.json"), JSON.stringify({ band: RIM_BAND, tolerance: TOLERANCE, presses: geometry }, null, 1));
   const value = (frame) => {
     const values = readings(frame.progress);
     return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -254,7 +268,7 @@ async function film(page, base, scheme) {
         return { label: `${when} +${n}`, k };
       })
     : null;
-  return { dir, stills, strip, pressStrip, progress: { dropping: value(dropping) } };
+  return { dir, stills, strip, pressStrip, progress: { dropping: value(dropping) }, geometry: presses?.map((p) => ({ tab: p.tab, pass: p.pass, ...p.geometry })) ?? null };
 }
 
 const SCALED = `scale=${WIDTH}:-2:flags=lanczos`;
@@ -340,6 +354,14 @@ async function main() {
   for (const scheme of Object.keys(filmed)) {
     const { frames } = JSON.parse(readFileSync(join(OUT, "frames", `${framesPrefix}${scheme}`, "progress.json"), "utf8"));
     console.log(`${scheme}: ${frames.length} frames, ${(frames.length / 60).toFixed(2)} s at 60 fps`);
+  }
+  const table = Object.entries(filmed).flatMap(([scheme, { geometry }]) => (geometry ?? []).map((g) => ({ scheme, ...g })));
+  if (table.length) {
+    console.log("press geometry (pt): scheme tab pass | frames | max |glass − content| | lag frames | min clearance | pane height | flagged");
+    for (const g of table) {
+      console.log(`  ${g.scheme} ${g.tab} ${g.pass} | ${g.framesChecked} | ${g.maxGlassMinusContent} | ${g.lagFrames.length} | ${g.minClearance} | ${g.maxPaneHeight} | ${g.flagged.length}`);
+    }
+    writeFileSync(join(OUT, "press-geometry.json"), JSON.stringify({ band: RIM_BAND, tolerance: TOLERANCE, presses: table }, null, 1));
   }
 }
 
