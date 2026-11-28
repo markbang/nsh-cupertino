@@ -990,6 +990,48 @@ pub mod bar {
         if dark { DARK } else { LIGHT }
     }
 
+    /// The glass tab bar's selection capsule, light: a black overlay of this
+    /// opacity, 1 − after / before. Over flat rows at the bar's end, the
+    /// capsule takes the luma from 246.8 to 217.9 in the iOS 27 simulator's
+    /// `tab-bar-light-a.png` (`/fixtures`, as `tools/tab-bar-pixels.mjs`
+    /// fetches it): 0.117. The browser composites sRGB-encoded values, so a
+    /// black overlay scales them, and the luma, by 1 − α.
+    pub const CAPSULE_ALPHA_LIGHT: f32 = 1.0 - 217.9 / 246.8;
+    /// Dark: 48.8 to 43.4 in `tab-bar-dark-a.png`, 0.111.
+    pub const CAPSULE_ALPHA_DARK: f32 = 1.0 - 43.4 / 48.8;
+
+    /// The selection capsule's opacity for the appearance.
+    pub const fn capsule_alpha(dark: bool) -> f32 {
+        if dark {
+            CAPSULE_ALPHA_DARK
+        } else {
+            CAPSULE_ALPHA_LIGHT
+        }
+    }
+
+    /// The pane a press lifts over the glass tab bar, light: Cohub Mobile's
+    /// `--color-surface-pressed` (`global.css`), `#e6e1d8`. Its tab bar draws
+    /// it where there is no Liquid Glass, "a solid pane rather than a tint".
+    pub const PRESSED_PANE_LIGHT: u32 = 0xe6e1_d8ff;
+    /// Dark: `--color-surface-pressed`, `#3a3a3c`.
+    pub const PRESSED_PANE_DARK: u32 = 0x3a3a_3cff;
+    /// The pane's shadow, `--shadow-float` in both appearances:
+    /// `0 6px 20px rgba(0, 0, 0, 0.14)`. Offset and blur in points.
+    pub const PRESSED_PANE_SHADOW_Y: f32 = 6.0;
+    /// The shadow's blur.
+    pub const PRESSED_PANE_SHADOW_BLUR: f32 = 20.0;
+    /// The shadow's opacity.
+    pub const PRESSED_PANE_SHADOW_ALPHA: f32 = 0.14;
+
+    /// The pressed pane's fill for the appearance, packed `0xRRGGBBAA`.
+    pub const fn pressed_pane(dark: bool) -> u32 {
+        if dark {
+            PRESSED_PANE_DARK
+        } else {
+            PRESSED_PANE_LIGHT
+        }
+    }
+
     /// The opaque fill of Reduce Transparency, in levels: [`TwoScale::over`]
     /// the page, 255 × 0.33200 + 167.14 = 251.80 light, 36.58 dark.
     pub const fn reduced_level(dark: bool) -> f32 {

@@ -600,3 +600,64 @@ Values from run 46081346295, 2026-11-27:
 
 The four time criteria pass, as do increased contrast (0.00 levels from the one-disc body) and the two-scale checks
 against iOS.
+
+### The glass tab bar's selection capsule
+
+iOS draws the chosen tab in a neutral capsule that is darker than the glass, in both themes. The accent stays on the
+glyph and the label (Cohub Mobile's `FloatingTabBar`: "iOS selects with a neutral capsule; the accent stays on the
+glyph and label"). The measurement below is the capsule's effect on luma at the bar's end, over rows where the
+backdrop is flat. Ours comes from film v3, run 46117274134, rest frame 29, against the same region of the bare film.
+iOS comes from the iOS 27 simulator frames `tab-bar-{light,dark}-a.png` in `/fixtures`, the ones
+`tools/tab-bar-pixels.mjs` fetches.
+
+| | iOS 27 | before (white, α 0x99 light / 0x24 dark) |
+| --- | --- | --- |
+| light | 246.8 → 217.9 (−28.9) | 247.9 → 251.4 (+3.5, barely visible) |
+| dark | 48.8 → 43.4 (−5.5) | 50.4 → 75.2 (+24.8, a lighter grey block) |
+
+The capsule is now a black overlay of α = 1 − after / before: 1 − 217.9 / 246.8 = 0.117 light and
+1 − 43.4 / 48.8 = 0.111 dark (`tokens::bar::CAPSULE_ALPHA_LIGHT` / `_DARK`). The browser composites sRGB-encoded
+values, so a black overlay scales each channel, and the luma, by 1 − α. The capsule keeps its shape (the tab's box,
+radius 26) and its fade over progress 0–0.12. It ignored Reduce Transparency and increased contrast before, and it
+still does. Darkening the fill by 11 % leaves the blue glyph and label, and the secondary-label grey, legible over
+the opaque bar and the near-opaque increased-contrast glass.
+
+### The glass tab bar's press
+
+The press follows Cohub Mobile's `FloatingTabBar.tsx` and the springs in its `motion.ts`, without the drag, the jelly
+or the pull.
+
+- **Touch down on a tab:**
+  - The bar swells by `BAR_SWELL` 0.049: x and y scale by 1 + 0.049 · swell, and swell springs to 1 on `dockPress`
+    (mass 1, stiffness 311, damping ratio 0.593).
+  - The capsule (the reference's lens) travels to the pressed tab on `dockTravel` (400 ms, ratio 0.85).
+  - It lifts: lift springs to 1 on `dockLift` (250 ms, ratio 1). Lifted, it grows by `LENS_GROWTH_X` 11.5 pt and
+    `LENS_GROWTH_Y` 10 pt on each side (size = base + 2 · growth · lift), and the glyph under it scales by
+    1 + `LENS_MAGNIFY` 0.16 · lift. "Under it" is 1 − |lens − index|, clamped to 0.
+- **Two layers, the reference's path without Liquid Glass** (`FloatingTabBar` :409–410, :432–438). Both share the
+  travel and the growth, and both sit over the glass and under the tab items.
+  - The neutral capsule (the black overlay above) has opacity (1 − lift) · its collapse fade, so it fades out as
+    the capsule lifts.
+  - The lifted pane has opacity lift · the collapse fade. It is "a solid pane rather than a tint": the reference's
+    `bg-surface-pressed` (`#e6e1d8` light, `#3a3a3c` dark) with `shadow-float` (0 6 20, black at 0.14), both from
+    Cohub Mobile's `global.css` (`tokens::bar::PRESSED_PANE_*`). It is rounded to half its height.
+- **Release:**
+  - swell springs back to 0 on `dockPress`;
+  - lift goes back to 0 on `dockLift`, no earlier than `LIFT_MIN_MS` 230 ms after the press began;
+  - the tab is chosen on release, as before. A release outside the tab, or a cancel, chooses nothing, and the
+    capsule travels back to the chosen tab.
+- **Duration springs:** for mass 1, stiffness = (2π / duration)², as `Spring::new` builds it: 246.7 for `dockTravel`
+  and 631.7 for `dockLift`. The damping ratio is then applied.
+- **What differs from the reference:**
+  - On iOS the reference's lifted lens is clear Liquid Glass. That is native only and not drawn here: no new glass
+    layer, only the pane.
+  - The swell scales the tabs and the capsule but not the glass or its shadow. On the web the shader redraws a frame
+    after its canvas moves (see the one-frame lag above), so a scaled canvas would show its picture a frame late. The
+    shader is unchanged.
+  - Lifted and swollen, the pane reaches past the glass, as the reference's lens does, and stands over the page
+    there on its shadow.
+- **Reduce Motion:** no swell, lift or magnification, so the pane never shows. A press still moves the capsule, at
+  once.
+- **At rest:** once the press is released and has settled, the frame is identical to the frame before the press. The
+  capsule is laid out at the chosen tab and moved only by (lens − chosen) · tab width. At lift 0 the pane's opacity
+  is 0 and the neutral capsule is as it was before the press existed.
