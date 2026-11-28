@@ -186,9 +186,10 @@ async function film(page, base, scheme) {
     let unchanged = 0;
     while (unchanged < PRESS_REST && frames.length - releasedFrom < CAP) unchanged = (await capture(beat, true)).same ? unchanged + 1 : 0;
     const restAt = frames.length - 1 - unchanged;
+    const restBy = unchanged >= PRESS_REST ? `${PRESS_REST} frames unchanged` : `cap of ${CAP} frames`;
     const settled = previous;
     for (let i = 0; i < PRESS_AFTER; i++) await capture(beat, true);
-    beats.push({ beat, from, to: frames.length - 1, restAt });
+    beats.push({ beat, from, to: frames.length - 1, restAt, restBy });
     const after = await evaluate(page, TAB_TARGET(tab));
     const entry = {
       tab,
@@ -200,7 +201,7 @@ async function film(page, base, scheme) {
       held: [from, releasedFrom - 1],
       releasedFrom,
       restAt,
-      restBy: unchanged >= PRESS_REST ? `${PRESS_REST} frames unchanged` : `cap of ${CAP} frames`,
+      restBy,
       heldFrames: PRESS,
       framesDifferingFromBefore: differing,
       settledIdenticalToBefore: settled === before,
