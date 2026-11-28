@@ -22,8 +22,6 @@ const TAB_LABEL_SIZE: f32 = 10.0;
 mod press {
     use nsh_core::prelude::Spring;
 
-    /// The bar's swell under a press: it scales by 1 + 0.049 · swell.
-    pub const BAR_SWELL: f32 = 0.049;
     /// How far the lifted capsule grows past its resting size on each side,
     /// in points (iOS 27's 94 × 53 lens grows to 117 × 73).
     pub const LENS_GROWTH_X: f32 = 11.5;
@@ -31,13 +29,12 @@ mod press {
     pub const LENS_GROWTH_Y: f32 = 10.0;
     /// The glyph under the lifted capsule scales by 1 + 0.16 · lift.
     pub const LENS_MAGNIFY: f32 = 0.16;
+    /// The glass's rim the lifted capsule keeps clear of, in points: the
+    /// hairline's 1.1 pt (`glass.rs`, `line`) and the rim light core's 1.4 pt
+    /// fall (`core`). The capsule stops this far inside the silhouette.
+    pub const RIM_BAND: f32 = 2.5;
     /// A quick tap keeps the capsule lifted this long from the press, in ms.
     pub const LIFT_MIN_MS: f32 = 230.0;
-
-    /// `dockPress`: mass 1, stiffness 311, damping ratio 0.593.
-    pub fn dock_press() -> Spring {
-        crate::overlay::spring(0.593, 311.0)
-    }
 
     /// `dockTravel`: 400 ms, damping ratio 0.85. A duration spring of mass 1
     /// has stiffness (2π / duration)², 246.7 ([`Spring::new`]).
@@ -329,8 +326,8 @@ pub enum GlassTabBarEvent {
 /// `UITabBarController.MinimizeBehavior`: the bar minimizes only when the app
 /// asks for it, and always comes back at the top of the page.
 ///
-/// A press swells the tabs, and the capsule travels to the pressed tab and
-/// lifts: it grows, a solid pane takes the neutral capsule's place, and the
+/// A press sends the capsule to the pressed tab and lifts it: it grows, inside
+/// the glass's rim, a solid pane takes the neutral capsule's place, and the
 /// glyph under it is magnified; the tab is chosen on release. With Reduce
 /// Motion the capsule only moves.
 #[component]
@@ -524,12 +521,11 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     // tab index, which travels to the pressed tab and back to the chosen one.
     // `capsule_lift` grows it, fades the neutral capsule out and a solid pane
     // in (the reference's lens without Liquid Glass), and magnifies the glyph
-    // under it; `swell` scales the tabs and the capsule. The glass does not
-    // swell: its canvas would be redrawn a frame after it scaled (see
-    // `lowered` above).
+    // under it. Nothing swells: the shader draws a frame after the page, so a
+    // glass that swelled with the tabs would trail them by a frame and let
+    // them cross its rim (`docs/design-notes.md`, the press).
     let has_tabs = !values.is_empty();
     let pressed = signal(None::<usize>);
-    let swell = animated_value(0.0);
     let capsule_lift = animated_value(0.0);
     let lens = animated_value(initial as f32);
     // The chosen index, which the capsule's box is laid out at: `lens` moves
@@ -563,7 +559,6 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
             return;
         }
         press_began.replace(Some(now()));
-        swell.spring(1.0, press::dock_press());
         capsule_lift.spring(1.0, press::dock_lift());
     };
     let press_up = move |index: usize| {
@@ -572,11 +567,9 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         }
         let began = press_began.replace(None);
         if reduce_motion() {
-            swell.set(0.0);
             capsule_lift.set(0.0);
             return;
         }
-        swell.spring(0.0, press::dock_press());
         let held = began.map_or(f32::MAX, |began| (now() - began).as_secs_f32() * 1000.0);
         let run = Animation::sequence([
             Animation::delay((press::LIFT_MIN_MS - held).max(0.0)),
@@ -585,20 +578,101 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         run.start();
         lowering.replace(Some(run));
     };
-    let swell_scale = swell.mul(press::BAR_SWELL).add(1.0);
-    let capsule_x = lens.sub(&resting).mul(&pitch);
-    let capsule_scale_x = capsule_lift
-        .mul(2.0 * press::LENS_GROWTH_X)
-        .div(&pitch)
-        .add(1.0);
-    let capsule_scale_y = capsule_lift
-        .mul(2.0 * press::LENS_GROWTH_Y / (HEIGHT - 8.0))
-        .add(1.0);
+    // The lifted capsule's rect, clamped to the glass inset by the rim band,
+    // in the capsule row's points (the row starts 4 pt inside the bar and is
+    // count · pitch wide and 56 tall). Each side grows by the lens's growth
+    // less what it would put past the band: `relu` is 0 exactly while it
+    // fits, so at rest every scale is exactly 1.
+    let relu = |x: AnimatedNode| x.interpolate(&[0.0, 1.0e4], &[0.0, 1.0e4]);
+    let grow_x = capsule_lift.mul(press::LENS_GROWTH_X);
+    let grow_y = capsule_lift.mul(press::LENS_GROWTH_Y);
+    let past_right = lens
+        .add(1.0)
+        .mul(&pitch)
+        .add(&grow_x)
+        .sub(&pitch.mul(count as f32))
+        .add(press::RIM_BAND - 4.0);
+    let past_left = grow_x.sub(&lens.mul(&pitch)).add(press::RIM_BAND - 4.0);
+    let grow_right = grow_x.sub(&relu(past_right));
+    let grow_left = grow_x.sub(&relu(past_left));
+    let half_y = (HEIGHT - 8.0) / 2.0;
+    let past_top = grow_y.add(half_y - HEIGHT / 2.0 + press::RIM_BAND);
+    let grow_up = grow_y.sub(&relu(past_top));
+    let capsule_x = lens
+        .sub(&resting)
+        .mul(&pitch)
+        .add(&grow_right.sub(&grow_left).mul(0.5));
+    let capsule_scale_x = grow_right.add(&grow_left).div(&pitch).add(1.0);
+    let capsule_scale_y = grow_up.div(half_y).add(1.0);
+    // The pane is a capsule of radius = its own half height: two discs and
+    // the bar between their centres, each scaled evenly, so its ends stay
+    // circles inside the bar's rounded ends.
+    let pane_radius = grow_up.add(half_y);
+    let pane_disc = pane_radius.div(half_y);
+    let pane_reach = pitch
+        .mul(0.5)
+        .add(&grow_right.add(&grow_left).mul(0.5))
+        .sub(&pane_radius);
+    let pane_span = pane_reach.mul(2.0).div(&pitch);
     let resting_opacity = capsule_opacity.mul(&capsule_lift.mul(-1.0).add(1.0));
     let pane_opacity = capsule_lift.mul(&capsule_opacity);
     let pane_shadow = Hsla {
         a: tokens::bar::PRESSED_PANE_SHADOW_ALPHA,
         ..rgba(0x0000_00ff).into()
+    };
+    // Lifted, "a solid pane rather than a tint", standing off the bar on its
+    // float shadow; one layer, so the pieces' overlaps never show.
+    let pane_fill = move || {
+        let dark = nsh_core::element::dark();
+        rgba(tokens::bar::pressed_pane(dark))
+    };
+    let disc = move |side: f32| {
+        view()
+            .absolute()
+            .inset_0()
+            .items_center()
+            .justify_center()
+            .bind_translate_x(&pane_reach.mul(side))
+            .child(
+                view()
+                    .size(px(HEIGHT - 8.0))
+                    .rounded_full()
+                    .bg(pane_fill)
+                    .bind_scale(&pane_disc),
+            )
+    };
+    let pane = move || {
+        view()
+            .absolute()
+            .inset_0()
+            .bind_opacity(&pane_opacity)
+            .child(
+                view()
+                    .absolute()
+                    .inset_0()
+                    .rounded_full()
+                    .bg(rgba(0x0000_0001))
+                    .shadow(vec![BoxShadow {
+                        offset_x: px(0.0),
+                        offset_y: px(tokens::bar::PRESSED_PANE_SHADOW_Y),
+                        blur: px(tokens::bar::PRESSED_PANE_SHADOW_BLUR),
+                        spread: px(0.0),
+                        color: pane_shadow.into(),
+                        inset: false,
+                    }])
+                    .bind_transform(TransformKind::ScaleX, &capsule_scale_x)
+                    .bind_transform(TransformKind::ScaleY, &pane_disc),
+            )
+            .child(
+                view()
+                    .absolute()
+                    .inset_0()
+                    .bg(pane_fill)
+                    .bind_transform(TransformKind::ScaleX, &pane_span)
+                    .bind_transform(TransformKind::ScaleY, &pane_disc),
+            )
+            .child(disc(-1.0))
+            .child(disc(1.0))
     };
     // As iOS draws it: a neutral capsule darker than the glass, in the tab's
     // box (`tokens::bar::capsule_alpha`).
@@ -640,29 +714,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                             .bind_transform(TransformKind::ScaleX, &capsule_scale_x)
                             .bind_transform(TransformKind::ScaleY, &capsule_scale_y),
                     )
-                    .child(
-                        // Lifted, "a solid pane rather than a tint", standing
-                        // off the bar on its float shadow.
-                        view()
-                            .absolute()
-                            .inset_0()
-                            .rounded_full()
-                            .bg(move || {
-                                let dark = nsh_core::element::dark();
-                                rgba(tokens::bar::pressed_pane(dark))
-                            })
-                            .shadow(vec![BoxShadow {
-                                offset_x: px(0.0),
-                                offset_y: px(tokens::bar::PRESSED_PANE_SHADOW_Y),
-                                blur: px(tokens::bar::PRESSED_PANE_SHADOW_BLUR),
-                                spread: px(0.0),
-                                color: pane_shadow.into(),
-                                inset: false,
-                            }])
-                            .bind_opacity(&pane_opacity)
-                            .bind_transform(TransformKind::ScaleX, &capsule_scale_x)
-                            .bind_transform(TransformKind::ScaleY, &capsule_scale_y),
-                    ),
+                    .child(pane()),
             )
     };
 
@@ -960,7 +1012,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                         .h_full()
                         .flex_row()
                         .items_center()
-                        .when(has_tabs, |v| v.bind_scale(&swell_scale).child(capsule()))
+                        .when(has_tabs, |v| v.child(capsule()))
                         .child(tabs),
                 )
                 .when(lowered, |v| v.bind_translate_y(&lift)),
