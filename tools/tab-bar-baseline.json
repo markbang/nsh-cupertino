@@ -1,5 +1,5 @@
 {
-  "$comment": "Known deviations of tools/tab-bar-pixels.mjs: a criterion over its limit that is listed here, with a value not worse than the listed one by more than 0.005, is reported KNOWN instead of failing; it is never counted as a pass. The baseline only tightens: when the script prints \"tighten\", lower the value or remove the entry. A commit that raises a value or adds an entry must give the reason in the pull request description. Names are the labels the script prints; values and limits are as printed in the run named.",
+  "$comment": "Known deviations of tools/tab-bar-pixels.mjs: a criterion over its limit that is listed here, with a value not worse than the listed one by more than 0.005, is reported KNOWN instead of failing; it is never counted as a pass. The baseline only tightens: when the script prints \"tighten\", lower the value or remove the entry. A commit that raises a value or adds an entry must give the reason in the pull request description. Entries marked \"temporary\" in their reason are removed when the reference is aligned. Names are the labels the script prints; values and limits are as printed in the run named.",
   "items": [
     {
       "item": "frame light 02 (t 33.3 ms, progress 0.1365): box edge jump",
@@ -27,18 +27,18 @@
     },
     {
       "item": "frame light 11 (t 183.3 ms, progress 0.9608): step",
-      "value": 25.42,
-      "limit": 24.75,
-      "measured": "2026-11-27",
-      "run": 46081346295,
+      "value": 25.35,
+      "limit": 24.7,
+      "measured": "2026-11-28",
+      "run": 46109340067,
       "reason": "the disc's edge beside the pill's edge at (175.0, 820.3), a separate defect, cause not found; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
     },
     {
       "item": "frame light 11 (t 183.3 ms, progress 0.9608): ramp",
-      "value": 25.42,
-      "limit": 24.75,
-      "measured": "2026-11-27",
-      "run": 46081346295,
+      "value": 25.35,
+      "limit": 24.7,
+      "measured": "2026-11-28",
+      "run": 46109340067,
       "reason": "as the light 11 step; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
     },
     {
@@ -66,11 +66,27 @@
       "reason": "the layers' box top, 218 profiles; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
     },
     {
+      "item": "frame dark 05 (t 83.3 ms, progress 0.5191): ramp",
+      "value": 35.51,
+      "limit": 33.15,
+      "measured": "2026-11-28",
+      "run": 46109340067,
+      "reason": "temporary, pending alignment of sampling: when the reference and the measured frame get the same treatment (same fractional resample and phase), delete this entry; it is not a permanent exemption. A sampling difference, not a rendering defect: the one-disc reference is low-passed vertically by its fractional DOM drop, while the two-scale drop is drawn on pixel centres. The probe change exposed the reference: on main the one-disc frame's ramp for frames 5-10 read the old disc's edge, not the glass (47.78, 39.16, 44.14, 36.54, 40.29, 66.52 against 27.09, 28.28, 22.26, 28.53, 19.39, 62.00 on #54), which had lifted the limit. Resampled and phase-compensated: 30.85. This item: x 209 (68 profiles, 1 over; neighbours 31.4 and 21.4; the one-disc column x 209 reads 22.41). On main it was not over the limit outside the disc (disc-free two-scale 32.61 at x 273, 0.54 under 33.15), and x 209 lay under the old disc (alpha 0.446, about 19.95): removing the disc makes it visible, it is not a gap hidden on main. Fraction 0.343; phase alone spans 23.9-37.9 two-scale against 17.0-32.5 one-disc at that column; resampled 36.95, compensated 30.85; two-scale-only terms 0.0. Numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame dark 07 (t 116.7 ms, progress 0.7315): ramp",
+      "value": 35.33,
+      "limit": 33.15,
+      "measured": "2026-11-28",
+      "run": 46109340067,
+      "reason": "temporary, pending alignment of sampling: when the reference and the measured frame get the same treatment (same fractional resample and phase), delete this entry; it is not a permanent exemption. A sampling difference, not a rendering defect: the one-disc reference is low-passed vertically by its fractional DOM drop, while the two-scale drop is drawn on pixel centres. The probe change exposed the reference: on main the one-disc frame's ramp for frames 5-10 read the old disc's edge, not the glass (47.78, 39.16, 44.14, 36.54, 40.29, 66.52 against 27.09, 28.28, 22.26, 28.53, 19.39, 62.00 on #54), which had lifted the limit. Resampled and phase-compensated: 32.12. This item: x 160 (a one-sample notch, 42 profiles, 1 over; neighbour 19.2) reads 35.33 on main too (|main - #54| = 0.0 in its window, outside the disc). On main it passed only because the one-disc frame's disc edge (44.14 at x 222) lifted the limit to 46.54; against the end-frame limit 33.15 it is over by 2.18. Fraction 0.167; resampled 32.85, compensated 32.12; two-scale-only terms <= 3.4 levels. Numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
       "item": "frame dark 11 (t 183.3 ms, progress 0.9608): ramp",
-      "value": 67.28,
-      "limit": 65.95,
-      "measured": "2026-11-27",
-      "run": 46081346295,
+      "value": 66.26,
+      "limit": 65.02,
+      "measured": "2026-11-28",
+      "run": 46109340067,
       "reason": "as the light 11 step: two-scale rim about 8 % brighter at every sampling phase; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
     }
   ]
