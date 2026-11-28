@@ -477,8 +477,15 @@ against the shader's one-disc body. These are the limits that check met.
   - **Pixel evidence:** on dark frames where the edge is measurable, the edge detected in the pixels lies 0.12–0.39
     pt from the k − 1 model and 6–15 pt from the model at frame k's progress (runs 46039755135 and 46045745728).
 - **Pill occlusion.** The minimised pill is a CSS capsule (50 × 64 pt, page-coloured at α 0.92 light / 0.86 dark)
-  over the glass. Its edge lies about 6.4 pt outside the glass disc's. From frame 10 on, every scan line over a flat
-  backdrop crosses it, so the glass's edge cannot be measured there.
+  over the glass. Its fill, hairline and shadow show only at the end: opacity 0 up to progress 0.75, then smoothstep
+  to 1 at progress 1. Before that the circle is the glass's own shrinking silhouette. Reduce Transparency's opaque bar
+  has no silhouette, so there the disc still fades in on the progress. Once the disc shows, its edge lies about 6.4 pt
+  outside the glass disc's, and a scan line over a flat backdrop that crosses it cannot measure the glass's edge.
+- **One glyph.** Every frame shows exactly one chosen glyph. For progress > 0 the tab's own icon hides and the pill's
+  glyph takes its place. The glyph starts on the tab's icon (27.5 pt, 4 − 8 · anchor pt across and 7.5 pt up; the
+  6 pt lift moves both) and travels into the circle, scaling to 24 pt, by clamp01(progress / 0.45). The other tabs
+  (icon, label, badge) fade over progress 0–0.35, the chosen label and badge over 0–0.3 and the selection capsule
+  over 0–0.12, as in Cohub Mobile's `FloatingTabBar` (:409, :539–546). Restoring runs the same curves backwards.
 - **Grain.** In light the glass's edge steps 3–4 levels per third of a point, as much as the shader's grain inside
   the body, so the steepest step is often in the grain.
 - **Hairline rounding.** In light the edge is a bright hairline, not a step. Its two flanks differ by about 1 level,
@@ -524,7 +531,7 @@ against the shader's one-disc body. These are the limits that check met.
     - no item went from ok to FAIL; two margins shrank by 0.05 and 0.07;
     - the time criteria, increased contrast (0.00 levels), the iOS checks and Reduce Transparency are unchanged.
 
-**Known deviations.** Nine criteria stay over their limits. Judged on the geometry the shader draws (silhouette at
+**Known deviations.** Eleven criteria stay over their limits. Judged on the geometry the shader draws (silhouette at
 frame k − 1's progress, each bar's own drop), with the limits unchanged (the larger of the two-scale end frames and
 the one-disc frame of the same index, + 1.98 light / 2.40 dark).
 
@@ -572,6 +579,24 @@ Values from run 46081346295, 2026-11-27:
     runs 32.69–55.00 two-scale and 24.17–45.34 one-disc, and the two ranges overlap.
   - **Without resampling they agree:** in frame 4 the one-disc drop is 7.060 px (fraction 0.06), and the two
     renders measure 41.52 against 41.48.
+- **Tightened (run 46109340067, 2026-11-28):** light 11 step 25.42 → 25.35 (limit 24.70), light 11 ramp
+  25.42 → 25.35 (limit 24.70), dark 11 ramp 67.28 → 66.26 (limit 65.02).
+- **Dark 5 and dark 7 ramps are temporary known items** (run 46109340067, 2026-11-28; limit 33.15 = end frame 30.75
+  + 2.40). They are a sampling difference, not a rendering defect. The one-disc reference is low-passed vertically by
+  its fractional DOM drop, while the two-scale drop is drawn on pixel centres. The entries go once both get the same
+  fractional resample and phase.
+  - **What the probe change exposed:** on main the one-disc frame's ramp for frames 5–10 read the old disc's edge,
+    not the glass: 47.78, 39.16, 44.14, 36.54, 40.29, 66.52, against 27.09, 28.28, 22.26, 28.53, 19.39, 62.00 on
+    PR #54. That lifted the limit.
+  - **Dark 7 (35.33):** x 160, a one-sample notch (42 profiles, 1 over; neighbour 19.2). It reads 35.33 on main
+    too (|main − #54| = 0.0 in its window, outside the disc). On main it passed only because the one-disc disc edge
+    (44.14 at x 222) lifted the limit to 46.54; against 33.15 it is over by 2.18. Fraction 0.167; resampled 32.85,
+    phase-compensated 32.12; two-scale-only terms ≤ 3.4 levels.
+  - **Dark 5 (35.51):** x 209 (68 profiles, 1 over; neighbours 31.4 and 21.4; the one-disc column reads 22.41).
+    It was not over the limit on main outside the disc (disc-free two-scale 32.61 at x 273, 0.54 under 33.15), and
+    on main x 209 lay under the old disc (α 0.446, about 19.95). Removing the disc makes it visible; it is not a gap
+    hidden on main. Fraction 0.343; phase alone spans 23.9–37.9 two-scale against 17.0–32.5 one-disc at that column;
+    resampled 36.95, phase-compensated 30.85; two-scale-only terms 0.0.
 
 The four time criteria pass, as do increased contrast (0.00 levels from the one-disc body) and the two-scale checks
 against iOS.

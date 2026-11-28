@@ -108,7 +108,7 @@ async function film(page, base, scheme) {
     for (let i = 0; i < count; i++) await capture(beat, frames.length > 0);
     beats.push({ beat, from, to: frames.length - 1 });
   };
-  const readings = (progress) => [progress?.fromShadow, progress?.fromPill].filter((value) => typeof value === "number");
+  const readings = (progress) => [progress?.fromShadow, progress?.fromLift].filter((value) => typeof value === "number");
   // Until the progress sits at `target` and the frame is the one before it,
   // pixel for pixel; then half a second more.
   const untilRest = async (beat, target) => {
@@ -159,7 +159,7 @@ async function film(page, base, scheme) {
   };
   const drop = beat("minimise");
   const read = frames.slice(drop.from, drop.restAt + 1).filter((frame) => value(frame) !== null);
-  if (!read.length) throw new Error(`${name}: no frame of the minimise has a progress (PROGRESS found neither the bar's shadow nor the pill)`);
+  if (!read.length) throw new Error(`${name}: no frame of the minimise has a progress (PROGRESS found no bar shadow)`);
   const dropping = read.reduce((best, frame) => (Math.abs(value(frame) - 0.3) < Math.abs(value(best) - 0.3) ? frame : best));
   const stills = { rest: beat("rest").to, dropping: dropping.k, minimised: drop.restAt, restored: beat("restore").restAt };
   const nearest = (p) => read.reduce((best, frame) => (Math.abs(value(frame) - p) < Math.abs(value(best) - p) ? frame : best));

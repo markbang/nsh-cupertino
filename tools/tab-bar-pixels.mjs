@@ -1020,11 +1020,11 @@ function judgeFrames(theme, ref, measure) {
   const one = meta(`tab-bar-exact-single-${theme}`);
   const ends = [measure["two-0"], measure["two-1"]];
   const progressOf = (frame, name) => {
-    const { fromShadow, fromPill } = frame.progress ?? {};
-    if (typeof fromShadow !== "number" || typeof fromPill !== "number") {
+    const { fromShadow, fromLift } = frame.progress ?? {};
+    if (typeof fromShadow !== "number" || typeof fromLift !== "number") {
       throw new Error(`${name} frame ${frame.k}: no progress recorded (${JSON.stringify(frame.progress)})`);
     }
-    return { p: fromShadow, agree: Math.abs(fromShadow - fromPill) };
+    return { p: fromShadow, agree: Math.abs(fromShadow - fromLift) };
   };
   const summary = { judged: 0, failing: [], worst: null };
   const proof = { theme, rows: [] };
@@ -1037,7 +1037,7 @@ function judgeFrames(theme, ref, measure) {
     check(
       `${tag}: the progress is known`,
       agree <= 0.01 && Math.abs(p - pOne) <= 0.01,
-      `shadow and pill agree within ${f(agree, 4)}; the one-disc frame's progress ${f(pOne, 4)} (both ≤ 0.01)`,
+      `shadow's opacity and drop agree within ${f(agree, 4)}; the one-disc frame's progress ${f(pOne, 4)} (both ≤ 0.01)`,
     );
     const name = String(k).padStart(3, "0");
     const imageTwo = lumaClip(join(motion, `tab-bar-exact-${theme}-${name}.png`));

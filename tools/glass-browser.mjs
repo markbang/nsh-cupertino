@@ -246,10 +246,16 @@ export const CLOCK = `(() => {
 /** The frame step of the recordings: 60 frames a second. */
 export const STEP_MS = 1000 / 60;
 
-// The minimise progress the page shows: 1 minus the effective opacity of the
-// bar's shadow (`tab_bar.rs`, bound to 1 - progress) and the effective opacity
-// of the minimised pill's disc (bound to progress), each the product of the
-// opacities from the view up to the app's root. Two readings of one value.
+/** The bar's drop as it minimises, in points (`tab_bar.rs`, 6 · progress). */
+export const LIFT_PT = 6;
+
+// The minimise progress the page shows, read twice off the bar's shadow
+// (`tab_bar.rs`): 1 minus its effective opacity (bound to 1 - progress), and
+// its drop over LIFT_PT, the sum of the translateY from it up to the app's
+// root (bound to LIFT_PT · progress on the shadow itself with the two-scale
+// body, on the bar without). Two readings of one value, neither of them the
+// disc's: `disc` is the minimised disc's effective opacity, a curve of the
+// progress that `tab_bar.rs` owns, recorded beside them.
 export const PROGRESS = `(() => {
   const all = [...document.querySelectorAll("#app *")];
   const effective = (el) => {
@@ -257,9 +263,22 @@ export const PROGRESS = `(() => {
     for (let n = el; n && n.id !== "app"; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
     return o;
   };
+  const dropped = (el) => {
+    let y = 0;
+    for (let n = el; n && n.id !== "app"; n = n.parentElement) {
+      const style = getComputedStyle(n);
+      if (style.transform !== "none") y += new DOMMatrixReadOnly(style.transform).m42;
+      if (style.translate !== "none") y += Number.parseFloat(style.translate.split(" ")[1] ?? "0");
+    }
+    return y;
+  };
   const shadow = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 7px 10px"));
-  const pill = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 5px 12px"));
-  return { fromShadow: shadow ? 1 - effective(shadow) : null, fromPill: pill ? effective(pill) : null };
+  const disc = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 5px 12px"));
+  return {
+    fromShadow: shadow ? 1 - effective(shadow) : null,
+    fromLift: shadow ? dropped(shadow) / ${LIFT_PT} : null,
+    disc: disc ? effective(disc) : null,
+  };
 })()`;
 
 /**
