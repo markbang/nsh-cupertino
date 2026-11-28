@@ -26,6 +26,9 @@ All notable changes to `nsh-cupertino`. The format follows
 
 ### Fixed
 
+- **`GlassTabBar`'s pressed pane stays inside the glass.** A press no longer
+  swells the tabs, and the lifted pane stops 2.5 pt inside the glass's rim, at
+  most 59 pt tall, so the bar's outline and hairline stay continuous.
 - **Interactive glass shows its backdrop.** A press bound the lens to 1.0 at
   rest and 2.4 held instead of `LENS` times that, so `GlassButton`, the
   `GlassMenu` button and `Glass interactive` drew the backdrop at their centre
