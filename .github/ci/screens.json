@@ -56,7 +56,7 @@
   ],
   "docsOnly": ["docs/**", "**/*.md"],
   "glassShots": {
-    "glass": ["glass", "glass-rows", "glass-calibration"],
+    "glass": ["glass", "glass-rows", "glass-calibration", "tab-bar-fixture"],
     "contextmenu": ["contextmenu"]
   }
 }

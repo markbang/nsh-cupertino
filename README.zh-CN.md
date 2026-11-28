@@ -237,7 +237,7 @@ cd .. && node tools/site-check.mjs --url http://127.0.0.1:4173/nsh-cupertino/
 CI（`.github/workflows/ci.yml`）：fmt、clippy `-D warnings`、测试、主题漂移检查、
 演示应用的 `nsh check` 与 `nsh test`、Web 打包、把截图发布到 `screenshots` 分支的截图任务，
 以及站点自身的检查、测试、Web 打包与无头运行。`pages.yml` 在每次推送到 `main`
-和每个 tag 上把站点部署到 GitHub Pages。拉取请求只拍它改动到的页面，缓存未命中即失败（改了 lock 文件时加 `deps` 标签）；Android 模拟器在每晚、手动触发或带 `android` 标签时运行。
+和每个 `v*` tag 时构建站点，但只从 `main` 或手动运行部署到 GitHub Pages：tag 的运行只构建、不部署。拉取请求只拍它改动到的页面，缓存未命中即失败（改了 lock 文件时加 `deps` 标签）；Android 模拟器在每晚、手动触发或带 `android` 标签时运行。
 
 ## 许可
 

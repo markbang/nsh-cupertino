@@ -10,7 +10,11 @@
 // read from the iOS 27 reference (`docs/design-notes.md`): the structure under
 // the glass survives, dark glass is lighter than its backdrop, the rim
 // refracts, both ends of the light axis catch it alike, and the sheen is
-// smooth rather than banded.
+// smooth rather than banded. Then it runs the tab bar's own checks on the same
+// directory: `tools/tab-bar-pixels.mjs` (the two-scale body against iOS 27, the
+// morph's middle frames, increased contrast) and `tools/tab-bar-motion.mjs` (the
+// minimise in time, `motion/`). CI's glass-pixels job runs this file.
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -190,11 +194,7 @@ for (const scheme of ["light", "dark"]) {
   );
 }
 
-if (failures.length) {
-  console.error(`${failures.length} check(s) failed`);
-  process.exit(1);
-}
-console.log("the material refracts, keeps its backdrop's structure and catches the light");
+if (!failures.length) console.log("the material refracts, keeps its backdrop's structure and catches the light");
 
 // The minimised pill follows the chosen tab. Two stills of the same page, one
 // with Inbox chosen and one with Settings chosen after mount: the pill's icon
@@ -382,3 +382,26 @@ console.log("the material refracts, keeps its backdrop's structure and catches t
     );
   }
 }
+
+// Every section's failures fail the run, after the tab bar's tools have run too.
+let status = 0;
+if (failures.length) {
+  console.error(`${failures.length} check(s) failed: ${failures.join("; ")}`);
+  status = 1;
+}
+for (const [tool, toolArgs] of [
+  ["tab-bar-pixels.mjs", ["--dir", DIR]],
+  ["tab-bar-motion.mjs", ["--dir", join(DIR, "motion")]],
+  // Report only: pinned stills against the frames of a real minimise.
+  ["tab-bar-frames.mjs", ["--dir", DIR]],
+  // Report only: the cover over the layers against the one-disc frames.
+  ["tab-bar-cover.mjs", ["--dir", DIR]],
+]) {
+  console.log(`\n== ${tool}`);
+  const run = spawnSync(process.execPath, [join(root, "tools", tool), ...toolArgs], { stdio: "inherit" });
+  if (run.status !== 0) {
+    console.error(`${tool} failed (exit ${run.status ?? run.signal})`);
+    status = 1;
+  }
+}
+process.exit(status);

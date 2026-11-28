@@ -278,8 +278,9 @@ Actions (`.github/workflows/ci.yml`, `android-ui.yml`); `pages.yml` publishes th
 CI (`.github/workflows/ci.yml`): fmt, clippy `-D warnings`, tests, the theme
 drift check, `nsh check` + `nsh test` of the demo, the web package, a screenshot
 job that publishes the captures to the `screenshots` branch, and the site's own
-check, tests, web build and headless run. `pages.yml` deploys the site to GitHub
-Pages on every push to `main` and on every tag. A pull request runs only the screens it touches and fails on a cache miss (label it `deps` when it changes a lock file); the Android emulator runs nightly, by hand, or with the `android` label.
+check, tests, web build and headless run. `pages.yml` builds the site on every
+push to `main` and on every `v*` tag, and deploys it to GitHub Pages only from
+`main` or a manual run: a tag's run builds without deploying. A pull request runs only the screens it touches and fails on a cache miss (label it `deps` when it changes a lock file); the Android emulator runs nightly, by hand, or with the `android` label.
 
 ## License
 

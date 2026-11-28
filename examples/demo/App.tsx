@@ -7,7 +7,9 @@
 // `cupertino.contrast` and `cupertino.appearance` — `open(entry, { storage })`
 // in a test, or the app's own storage elsewhere.
 import {
+  Image,
   Keyboard,
+  Scroll,
   ShaderEffect,
   type JSX,
   mount,
@@ -106,7 +108,7 @@ const menuCloseFrame = signal<number | undefined>(undefined);
 const presses = new Count();
 const pressCount = signal(0);
 
-const PAGE_IDS = ["gallery", "glass-calibration", "glass-rows", ...PAGES.map((entry) => entry.id)];
+const PAGE_IDS = ["gallery", "glass-calibration", "glass-rows", "tab-bar-fixture", ...PAGES.map((entry) => entry.id)];
 
 function titleOf(id: string): string {
   return PAGES.find((entry) => entry.id === id)?.title ?? "Cupertino";
@@ -1647,6 +1649,87 @@ function GlassRowsPage() {
   );
 }
 
+// The iOS 27 tab-bar fixture's backdrop under our bar, for
+// `tools/tab-bar-pixels.mjs`: the reference frame without the bar
+// (`tab-bar-ref-<theme>-<frame>.png`, fetched at CI time and served next to the
+// build by `tools/glass-shots.mjs`) fills a 402 × 874 pt screen at 3x, pixel
+// for pixel, and the bar sits where iOS's does: x 21–381 pt, and our 64 pt
+// centred on iOS's 62 pt (791–853), so 790–854. The bar has no tabs: the
+// measurement reads the material between iOS's tab items.
+const fixtureFrame = signal("light-a");
+// `"glass"`, or `"single-blur"` for the shader's own one-disc body.
+const fixtureBody = signal("glass");
+// The minimise progress the bar is pinned at (`morph`), for the morph's middle
+// frames; unset, the bar is expanded.
+const fixtureMorph = signal<number | undefined>(undefined);
+// The recording of a minimise (`tools/glass-shots.mjs`, `--record`): the same
+// backdrop in a page that scrolls, and the bar minimising as it does for a user.
+// `"1"`: the scrolling page above; `"exact"`: the still's own scene in a scroll
+// view, for comparing the recording's frames with the pinned stills.
+const fixtureScrolls = signal("");
+const fixtureOffset = signal(0);
+
+// The pinned stills' scene, scrolling: a 60 pt spacer above the fixture image,
+// so that after the user's 60 pt scroll the image lies at y 0 as on the still
+// page, and the bar in the still page's own container. The scroll is fed to
+// the bar, which minimises as it does for a user. Scroll at y 866-874: the
+// bar's container covers the rest and would take the wheel.
+function TabBarFixtureExactPage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Scroll
+        style={{ position: "absolute", left: 0, top: 0, width: 402, height: 874 }}
+        onScroll={(event: { offset: { x: number; y: number } }) => fixtureOffset.set(event.offset.y)}
+      >
+        <View style={{ height: 60 }} />
+        <Image src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`} style={{ width: 402, height: 874 }} />
+        <View style={{ height: 600 }} />
+      </Scroll>
+      <View style={{ position: "absolute", left: 1, right: 1, top: 0, height: 866 }}>
+        <GlassTabBar items={[]} label="Fixture tabs" material={fixtureBody()} scrollOffset={fixtureOffset()} />
+      </View>
+    </View>
+  );
+}
+
+function TabBarFixtureScrollPage() {
+  return (
+    <View style={{ flex: 1 }}>
+      <NavPage
+        title="Fixture"
+        material="glass"
+        onScroll={(event: { offset: number }) => fixtureOffset.set(event.offset)}
+      >
+        <Image src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`} style={{ width: 402, height: 874 }} />
+        <View style={{ height: 600 }} />
+      </NavPage>
+      <GlassTabBar items={[]} label="Fixture tabs" material={fixtureBody()} scrollOffset={fixtureOffset()} />
+    </View>
+  );
+}
+
+function TabBarFixturePage() {
+  if (fixtureScrolls() === "exact") return <TabBarFixtureExactPage />;
+  if (fixtureScrolls() === "1") return <TabBarFixtureScrollPage />;
+  return (
+    <View style={{ flex: 1 }}>
+      <Image
+        src={`fixtures/tab-bar-ref-${fixtureFrame()}.png`}
+        style={{ position: "absolute", left: 0, top: 0, width: 402, height: 874 }}
+      />
+      <View style={{ position: "absolute", left: 1, right: 1, top: 0, height: 866 }}>
+        <GlassTabBar
+          items={[]}
+          label="Fixture tabs"
+          behavior="never"
+          material={fixtureBody()}
+          morph={fixtureMorph()}
+        />
+      </View>
+    </View>
+  );
+}
+
 function CurrentPage() {
   const id = page();
   if (id === "gallery") return <Gallery />;
@@ -1665,6 +1748,7 @@ function CurrentPage() {
   if (id === "glass") return <GlassPage />;
   if (id === "glass-calibration") return <GlassCalibrationPage />;
   if (id === "glass-rows") return <GlassRowsPage />;
+  if (id === "tab-bar-fixture") return <TabBarFixturePage />;
   if (id === "sheet") return <SheetPage />;
   if (id === "actionsheet") return <ActionSheetPage />;
   if (id === "alert") return <AlertPage />;
@@ -1693,6 +1777,14 @@ function App() {
     const seedOverlay = await Storage.getItem("cupertino.overlay");
     const seedGlass = await Storage.getItem("cupertino.glass");
     if (seedGlass) glassMode.set(seedGlass);
+    const seedFixture = await Storage.getItem("cupertino.fixture");
+    if (seedFixture) fixtureFrame.set(seedFixture);
+    const seedBody = await Storage.getItem("cupertino.barbody");
+    if (seedBody) fixtureBody.set(seedBody);
+    const seedMorph = await Storage.getItem("cupertino.morph");
+    if (seedMorph) fixtureMorph.set(Number(seedMorph));
+    const seedScroll = await Storage.getItem("cupertino.fixturescroll");
+    if (seedScroll === "1" || seedScroll === "exact") fixtureScrolls.set(seedScroll);
     if (seedOverlay) overlaySeed.set(seedOverlay);
     const seedFrame = await Storage.getItem("cupertino.menuframe");
     if (seedFrame) menuFrame.set(Number(seedFrame));

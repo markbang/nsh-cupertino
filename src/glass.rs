@@ -70,8 +70,10 @@ struct Uniforms {
   body: f32,
   shadow_offset: f32,
   shadow_sigma: f32,
-  pad2: f32,
-  pad3: f32,
+  two_scale_tint: f32,
+  two_scale_alpha: f32,
+  two_scale_amount: f32,
+  lowered: f32,
 }
 
 // A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
@@ -162,7 +164,10 @@ fn sd_shape(p: vec2f) -> f32 {
 
 // The floating bar's minimized silhouette: a small pill around the selected
 // tab, blended into the bar's own as `morph` runs.
-fn sd_silhouette(p: vec2f) -> f32 {
+fn sd_silhouette(at: vec2f) -> f32 {
+  // `lowered` drops the silhouette inside the canvas (a web tab bar that keeps
+  // its canvas still, `GlassSpec::lowered`).
+  let p = at - vec2f(0.0, uniforms.lowered);
   let d = sd_shape(p);
   if (uniforms.morph <= 0.0 || uniforms.min_radius <= 0.0) {
     return d;
@@ -172,10 +177,44 @@ fn sd_silhouette(p: vec2f) -> f32 {
   return mix(d, min, clamp(uniforms.morph, 0.0, 1.0));
 }
 
-fn sd_gradient(p: vec2f) -> vec2f {
+// The difference across one axis from the SDF at −e, 0 and +e: the central
+// difference, except on a kink (a capsule's centre line, which the minimise
+// carries into the lens tip), where the one-sided slopes have opposite signs
+// and the central one cancels; there the steeper side, at the same scale.
+// k is the kink's slope change the three samples imply: 1 on a capsule's
+// centre line, at least 0.48 on the lens axis of the minimise's frames 4-6,
+// at most 0.41 at a smooth extremum (a circle's centre line), which keeps the
+// central difference. `straddles` is `sd_gradient`'s test that the stencil
+// sits across a kink at all.
+fn sd_slope(below: f32, at: f32, above: f32, e: f32, straddles: bool) -> f32 {
+  let forward = above - at;
+  let backward = at - below;
+  if (straddles && forward * backward < 0.0) {
+    let r = abs(forward + backward) / max(abs(forward), abs(backward));
+    let k = abs(forward - backward) / e / (2.0 - r);
+    if (k >= 0.45) {
+      return 2.0 * select(backward, forward, abs(forward) > abs(backward));
+    }
+  }
+  return above - below;
+}
+
+// A distance field has a gradient of length 1 almost everywhere (the eikonal
+// equation); a central-difference gradient well below 1 means the stencil
+// straddles a kink, where the two sides' slopes cancel. 0.68 sits in the
+// measured gap: at most 0.567 at the lens tip of frames 4-6 (both renders),
+// at least 0.794 on a circle's centre line 0.5-0.83 pt from its centre,
+// where the slope test alone also fires (up to 0.639 at a capsule's cap
+// centre).
+fn sd_gradient(p: vec2f, at: f32) -> vec2f {
   let e = 0.6;
-  let gx = sd_silhouette(p + vec2f(e, 0.0)) - sd_silhouette(p - vec2f(e, 0.0));
-  let gy = sd_silhouette(p + vec2f(0.0, e)) - sd_silhouette(p - vec2f(0.0, e));
+  let left = sd_silhouette(p - vec2f(e, 0.0));
+  let right = sd_silhouette(p + vec2f(e, 0.0));
+  let up = sd_silhouette(p - vec2f(0.0, e));
+  let down = sd_silhouette(p + vec2f(0.0, e));
+  let straddles = length(vec2f(right - left, down - up)) / (2.0 * e) < 0.68;
+  let gx = sd_slope(left, at, right, e, straddles);
+  let gy = sd_slope(up, at, down, e, straddles);
   let g = vec2f(gx, gy);
   let l = length(g);
   return select(vec2f(0.0, -1.0), g / l, l > 1e-5);
@@ -251,6 +290,19 @@ fn shade(uv: vec2f) -> vec4f {
   let p = uv * size - size * 0.5;
   let sdf = sd_silhouette(p);
   let coverage = clamp(0.5 - sdf, 0.0, 1.0) * clamp(uniforms.reveal, 0.0, 1.0);
+  // The web tab bar's two-scale layers keep the bar's box while they carry any
+  // of the body (`two_scale_amount` > 0), and the silhouette may have shrunk
+  // inside it: there this canvas draws the page itself over them, from the
+  // backdrop picture (which leaves the layers out), so no layer shows outside
+  // the glass. Opaque to 0.5 pt past their box, so their own edge, a pixel
+  // wide, is covered whole; then a 1 pt ramp to nothing over the page.
+  var ring = 0.0;
+  if (uniforms.two_scale_alpha > 0.0 && uniforms.two_scale_amount > 0.0 && uniforms.morph > 0.0) {
+    ring = clamp(1.5 - sd_shape(p), 0.0, 1.0);
+  }
+  if (coverage <= 0.0 && ring > 0.0) {
+    return vec4f(backdrop_at(p).rgb, ring);
+  }
   if (coverage <= 0.0) {
     // The drop shadow lives in the margin around the shape: the shape lowered
     // by 6 pt, blurred over 9. Above and to the sides of the glass, the page
@@ -276,7 +328,26 @@ fn shade(uv: vec2f) -> vec4f {
   let inside = -sdf;
   let t = clamp(inside / max(uniforms.bevel, 0.5), 0.0, 1.0);
   let rim = 1.0 - t;
-  let normal = sd_gradient(p);
+
+  // The web tab bar's two-scale body (`GlassSpec::two_scale`, tokens `bar`):
+  // the ghost and the frost are CSS backdrop layers under this canvas, so the
+  // body here is the measured tint alone, at `two_scale_alpha` over them.
+  // `hand` gives the body to the layers between 1.5 and 6 pt inside the edge,
+  // past the hairline, the rim light's core and the rim's shade, which stay
+  // the glass's; `two_scale_amount` (1 expanded, 0 minimised, on its own
+  // clock) crossfades it with the shader's own body while the layers stay
+  // whole under it.
+  var hand = 0.0;
+  if (uniforms.two_scale_alpha > 0.0) {
+    // Only over the layers: a lowered silhouette leaves their box at its foot.
+    let over = min(inside, -sd_shape(p));
+    hand = smoothstep(1.5, 6.0, over) * clamp(uniforms.two_scale_amount, 0.0, 1.0);
+  }
+  if (hand >= 1.0) {
+    return vec4f(vec3f(uniforms.two_scale_tint), coverage * uniforms.two_scale_alpha);
+  }
+
+  let normal = sd_gradient(p, sdf);
 
   // The lens: a paraxial lens of 1.24 over `thickness` shifts the picture at
   // the rim by (n - 1) * thickness * slope; a press also magnifies the sheet.
@@ -343,7 +414,7 @@ fn shade(uv: vec2f) -> vec4f {
   let core = exp(-max(inside - 0.7, 0.0) / 1.4);
   let tail = exp(-max(inside - 0.7, 0.0) / 7.0);
   rgb = rgb + vec3f(1.0) * uniforms.rim_light * lobe * ease * (0.30 * core + 0.05 * tail);
-  let along = clamp(0.5 + 0.5 * dot(p / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
+  let along = clamp(0.5 + 0.5 * dot((p - vec2f(0.0, uniforms.lowered)) / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
   rgb = rgb + vec3f(1.0) * select(uniforms.specular, 0.0, flat) * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
   // The hairline: the backdrop at its own position, darkened; strongest at
@@ -359,7 +430,28 @@ fn shade(uv: vec2f) -> vec4f {
   // at the ends of the light axis.
   rgb = rgb + vec3f(1.0) * line * ease * (0.18 + 0.35 * axis);
 
-  return vec4f(clamp(rgb, vec3f(0.0), vec3f(1.0)), coverage);
+  let surface = clamp(rgb, vec3f(0.0), vec3f(1.0));
+  if (hand <= 0.0) {
+    return over_ring(surface, coverage, coverage, ring, p);
+  }
+  // Over the layers L the canvas must show
+  // hand·(β·tint + (1 − β)·L) + (1 − hand)·surface: alpha 1 − hand·(1 − β)
+  // and the straight colour that gives it.
+  let beta = uniforms.two_scale_alpha;
+  let opacity = 1.0 - hand * (1.0 - beta);
+  let colour = (hand * beta * vec3f(uniforms.two_scale_tint) + (1.0 - hand) * surface) / opacity;
+  return over_ring(clamp(colour, vec3f(0.0), vec3f(1.0)), coverage * opacity, coverage, ring, p);
+}
+
+// The glass (`rgb` at `alpha`, its silhouette covering `coverage` of the
+// pixel) over the page drawn in the ring outside it (`ring`).
+fn over_ring(rgb: vec3f, alpha: f32, coverage: f32, ring: f32, p: vec2f) -> vec4f {
+  let cover = ring * (1.0 - coverage);
+  if (cover <= 0.0) {
+    return vec4f(rgb, alpha);
+  }
+  let a = alpha + cover;
+  return vec4f((rgb * alpha + backdrop_at(p).rgb * cover) / max(a, 1e-4), min(a, 1.0));
 }
 "#;
 
@@ -520,6 +612,9 @@ pub struct GlassSpec {
     body: Option<Body>,
     soft_shadow: Option<(f32, f32)>,
     shadow_amount: Option<AnimatedNode>,
+    two_scale: bool,
+    two_scale_amount: Option<AnimatedNode>,
+    lowered: Option<AnimatedNode>,
 }
 
 /// A menu's flat body ([`GlassSpec::menu_body`]).
@@ -568,6 +663,9 @@ impl GlassSpec {
             body: None,
             soft_shadow: None,
             shadow_amount: None,
+            two_scale: false,
+            two_scale_amount: None,
+            lowered: None,
         }
     }
 
@@ -707,6 +805,32 @@ impl GlassSpec {
     /// shader, whatever the GPU can do: the "material" side of a comparison.
     pub fn material_only(mut self, only: bool) -> Self {
         self.material_only = only;
+        self
+    }
+
+    /// The tab bar's two-scale body ([`tokens::bar`]) where [`two_scale_active`]
+    /// holds: the shader draws the measured tint over [`two_scale_layers`],
+    /// which must sit right under it, and keeps its own rim. Elsewhere, and as
+    /// the bar minimises, the shader's own body.
+    pub(crate) fn two_scale(mut self, on: bool) -> Self {
+        self.two_scale = on;
+        self
+    }
+
+    /// How much of the body the two-scale layers carry, 0 to 1, as an animated
+    /// value: the shader crossfades its own body in as it falls, and while it
+    /// is above 0 covers the layers wherever the minimising silhouette has
+    /// left their box. 1 unless set.
+    pub(crate) fn two_scale_amount(mut self, amount: &AnimatedNode) -> Self {
+        self.two_scale_amount = Some(*amount);
+        self
+    }
+
+    /// Drops the silhouette by `amount` points inside the canvas, as an
+    /// animated value, where the surface's own box would otherwise move: the
+    /// canvas and what lies under it stay where they are.
+    pub(crate) fn lowered(mut self, amount: &AnimatedNode) -> Self {
+        self.lowered = Some(*amount);
         self
     }
 
@@ -922,6 +1046,7 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         return glass.absolute().inset_0();
     };
     let tint = spec.clone();
+    let two_scale = spec.two_scale;
     let quality = spec.quality.taps();
     let light_degrees = spec.light;
     let (first, second) = shape_slots(&spec.first, &spec.second);
@@ -997,7 +1122,23 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         .uniform("body", -1.0_f32)
         .uniform("shadow_offset", spec.soft_shadow.map_or(0.0, |s| s.0))
         .uniform("shadow_sigma", spec.soft_shadow.map_or(0.0, |s| s.1))
-        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 });
+        .uniform("light_lift", move || if dark() { 0.0_f32 } else { 0.10 })
+        .uniform("two_scale_tint", move || {
+            if two_scale && two_scale_active() {
+                tokens::bar::of(dark()).tint_level() / 255.0
+            } else {
+                0.0
+            }
+        })
+        .uniform("two_scale_alpha", move || {
+            if two_scale && two_scale_active() {
+                tokens::bar::of(dark()).tint_alpha()
+            } else {
+                0.0
+            }
+        })
+        .uniform("two_scale_amount", 1.0_f32)
+        .uniform("lowered", 0.0_f32);
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
@@ -1015,6 +1156,12 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     };
     if let Some(morph) = &spec.morph {
         glass = glass.uniform("morph", morph);
+    }
+    if let Some(amount) = &spec.two_scale_amount {
+        glass = glass.uniform("two_scale_amount", amount);
+    }
+    if let Some(lowered) = &spec.lowered {
+        glass = glass.uniform("lowered", lowered);
     }
     if let Some(anchor) = &spec.anchor_node {
         glass = glass.uniform("anchor", anchor);
@@ -1042,6 +1189,130 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
         glass = glass.uniform("lens", &press.lens());
     }
     glass.absolute().inset_0()
+}
+
+/// Whether the tab bar draws iOS's two-scale body ([`tokens::bar`]) here: on
+/// the web, where two CSS backdrop layers give the two blur scales, while the
+/// shader draws, in normal contrast and without Reduce Transparency.
+///
+/// The native builds keep the shader's one-disc body: their shader reads one
+/// backdrop picture without mips, and whether a platform blur layer under it
+/// stays out of that picture, and blurs with a Gaussian of the same σ, is
+/// unmeasured there (`docs/design-notes.md`, "What still differs from Apple"). Increased contrast swaps in the near-opaque
+/// `glass-regular`, which the measured tint does not describe. Reading it
+/// subscribes to the appearance and the theme.
+pub(crate) fn two_scale_active() -> bool {
+    matches!(nsh_core::element::os(), nsh_core::platform::Os::Web)
+        && shader_draws()
+        && !reduce_transparency()
+        && standard_regular_fill()
+}
+
+/// Whether `glass-regular` is the standard-contrast value of the appearance
+/// (not the increased-contrast one a [`crate::Theme`] swaps in).
+fn standard_regular_fill() -> bool {
+    let now = tokens::glass_fill(numbers::REGULAR);
+    tokens::role(numbers::REGULAR)
+        .map(|role| role.value(dark(), false))
+        .is_some_and(|standard| (standard.a - now.a).abs() < 0.02)
+}
+
+/// Whether the user asked for less transparency: the browser's
+/// `prefers-reduced-transparency`, asked when called. NSH's environment has
+/// no such flag, so the native builds answer `false`.
+pub(crate) fn reduce_transparency() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        media_matches("(prefers-reduced-transparency: reduce)")
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+}
+
+/// `window.matchMedia(query).matches`; `false` where there is no
+/// `matchMedia` (a worker, a host without a window).
+#[cfg(target_arch = "wasm32")]
+fn media_matches(query: &str) -> bool {
+    use wasm_bindgen::{JsCast, JsValue};
+
+    let global = js_sys::global();
+    let Ok(function) = js_sys::Reflect::get(&global, &JsValue::from_str("matchMedia")) else {
+        return false;
+    };
+    let Some(function) = function.dyn_ref::<js_sys::Function>() else {
+        return false;
+    };
+    let Ok(list) = function.call1(&global, &JsValue::from_str(query)) else {
+        return false;
+    };
+    js_sys::Reflect::get(&list, &JsValue::from_str("matches"))
+        .ok()
+        .and_then(|matches| matches.as_bool())
+        .unwrap_or(false)
+}
+
+/// The two blur scales of the tab bar's body ([`tokens::bar`]), as CSS
+/// backdrop layers of the bar's box and `radius`: the ghost, opaque, then the
+/// frost at α2 over it. They go right under a [`layer`] of a spec with
+/// [`GlassSpec::two_scale`]`(on)`, which draws the tint over them, and show
+/// only with `on` and while [`two_scale_active`] holds.
+///
+/// `shown` is 1 while the layers carry any of the body
+/// ([`GlassSpec::two_scale_amount`] above 0) and 0 after: they stay whole, so
+/// the shader's crossfade over them is exact. A view keeps its box and cannot
+/// follow the silhouette into the pill; the shader covers what of them lies
+/// outside the glass. The opacity is the layers' own: on an ancestor it would
+/// make a Backdrop Root and blank the filters.
+pub(crate) fn two_scale_layers(on: bool, radius: f32, shown: AnimatedNode) -> impl IntoElement {
+    view()
+        .absolute()
+        .inset_0()
+        .pointer_events(PointerEvents::None)
+        .when(on, |layers| {
+            layers
+                .child(two_scale_pair(false, radius, shown))
+                .child(two_scale_pair(true, radius, shown))
+        })
+}
+
+/// The ghost and the frost of one appearance.
+fn two_scale_pair(dark_pair: bool, radius: f32, shown: AnimatedNode) -> impl IntoElement {
+    when(
+        move || dark() == dark_pair && two_scale_active(),
+        move || {
+            let fit = tokens::bar::of(dark_pair);
+            // The material's saturation, on the ghost only (the frost reads the
+            // ghost): CSS `saturate()` keeps Rec. 709 luma, which the fit is in.
+            let saturation = if dark_pair {
+                numbers::SATURATION_DARK
+            } else {
+                numbers::SATURATION
+            };
+            view()
+                .absolute()
+                .inset_0()
+                .child(
+                    view()
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(radius))
+                        .backdrop_blur(px(tokens::bar::GHOST_SIGMA))
+                        .backdrop_saturate(saturation)
+                        .bind_opacity(&shown),
+                )
+                .child(
+                    view()
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(radius))
+                        .backdrop_blur(px(tokens::bar::FROST_SIGMA))
+                        .bind_opacity(&shown.mul(fit.frost_alpha())),
+                )
+                .into_element()
+        },
+    )
 }
 
 /// The material without a GPU shader: the fill and blur of

@@ -40,5 +40,11 @@ for scheme in light dark; do
     [ -s "$file" ] || { echo "::error::missing $file"; missing=1; }
   done
 done
+# The tab bar's comparison images, for review (in the artifact, not published:
+# tools/publish-shots.sh takes the top-level PNGs only).
+if [ -s "$dir/motion/tab-bar-exact-light.json" ] && [ -s "$dir/motion/tab-bar-exact-dark.json" ]; then
+  node tools/tab-bar-compare.mjs --dir "$dir" --out "$dir/compare" || missing=1
+  node tools/tab-bar-tip-crops.mjs --dir "$dir" --out "$dir/compare" || missing=1
+fi
 echo "checked ${#pages[@]} pages in $dir"
 exit "$missing"
