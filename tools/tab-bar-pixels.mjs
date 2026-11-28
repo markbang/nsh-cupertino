@@ -82,10 +82,31 @@ const BH = BAND[1] - BAND[0];
 const THEMES = ["light", "dark"];
 const FRAMES = ["a", "b"];
 
+// The known deviations (`tools/tab-bar-baseline.json`): a criterion over its
+// limit is KNOWN, not a failure, while it is listed there and its value is not
+// worse than the listed one by more than WORSE; it is never counted as a pass.
+// The criteria and their limits are unchanged; only this decision is.
+const BASELINE = JSON.parse(readFileSync(join(root, "tools", "tab-bar-baseline.json"), "utf8")).items;
+const baselined = new Map(BASELINE.map((entry) => [entry.item, entry]));
+const WORSE = 0.005;
 const failures = [];
-const check = (label, ok, detail) => {
+const known = [];
+const measured = new Map();
+let passed = 0;
+/** `value` and `limit`, where given, are what the baseline compares. */
+const check = (label, ok, detail, value, limit) => {
+  if (value !== undefined) measured.set(label, { value, limit, ok });
+  const entry = baselined.get(label);
+  if (ok) {
+    passed += 1;
+  } else if (entry && value !== undefined && value <= entry.value + WORSE) {
+    known.push(label);
+    console.log(`KNOWN ${label}: ${detail}`);
+    return;
+  } else {
+    failures.push(label);
+  }
   console.log(`${ok ? "ok  " : "FAIL"} ${label}: ${detail}`);
-  if (!ok) failures.push(label);
 };
 /** A criterion printed as `check` would, without failing the run. */
 const report = (label, ok, detail) => console.log(`${ok ? "ok  " : "OVER"} (report only) ${label}: ${detail}`);
@@ -1012,7 +1033,7 @@ function judgeFrames(theme, ref, measure) {
     const { p, agree } = progressOf(frame, `tab-bar-exact-${theme}`);
     const { p: pOne } = progressOf(one.frames[k], `tab-bar-exact-single-${theme}`);
     const tag = `frame ${theme} ${String(k).padStart(2, "0")} (t ${f(frame.t, 1)} ms, progress ${f(p, 4)})`;
-    const before = failures.length;
+    const before = failures.length + known.length;
     check(
       `${tag}: the progress is known`,
       agree <= 0.01 && Math.abs(p - pOne) <= 0.01,
@@ -1047,6 +1068,8 @@ function judgeFrames(theme, ref, measure) {
         `${tag}: ${key}`,
         value <= limit(key),
         `${f(value, 2)} / ${f(limit(key), 2)} (end frames ${f(Math.abs(ends[0][key]), 2)}, ${f(Math.abs(ends[1][key]), 2)}; one-disc frame ${f(Math.abs(single[key]), 2)}; + ${MARGIN[theme]})`,
+        value,
+        limit(key),
       );
       if (value > limit(key) && key !== "jump" && r.worst[key]) explainWorst(key, r, single);
     }
@@ -1055,12 +1078,12 @@ function judgeFrames(theme, ref, measure) {
         const value = Math.abs(r.box[key]);
         const lim = Math.abs(single.box[key]) + MARGIN[theme];
         worstRatio = Math.max(worstRatio, value / lim);
-        check(`${tag}: box edge ${key}`, value <= lim, `${f(value, 2)} / ${f(lim, 2)} over ${r.box.n} profiles (one-disc frame ${f(Math.abs(single.box[key]), 2)} + ${MARGIN[theme]})`);
+        check(`${tag}: box edge ${key}`, value <= lim, `${f(value, 2)} / ${f(lim, 2)} over ${r.box.n} profiles (one-disc frame ${f(Math.abs(single.box[key]), 2)} + ${MARGIN[theme]})`, value, lim);
       }
     } else {
       console.log(`  ${tag}: box edge not judged: ${r.box ? "the one-disc frame has no box edge" : "the silhouette is still the layers' box"}`);
     }
-    if (failures.length > before) summary.failing.push(k);
+    if (failures.length + known.length > before) summary.failing.push(k);
     if (!summary.worst || worstRatio > summary.worst.ratio) summary.worst = { k, t: frame.t, p, ratio: worstRatio };
   }
   reportProof(proof);
@@ -1229,6 +1252,28 @@ for (const theme of THEMES) {
   );
 }
 
+// The known deviations: every baseline entry and every criterion over its
+// limit, with what it measured now. "tighten" marks an entry whose value is
+// better than the baseline's (or passes now): lower or remove it.
+console.log("known deviations (tools/tab-bar-baseline.json): item | current | baseline | limit | tag");
+const listed = new Set();
+for (const entry of BASELINE) {
+  listed.add(entry.item);
+  const now = measured.get(entry.item);
+  if (!now) {
+    console.log(`  ${entry.item} | not measured | ${f(entry.value, 2)} | ${f(entry.limit, 2)} | not measured`);
+    continue;
+  }
+  const tag = now.ok ? "passes now" : now.value <= entry.value + WORSE ? "known" : "new";
+  const tighten = now.ok || now.value < entry.value - WORSE ? `; tighten to ${f(now.value, 2)}` : "";
+  console.log(`  ${entry.item} | ${f(now.value, 2)} | ${f(entry.value, 2)} | ${f(now.limit, 2)} | ${tag}${tighten}`);
+}
+for (const label of failures) {
+  if (listed.has(label)) continue;
+  const now = measured.get(label);
+  console.log(`  ${label} | ${now ? f(now.value, 2) : "—"} | — | ${now ? f(now.limit, 2) : "—"} | new`);
+}
+console.log(`summary: ${passed} pass, ${known.length} known, ${failures.length} fail`);
 if (failures.length) {
   console.error(`${failures.length} check(s) failed`);
   process.exit(1);

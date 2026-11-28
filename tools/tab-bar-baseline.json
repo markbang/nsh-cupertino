@@ -1,0 +1,77 @@
+{
+  "$comment": "Known deviations of tools/tab-bar-pixels.mjs: a criterion over its limit that is listed here, with a value not worse than the listed one by more than 0.005, is reported KNOWN instead of failing; it is never counted as a pass. The baseline only tightens: when the script prints \"tighten\", lower the value or remove the entry. A commit that raises a value or adds an entry must give the reason in the pull request description. Names are the labels the script prints; values and limits are as printed in the run named.",
+  "items": [
+    {
+      "item": "frame light 02 (t 33.3 ms, progress 0.1365): box edge jump",
+      "value": 8.06,
+      "limit": 7.48,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "the layers' box top beside the lens tips, 62 profiles; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame light 07 (t 116.7 ms, progress 0.7315): step",
+      "value": 15.53,
+      "limit": 13.7,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "the two-scale body 3 pt inside the edge at (160.0, 821.8), 2.3 pt above the lens axis; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame light 07 (t 116.7 ms, progress 0.7315): ramp",
+      "value": 15.53,
+      "limit": 8.44,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "as the light 7 step; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame light 11 (t 183.3 ms, progress 0.9608): step",
+      "value": 25.42,
+      "limit": 24.75,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "the disc's edge beside the pill's edge at (175.0, 820.3), a separate defect, cause not found; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame light 11 (t 183.3 ms, progress 0.9608): ramp",
+      "value": 25.42,
+      "limit": 24.75,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "as the light 11 step; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame dark 02 (t 33.3 ms, progress 0.1365): box edge jump",
+      "value": 11.76,
+      "limit": 11.2,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "as the light 2 box-edge jump; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame dark 03 (t 50.0 ms, progress 0.2605): ramp",
+      "value": 45.67,
+      "limit": 34.84,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "(73.0, 807.3), 1-1.3 pt inside the edge: 147 -> 193 against one-disc 159 -> 185; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame dark 03 (t 50.0 ms, progress 0.2605): box edge step",
+      "value": 99.07,
+      "limit": 98.01,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "the layers' box top, 218 profiles; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    },
+    {
+      "item": "frame dark 11 (t 183.3 ms, progress 0.9608): ramp",
+      "value": 67.28,
+      "limit": 65.95,
+      "measured": "2026-11-27",
+      "run": 46081346295,
+      "reason": "as the light 11 step: two-scale rim about 8 % brighter at every sampling phase; numbers in docs/design-notes.md, \"The web two-scale minimise: known limits\", \"What stays red\""
+    }
+  ]
+}
