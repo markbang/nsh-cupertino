@@ -621,3 +621,34 @@ values, so a black overlay scales each channel, and the luma, by 1 − α. The c
 radius 26) and its fade over progress 0–0.12. It ignored Reduce Transparency and increased contrast before, and it
 still does. Darkening the fill by 11 % leaves the blue glyph and label, and the secondary-label grey, legible over
 the opaque bar and the near-opaque increased-contrast glass.
+
+### The glass tab bar's press
+
+The press follows Cohub Mobile's `FloatingTabBar.tsx` and the springs in its `motion.ts`, without the drag, the jelly
+or the pull.
+
+- **Touch down on a tab:**
+  - The bar swells by `BAR_SWELL` 0.049: x and y scale by 1 + 0.049 · swell, and swell springs to 1 on `dockPress`
+    (mass 1, stiffness 311, damping ratio 0.593).
+  - The capsule (the reference's lens) travels to the pressed tab on `dockTravel` (400 ms, ratio 0.85).
+  - It lifts: lift springs to 1 on `dockLift` (250 ms, ratio 1). Lifted, it grows by `LENS_GROWTH_X` 11.5 pt and
+    `LENS_GROWTH_Y` 10 pt on each side (size = base + 2 · growth · lift), and the glyph under it scales by
+    1 + `LENS_MAGNIFY` 0.16 · lift. "Under it" is 1 − |lens − index|, clamped to 0.
+- **Release:**
+  - swell springs back to 0 on `dockPress`;
+  - lift goes back to 0 on `dockLift`, no earlier than `LIFT_MIN_MS` 230 ms after the press began;
+  - the tab is chosen on release, as before. A release outside the tab, or a cancel, chooses nothing, and the
+    capsule travels back to the chosen tab.
+- **Duration springs:** for mass 1, stiffness = (2π / duration)², as `Spring::new` builds it: 246.7 for `dockTravel`
+  and 631.7 for `dockLift`. The damping ratio is then applied.
+- **What differs from the reference:**
+  - The reference's lifted lens turns into clear Liquid Glass (native only). Ours stays the neutral capsule, with no
+    new glass layer.
+  - The swell scales the tabs and the capsule but not the glass or its shadow. On the web the shader redraws a frame
+    after its canvas moves (see the one-frame lag above), so a scaled canvas would show its picture a frame late. The
+    shader is unchanged.
+  - Lifted and swollen, the capsule reaches past the glass, as the reference's lens does. Ours is drawn over the
+    page there, not merged into the glass.
+- **Reduce Motion:** no swell, lift or magnification. A press still moves the capsule, at once.
+- **At rest:** once the press is released and has settled, the frame is identical to the frame before the press. The
+  capsule is laid out at the chosen tab and moved only by (lens − chosen) · tab width.
