@@ -301,6 +301,12 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
     // of a frame, the rest left to the silhouette's own motion (at most 1.35 a
     // frame in the one-disc recording, `tools/tab-bar-motion.mjs`).
     const HANDOVER_MS: f32 = 200.0;
+    const TAB_ICON: f32 = 27.5;
+    const PILL_ICON: f32 = 24.0;
+    // The tab icon's centre above the pill's: the tab's column (icon, 2 pt gap,
+    // CAPTION2's 13 pt line) is centred in the bar, the pill's icon alone. The
+    // 6 pt lift moves both, so it cancels.
+    const GLYPH_DY: f32 = TAB_ICON / 2.0 - (TAB_ICON + 2.0 + 13.0) / 2.0;
 
     let items = props.items;
     let values = items.get_untracked();
@@ -462,6 +468,13 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .two_scale_amount(&carried.animated_node());
     let spec = if lowered { spec.lowered(&lift) } else { spec };
 
+    // As in Cohub Mobile's `FloatingTabBar` (:409, :539-546), on the progress
+    // both ways: the capsule goes first, the chosen label next, the other tabs
+    // by 0.35; the chosen icon hands over to the pill's travelling glyph.
+    let capsule_opacity = progress.interpolate(&[0.0, 0.12], &[1.0, 0.0]);
+    let other_opacity = progress.interpolate(&[0.0, 0.35], &[1.0, 0.0]);
+    let chosen_label_opacity = progress.interpolate(&[0.0, 0.3], &[1.0, 0.0]);
+    let chosen_icon_opacity = progress.interpolate(&[0.0, 0.001], &[1.0, 0.0]);
     let mut tabs = view().flex_row().flex_1().items_center().px(px(4.0));
     for (index, item) in values.iter().enumerate() {
         let value = item.value.clone();
@@ -471,8 +484,30 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         let badge_shown = item.badge.clone();
         let label = title.clone();
         let shown = move || selected.get() == index;
+        let chosen = animated_value(if index == initial { 1.0 } else { 0.0 });
+        effect(move || chosen.set(if shown() { 1.0 } else { 0.0 }));
+        let chosen = chosen.animated_node();
+        let unchosen = chosen.mul(-1.0).add(1.0);
+        let icon_opacity = chosen
+            .mul(&chosen_icon_opacity)
+            .add(&unchosen.mul(&other_opacity));
+        let text_opacity = chosen
+            .mul(&chosen_label_opacity)
+            .add(&unchosen.mul(&other_opacity));
+        let tab_icon = icon(
+            icon_name.as_deref().unwrap_or("circle.lefthalf.filled"),
+            TAB_ICON,
+        )
+        .text_color(move || {
+            if shown() {
+                tokens::system_blue()
+            } else {
+                tokens::secondary_label()
+            }
+        });
         tabs = tabs.child(
             button()
+                .relative()
                 .flex_1()
                 .h(px(HEIGHT - 8.0))
                 .rounded(px(26.0))
@@ -483,16 +518,6 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 .accessibility_label(label)
                 .selected(move || selected.get() == index)
                 .role(AccessibilityRole::Button)
-                .bg(move || {
-                    if !shown() {
-                        return rgba(0x0000_0000);
-                    }
-                    if nsh_core::element::dark() {
-                        rgba(0xffff_ff24)
-                    } else {
-                        rgba(0xffff_ff99)
-                    }
-                })
                 .on_press(move || {
                     if selected.get_untracked() == index {
                         return;
@@ -503,23 +528,28 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 })
                 .child(
                     view()
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(26.0))
+                        .bg(move || {
+                            if !shown() {
+                                return rgba(0x0000_0000);
+                            }
+                            if nsh_core::element::dark() {
+                                rgba(0xffff_ff24)
+                            } else {
+                                rgba(0xffff_ff99)
+                            }
+                        })
+                        .bind_opacity(&capsule_opacity),
+                )
+                .child(
+                    view()
                         .relative()
-                        .size(px(27.5))
+                        .size(px(TAB_ICON))
                         .items_center()
                         .justify_center()
-                        .child(
-                            icon(
-                                icon_name.as_deref().unwrap_or("circle.lefthalf.filled"),
-                                27.5,
-                            )
-                            .text_color(move || {
-                                if shown() {
-                                    tokens::system_blue()
-                                } else {
-                                    tokens::secondary_label()
-                                }
-                            }),
-                        )
+                        .child(view().bind_opacity(&icon_opacity).child(tab_icon))
                         .child(when(
                             move || badge_shown.is_some(),
                             move || {
@@ -542,11 +572,13 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                                             .font_weight(FontWeight(600))
                                             .text_color(rgba(0xffff_ffff)),
                                     )
+                                    .bind_opacity(&text_opacity)
                             },
                         )),
                 )
                 .child(
                     text(title)
+                        .bind_opacity(&text_opacity)
                         .text_size(px(TAB_LABEL_SIZE))
                         .line_height(type_default::CAPTION2.line_height)
                         .letter_spacing(tokens::tracking(type_default::CAPTION2))
@@ -565,12 +597,39 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
 
     let expanded_opacity = progress.interpolate(&[0.0, 1.0], &[1.0, 0.0]);
     let minimized_opacity = progress.interpolate(&[0.0, 1.0], &[0.0, 1.0]);
+    // The chosen tab's one glyph: from the first frame of the morph it is the
+    // pill's, laid on the tab's icon (the tab centres sit 4 − 8·anchor pt off
+    // anchor·W, inside the row's padding), and travels into the circle by
+    // progress 0.45 (`FloatingTabBar` :539-546).
+    let staying = progress.interpolate(&[0.0, 0.45], &[1.0, 0.0]);
+    let glyph_dx = staying.mul(&anchor_node.mul(-8.0).add(4.0));
+    let glyph_dy = staying.mul(GLYPH_DY);
+    let glyph_scale = staying.mul(TAB_ICON / PILL_ICON - 1.0).add(1.0);
+    let glyph_opacity = progress.interpolate(&[0.0, 0.001], &[0.0, 1.0]);
+    // The disc shows only at the end, smoothstep over progress 0.75-1: before,
+    // the shape is the glass's own shrinking silhouette. The opaque bar of
+    // Reduce Transparency has no silhouette, so its disc fades in all the way.
+    let disc_opacity = if reduced {
+        minimized_opacity
+    } else {
+        progress.interpolate_with(
+            &[0.75, 1.0],
+            AnimationOutput::Numbers(vec![0.0, 1.0]),
+            Interpolation {
+                easing: Easing::Bezier(1.0 / 3.0, 0.0, 2.0 / 3.0, 1.0),
+                ..Interpolation::default()
+            },
+        )
+    };
     // One icon per tab, each shown only while that tab is chosen: the pill is a
     // picture of the live selection, not of the one the bar was built with.
-    let mut pill = view().absolute().inset_0().items_center().justify_center();
+    let mut glyph = view()
+        .items_center()
+        .justify_center()
+        .bind_scale(&glyph_scale);
     for (index, item) in values.iter().enumerate() {
         let icon_name = item.icon.clone();
-        pill = pill.child(when(
+        glyph = glyph.child(when(
             move || selected.get() == index,
             move || {
                 view()
@@ -579,7 +638,7 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                     .child(
                         icon(
                             icon_name.as_deref().unwrap_or("circle.lefthalf.filled"),
-                            24.0,
+                            PILL_ICON,
                         )
                         .text_color(tokens::system_blue()),
                     )
@@ -587,6 +646,15 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
             },
         ));
     }
+    let pill = view()
+        .absolute()
+        .inset_0()
+        .items_center()
+        .justify_center()
+        .bind_opacity(&glyph_opacity)
+        .bind_translate_x(&glyph_dx)
+        .bind_translate_y(&glyph_dy)
+        .child(glyph);
     let minimized_view = view()
         .absolute()
         .pointer_events(PointerEvents::None)
@@ -597,7 +665,6 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
         .w(px(50.0))
         .items_center()
         .justify_center()
-        .bind_opacity(&minimized_opacity)
         .when(lowered, |v| v.bind_translate_y(&lift))
         // The pill is a picture of the chosen tab: a page-coloured disc with a
         // hairline and the iOS 27 shadow, so it reads as a surface on white
@@ -635,7 +702,8 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                     spread: px(0.0),
                     color: rgba(0x0000_001f).into(),
                     inset: false,
-                }]),
+                }])
+                .bind_opacity(&disc_opacity),
         )
         .child(pill);
 
@@ -702,7 +770,6 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                 .flex_row()
                 .items_center()
                 .child(tabs)
-                .bind_opacity(&expanded_opacity)
                 .when(lowered, |v| v.bind_translate_y(&lift)),
         )
         .child(minimized_view)

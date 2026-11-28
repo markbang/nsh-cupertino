@@ -477,8 +477,15 @@ against the shader's one-disc body. These are the limits that check met.
   - **Pixel evidence:** on dark frames where the edge is measurable, the edge detected in the pixels lies 0.12–0.39
     pt from the k − 1 model and 6–15 pt from the model at frame k's progress (runs 46039755135 and 46045745728).
 - **Pill occlusion.** The minimised pill is a CSS capsule (50 × 64 pt, page-coloured at α 0.92 light / 0.86 dark)
-  over the glass. Its edge lies about 6.4 pt outside the glass disc's. From frame 10 on, every scan line over a flat
-  backdrop crosses it, so the glass's edge cannot be measured there.
+  over the glass. Its fill, hairline and shadow show only at the end: opacity 0 up to progress 0.75, then smoothstep
+  to 1 at progress 1. Before that the circle is the glass's own shrinking silhouette. Reduce Transparency's opaque bar
+  has no silhouette, so there the disc still fades in on the progress. Once the disc shows, its edge lies about 6.4 pt
+  outside the glass disc's, and a scan line over a flat backdrop that crosses it cannot measure the glass's edge.
+- **One glyph.** Every frame shows exactly one chosen glyph. For progress > 0 the tab's own icon hides and the pill's
+  glyph takes its place. The glyph starts on the tab's icon (27.5 pt, 4 − 8 · anchor pt across and 7.5 pt up; the
+  6 pt lift moves both) and travels into the circle, scaling to 24 pt, by clamp01(progress / 0.45). The other tabs
+  (icon, label, badge) fade over progress 0–0.35, the chosen label and badge over 0–0.3 and the selection capsule
+  over 0–0.12, as in Cohub Mobile's `FloatingTabBar` (:409, :539–546). Restoring runs the same curves backwards.
 - **Grain.** In light the glass's edge steps 3–4 levels per third of a point, as much as the shader's grain inside
   the body, so the steepest step is often in the grain.
 - **Hairline rounding.** In light the edge is a bright hairline, not a step. Its two flanks differ by about 1 level,
