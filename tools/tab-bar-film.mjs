@@ -4,7 +4,7 @@
 // two-scale body, frame by frame on the frozen page clock at 60 fps.
 //
 //   node tools/tab-bar-film.mjs --from <dir> --out <dir> [--scheme light|dark]
-//     [--chrome <path>]
+//     [--scene bare|tabs] [--chrome <path>]
 //
 // `--from` is what `nsh package App.tsx --target web -o <dir>` wrote for
 // `examples/demo`. The path, per theme: rest 0.5 s; a press held 0.2 s on the
@@ -16,6 +16,12 @@
 //   frames/{theme}/progress.json  each frame's progress (`PROGRESS`), the beats
 //   tab-bar-morph-{theme}.mp4, tab-bar-morph-{theme}-quarter.mp4
 //   tab-bar-morph-{theme}-4up.png, tab-bar-morph-4up.png (light above dark)
+//
+// `--scene tabs` films the same scene with a bar of four tabs, Me selected
+// (`exact-tabs`, `App.tsx`): frames under `frames/tabs-{theme}/`, outputs named
+// `tab-bar-morph-tabs-*`, and a contact strip per theme,
+// `tab-bar-morph-tabs-strip-{theme}.png`: the minimise's frames nearest to
+// `STRIP` progress, cropped to the bar, each labelled with its k and progress.
 //
 // Needs ffmpeg (with libx264 and drawtext) and the DejaVu Sans font.
 import { spawnSync } from "node:child_process";
@@ -34,6 +40,11 @@ const FROM = arg("from", null);
 const OUT = arg("out", null);
 const CHROME = arg("chrome", process.env.CHROME ?? "google-chrome");
 const SCHEMES = arg("scheme", null) ? [arg("scheme")] : ["light", "dark"];
+const SCENE = arg("scene", "bare");
+const SCENES = {
+  bare: { scroll: "exact", name: "tab-bar-film", frames: "", prefix: "tab-bar-morph" },
+  tabs: { scroll: "exact-tabs", name: "tab-bar-film-tabs", frames: "tabs-", prefix: "tab-bar-morph-tabs" },
+};
 
 const FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
 /** The bar band with some page above it, in points. */
@@ -45,6 +56,9 @@ const PRESS = 12;
 /** A spring that has not rested after this many frames ends its beat anyway, and the json says so. */
 const CAP = 300;
 const WIDTH = 1080;
+/** The contact strip's progress values, and its crop of a frame (pt, in the clip): the bar's 790-854 with 20 pt above and 16 below. */
+const STRIP = [0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9, 1.0];
+const BAND = { y: 70, height: 100 };
 
 function ffmpeg(...params) {
   const run = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...params], { stdio: "inherit" });
@@ -61,17 +75,18 @@ const PRESS_TARGET = `(() => {
   const all = [...document.querySelectorAll("#app *")];
   const bar = all.find((el) => getComputedStyle(el).boxShadow.includes("0px 7px 10px"));
   const tab = document.querySelector('#app [role="button"][aria-selected="true"]');
-  if (tab) return { at: centre(tab), target: "selected tab " + JSON.stringify(tab.getAttribute("aria-label")) };
+  if (tab) return { at: centre(tab), label: tab.getAttribute("aria-label"), target: "selected tab " + JSON.stringify(tab.getAttribute("aria-label")) };
   if (bar) return { at: centre(bar), target: "bar body (the bar has no tab buttons)" };
   return null;
 })()`;
 
 async function film(page, base, scheme) {
-  const name = `tab-bar-film-${scheme}`;
-  const dir = join(OUT, "frames", scheme);
+  const scene = SCENES[SCENE];
+  const name = `${scene.name}-${scheme}`;
+  const dir = join(OUT, "frames", `${scene.frames}${scheme}`);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
-  await openRecording(page, base, { name, scheme, scroll: "exact" });
+  await openRecording(page, base, { name, scheme, scroll: scene.scroll });
 
   const frames = [];
   const beats = [];
@@ -118,6 +133,7 @@ async function film(page, base, scheme) {
 
   const target = await evaluate(page, PRESS_TARGET);
   if (!target) throw new Error(`${name}: no tab and no bar to press`);
+  if (SCENE === "tabs" && target.label === undefined) throw new Error(`${name}: the tabs scene has no selected tab to press (found the ${target.target})`);
   const [x, y] = target.at;
   await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
   const pressFrom = frames.length;
@@ -125,7 +141,8 @@ async function film(page, base, scheme) {
   for (let i = 0; i < PRESS; i++) if ((await capture("press", true)).data !== restFrame) differing += 1;
   await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
   beats.push({ beat: "press", from: pressFrom, to: frames.length - 1 });
-  const press = { at: [x, y], target: target.target, heldFrames: PRESS, framesDifferingFromRest: differing };
+  // 0 is a valid count: the held frames are compared with rest, pixel for pixel, and reported, not judged.
+  const press = { at: [x, y], target: target.target, label: target.label ?? null, heldFrames: PRESS, framesDifferingFromRest: differing };
   console.log(`  ${name}: press on the ${target.target} at (${x.toFixed(1)}, ${y.toFixed(1)}): ${differing} of ${PRESS} held frames differ from rest`);
 
   await wheel(60);
@@ -145,23 +162,27 @@ async function film(page, base, scheme) {
   if (!read.length) throw new Error(`${name}: no frame of the minimise has a progress (PROGRESS found neither the bar's shadow nor the pill)`);
   const dropping = read.reduce((best, frame) => (Math.abs(value(frame) - 0.3) < Math.abs(value(best) - 0.3) ? frame : best));
   const stills = { rest: beat("rest").to, dropping: dropping.k, minimised: drop.restAt, restored: beat("restore").restAt };
+  const nearest = (p) => read.reduce((best, frame) => (Math.abs(value(frame) - p) < Math.abs(value(best) - p) ? frame : best));
+  const strip = STRIP.map((p) => ({ target: p, k: nearest(p).k, progress: value(nearest(p)) }));
   writeFileSync(
     join(dir, "progress.json"),
-    JSON.stringify({ name, scheme, stepMs: STEP_MS, clip: CLIP, deviceScale: SCALE, wheel: WHEEL, press, beats, stills, frames }, null, 1),
+    JSON.stringify({ name, scheme, scene: SCENE, stepMs: STEP_MS, clip: CLIP, deviceScale: SCALE, wheel: WHEEL, press, beats, stills, strip, frames }, null, 1),
   );
   for (const b of beats) console.log(`  ${name}: ${b.beat} frames ${b.from}-${b.to}${b.restAt === undefined ? "" : `, at rest from ${b.restAt} (${b.restBy})`}`);
-  return { dir, stills, progress: { dropping: value(dropping) } };
+  for (const s of strip) console.log(`  ${name}: strip ${s.target} -> frame ${s.k}, progress ${s.progress.toFixed(4)}`);
+  return { dir, stills, strip, progress: { dropping: value(dropping) } };
 }
 
 const SCALED = `scale=${WIDTH}:-2:flags=lanczos`;
 
-function encode(scheme, { dir, stills, progress }) {
+function encode(scheme, { dir, stills, strip, progress }) {
+  const { prefix } = SCENES[SCENE];
   const input = join(dir, "%04d.png");
   const video = [`${SCALED}:out_color_matrix=bt709,format=yuv420p`];
   const x264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-r", "60", "-movflags", "+faststart"];
-  ffmpeg("-framerate", "60", "-start_number", "0", "-i", input, "-vf", video.join(","), ...x264, join(OUT, `tab-bar-morph-${scheme}.mp4`));
+  ffmpeg("-framerate", "60", "-start_number", "0", "-i", input, "-vf", video.join(","), ...x264, join(OUT, `${prefix}-${scheme}.mp4`));
   // The same frames at 15 a second, shown 4 times each at 60.
-  ffmpeg("-framerate", "15", "-start_number", "0", "-i", input, "-vf", video.join(","), ...x264, join(OUT, `tab-bar-morph-${scheme}-quarter.mp4`));
+  ffmpeg("-framerate", "15", "-start_number", "0", "-i", input, "-vf", video.join(","), ...x264, join(OUT, `${prefix}-${scheme}-quarter.mp4`));
 
   const [bg, fg] = scheme === "dark" ? ["black", "white"] : ["white", "black"];
   const panels = [
@@ -174,11 +195,21 @@ function encode(scheme, { dir, stills, progress }) {
   const labelled = panels
     .map(([label], i) => `[${i}:v]${SCALED},pad=iw:ih+80:0:80:color=${bg},drawtext=fontfile=${FONT}:text='${scheme} · ${label}':x=32:y=22:fontsize=40:fontcolor=${fg}[p${i}]`)
     .join(";");
-  ffmpeg(...inputs, "-filter_complex", `${labelled};[p0][p1][p2][p3]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0`, "-frames:v", "1", join(OUT, `tab-bar-morph-${scheme}-4up.png`));
+  ffmpeg(...inputs, "-filter_complex", `${labelled};[p0][p1][p2][p3]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0`, "-frames:v", "1", join(OUT, `${prefix}-${scheme}-4up.png`));
+
+  if (SCENE !== "tabs") return;
+  const crop = `crop=iw:${BAND.height * SCALE}:0:${BAND.y * SCALE}`;
+  const stripInputs = strip.flatMap(({ k }) => ["-i", join(dir, `${String(k).padStart(4, "0")}.png`)]);
+  const stripPanels = strip
+    .map(({ k, progress: p }, i) => `[${i}:v]${crop},${SCALED},pad=iw:ih+64:0:64:color=${bg},drawtext=fontfile=${FONT}:text='${scheme} · k ${k} · progress ${p.toFixed(3)}':x=32:y=14:fontsize=36:fontcolor=${fg}[s${i}]`)
+    .join(";");
+  const stacked = strip.map((_, i) => `[s${i}]`).join("");
+  ffmpeg(...stripInputs, "-filter_complex", `${stripPanels};${stacked}vstack=inputs=${strip.length}`, "-frames:v", "1", join(OUT, `${prefix}-strip-${scheme}.png`));
 }
 
 async function main() {
-  if (!FROM || !OUT) throw new Error("usage: node tools/tab-bar-film.mjs --from <web build> --out <dir> [--scheme light|dark]");
+  if (!FROM || !OUT) throw new Error("usage: node tools/tab-bar-film.mjs --from <web build> --out <dir> [--scheme light|dark] [--scene bare|tabs]");
+  if (!SCENES[SCENE]) throw new Error(`--scene must be bare or tabs, not ${SCENE}`);
   for (const scheme of SCHEMES) if (!["light", "dark"].includes(scheme)) throw new Error(`--scheme must be light or dark, not ${scheme}`);
   if (!existsSync(FONT)) throw new Error(`no ${FONT}: install it (apt-get install fonts-dejavu-core)`);
   mkdirSync(OUT, { recursive: true });
@@ -211,11 +242,12 @@ async function main() {
     }
   }
   for (const [scheme, result] of Object.entries(filmed)) encode(scheme, result);
+  const { prefix, frames: framesPrefix } = SCENES[SCENE];
   if (filmed.light && filmed.dark) {
-    ffmpeg("-i", join(OUT, "tab-bar-morph-light-4up.png"), "-i", join(OUT, "tab-bar-morph-dark-4up.png"), "-filter_complex", "vstack=inputs=2", "-frames:v", "1", join(OUT, "tab-bar-morph-4up.png"));
+    ffmpeg("-i", join(OUT, `${prefix}-light-4up.png`), "-i", join(OUT, `${prefix}-dark-4up.png`), "-filter_complex", "vstack=inputs=2", "-frames:v", "1", join(OUT, `${prefix}-4up.png`));
   }
   for (const scheme of Object.keys(filmed)) {
-    const { frames } = JSON.parse(readFileSync(join(OUT, "frames", scheme, "progress.json"), "utf8"));
+    const { frames } = JSON.parse(readFileSync(join(OUT, "frames", `${framesPrefix}${scheme}`, "progress.json"), "utf8"));
     console.log(`${scheme}: ${frames.length} frames, ${(frames.length / 60).toFixed(2)} s at 60 fps`);
   }
 }

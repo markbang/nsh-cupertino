@@ -264,7 +264,7 @@ export const PROGRESS = `(() => {
 
 /**
  * Opens the fixture bar's page as a recording sees it: `scene` is `{ name,
- * scheme, scroll, barbody }` (`scroll`: "1" or "exact", `App.tsx`), at the
+ * scheme, scroll, barbody }` (`scroll`: "1", "exact" or "exact-tabs", `App.tsx`), at the
  * iPhone's viewport, with the backdrop decoded and the page clock installed.
  */
 export async function openRecording(page, base, scene) {
