@@ -74,6 +74,8 @@ struct Uniforms {
   two_scale_alpha: f32,
   two_scale_amount: f32,
   lowered: f32,
+  swell: f32,
+  swell_margin: f32,
 }
 
 // A menu's body (`body` >= 0): the backdrop blurred, saturated by this much
@@ -166,15 +168,23 @@ fn sd_shape(p: vec2f) -> f32 {
 // tab, blended into the bar's own as `morph` runs.
 fn sd_silhouette(at: vec2f) -> f32 {
   // `lowered` drops the silhouette inside the canvas (a web tab bar that keeps
-  // its canvas still, `GlassSpec::lowered`).
-  let p = at - vec2f(0.0, uniforms.lowered);
+  // its canvas still, `GlassSpec::lowered`); `swell` scales it about the
+  // canvas's centre (`GlassSpec::swell`), its distances with it.
+  let s = max(uniforms.swell, 1e-3);
+  let p = (at - vec2f(0.0, uniforms.lowered)) / s;
   let d = sd_shape(p);
   if (uniforms.morph <= 0.0 || uniforms.min_radius <= 0.0) {
-    return d;
+    return d * s;
   }
-  let centre = vec2f((uniforms.anchor - 0.5) * nsh.size.x, 0.0);
+  let centre = vec2f((uniforms.anchor - 0.5) * (nsh.size.x - 2.0 * uniforms.swell_margin), 0.0);
   let min = sd_one(p - centre, vec2f(uniforms.min_radius), vec4f(-1.0, 0.0, 0.0, 0.0));
-  return mix(d, min, clamp(uniforms.morph, 0.0, 1.0));
+  return mix(d, min, clamp(uniforms.morph, 0.0, 1.0)) * s;
+}
+
+// The two-scale layers' box, which swells with the page's views.
+fn sd_layers(p: vec2f) -> f32 {
+  let s = max(uniforms.swell, 1e-3);
+  return sd_shape(p / s) * s;
 }
 
 // The difference across one axis from the SDF at −e, 0 and +e: the central
@@ -298,7 +308,7 @@ fn shade(uv: vec2f) -> vec4f {
   // wide, is covered whole; then a 1 pt ramp to nothing over the page.
   var ring = 0.0;
   if (uniforms.two_scale_alpha > 0.0 && uniforms.two_scale_amount > 0.0 && uniforms.morph > 0.0) {
-    ring = clamp(1.5 - sd_shape(p), 0.0, 1.0);
+    ring = clamp(1.5 - sd_layers(p), 0.0, 1.0);
   }
   if (coverage <= 0.0 && ring > 0.0) {
     return vec4f(backdrop_at(p).rgb, ring);
@@ -340,7 +350,7 @@ fn shade(uv: vec2f) -> vec4f {
   var hand = 0.0;
   if (uniforms.two_scale_alpha > 0.0) {
     // Only over the layers: a lowered silhouette leaves their box at its foot.
-    let over = min(inside, -sd_shape(p));
+    let over = min(inside, -sd_layers(p));
     hand = smoothstep(1.5, 6.0, over) * clamp(uniforms.two_scale_amount, 0.0, 1.0);
   }
   if (hand >= 1.0) {
@@ -353,7 +363,7 @@ fn shade(uv: vec2f) -> vec4f {
   // the rim by (n - 1) * thickness * slope; a press also magnifies the sheet.
   let flat = uniforms.body >= 0.0;
   let shift = normal * (uniforms.thickness * pow(rim, 1.6)) - p * select(uniforms.lens, 0.0, flat);
-  let jitter = hash_cell(floor(uv * size * nsh.scale)) * 0.5;
+  let jitter = hash_cell(floor((uv * size - vec2f(uniforms.swell_margin)) * nsh.scale)) * 0.5;
   var rgb = sample(p + shift, jitter);
 
   // A pixel of chromatic separation along the rim, as a thick edge spreads the
@@ -414,7 +424,7 @@ fn shade(uv: vec2f) -> vec4f {
   let core = exp(-max(inside - 0.7, 0.0) / 1.4);
   let tail = exp(-max(inside - 0.7, 0.0) / 7.0);
   rgb = rgb + vec3f(1.0) * uniforms.rim_light * lobe * ease * (0.30 * core + 0.05 * tail);
-  let along = clamp(0.5 + 0.5 * dot((p - vec2f(0.0, uniforms.lowered)) / max(size * 0.5, vec2f(1.0)), light), 0.0, 1.0);
+  let along = clamp(0.5 + 0.5 * dot((p - vec2f(0.0, uniforms.lowered)) / max((size - vec2f(2.0 * uniforms.swell_margin)) * 0.5, vec2f(1.0)), light), 0.0, 1.0);
   rgb = rgb + vec3f(1.0) * select(uniforms.specular, 0.0, flat) * 0.055 * pow(along, 2.0) * (1.0 - 0.5 * rim);
 
   // The hairline: the backdrop at its own position, darkened; strongest at
@@ -615,6 +625,8 @@ pub struct GlassSpec {
     two_scale: bool,
     two_scale_amount: Option<AnimatedNode>,
     lowered: Option<AnimatedNode>,
+    swell: Option<AnimatedNode>,
+    swell_margin: f32,
 }
 
 /// A menu's flat body ([`GlassSpec::menu_body`]).
@@ -666,6 +678,8 @@ impl GlassSpec {
             two_scale: false,
             two_scale_amount: None,
             lowered: None,
+            swell: None,
+            swell_margin: 0.0,
         }
     }
 
@@ -831,6 +845,17 @@ impl GlassSpec {
     /// canvas and what lies under it stay where they are.
     pub(crate) fn lowered(mut self, amount: &AnimatedNode) -> Self {
         self.lowered = Some(*amount);
+        self
+    }
+
+    /// Scales the silhouette, its rim and the two-scale layers' box about the
+    /// canvas's centre by `scale`, an animated value (1 at rest), inside a
+    /// canvas `margin` points larger on every side than the shape, which the
+    /// caller gives the layer (negative insets of `margin`).
+    pub(crate) fn swell(mut self, scale: &AnimatedNode, margin: f32) -> Self {
+        self.swell = Some(*scale);
+        self.margin = margin.max(0.0);
+        self.swell_margin = margin.max(0.0);
         self
     }
 
@@ -1138,7 +1163,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
             }
         })
         .uniform("two_scale_amount", 1.0_f32)
-        .uniform("lowered", 0.0_f32);
+        .uniform("lowered", 0.0_f32)
+        .uniform("swell", 1.0_f32)
+        .uniform("swell_margin", spec.swell_margin);
     if let Some(reveal) = &spec.reveal {
         glass = glass.uniform("reveal", reveal);
     }
@@ -1162,6 +1189,9 @@ fn shader_layer(spec: GlassSpec, press: Option<Press>) -> ShaderView {
     }
     if let Some(lowered) = &spec.lowered {
         glass = glass.uniform("lowered", lowered);
+    }
+    if let Some(swell) = &spec.swell {
+        glass = glass.uniform("swell", swell);
     }
     if let Some(anchor) = &spec.anchor_node {
         glass = glass.uniform("anchor", anchor);
