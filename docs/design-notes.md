@@ -624,25 +624,50 @@ the opaque bar and the near-opaque increased-contrast glass.
 
 ### The glass tab bar's press
 
-The press follows Cohub Mobile's `FloatingTabBar.tsx` and the springs in its `motion.ts`, without the drag, the jelly
-or the pull.
+The press follows Cohub Mobile's `FloatingTabBar.tsx` and the springs in its `motion.ts`, without the drag, the jelly,
+the pull or the swell. Cohub's rule decides the geometry: the glass's edge stays continuous, so in no frame may the
+pane cross, touch or cover the glass's rim, and the bar's outline and hairline never break.
 
+- **No swell.** The reference swells the bar by 0.049 under a press. Here nothing swells, neither the tabs nor the
+  glass. Only the capsule shows the press: it travels, lifts into the pane, and magnifies the glyph under it, which
+  stays inside its tab (27.5 → 31.9 pt in an 88 × 56 pt tab).
+  - Swelling the tabs alone (PR #55) put the lifted pane past the glass's right end: there the outline and the
+    hairline vanished.
+  - Swelling the glass with them in the shader was tried (the silhouette, its rim and the
+    two-scale cover scaled by 1 + 0.049 · swell about the canvas's centre, in a canvas 9 pt larger). On the web the
+    shader draws one frame behind the page (see the one-frame lag above), and so did the swell. In film run
+    46131171842, over the 8 dark presses, the glass's swell in frame k matched the content's in frame k − 1 to within
+    0.05 pt, and trailed the content of its own frame by up to 1.42 pt. The pane, clamped to the swollen glass,
+    crossed its rim by up to 1.3 pt. In light the rim is too faint to locate in every frame; its median frame also
+    matches k − 1 (0.10 pt).
 - **Touch down on a tab:**
-  - The bar swells by `BAR_SWELL` 0.049: x and y scale by 1 + 0.049 · swell, and swell springs to 1 on `dockPress`
-    (mass 1, stiffness 311, damping ratio 0.593).
   - The capsule (the reference's lens) travels to the pressed tab on `dockTravel` (400 ms, ratio 0.85).
   - It lifts: lift springs to 1 on `dockLift` (250 ms, ratio 1). Lifted, it grows by `LENS_GROWTH_X` 11.5 pt and
-    `LENS_GROWTH_Y` 10 pt on each side (size = base + 2 · growth · lift), and the glyph under it scales by
+    `LENS_GROWTH_Y` 10 pt on each side, as far as the clamp below allows. The glyph under it scales by
     1 + `LENS_MAGNIFY` 0.16 · lift. "Under it" is 1 − |lens − index|, clamped to 0.
+- **The clamp.** The capsule's rect, after travel and growth, stays inside the glass inset by `RIM_BAND` 2.5 pt.
+  That is the hairline's 1.1 pt (`src/glass.rs:424`, `smoothstep(1.1, 0, inside)`) and the 1.4 pt fall of the rim
+  light's core (`src/glass.rs:414`, `exp(-(inside - 0.7) / 1.4)`).
+  - Each side grows by growth · lift, less whatever would pass the band. That excess is an exact ReLU, so while the
+    rect fits, and at rest, every scale is exactly 1.
+  - Vertically the bar is 64 pt and a tab 56 pt. The reference's +10 pt per side (76 pt) does not fit, and the clamp
+    wins over the reference's growth: the pane stops at 64 − 2 · 2.5 = 59 pt tall, from lift 0.15.
+  - Across, a middle tab's pane grows by 23 pt, from 88 to 111 pt on the fixture's 360 pt bar. At the bar's ends
+    (Chats, Me) its outer side stops 2.5 pt inside the glass, 1.5 pt past the tab, so the pane is 101 pt wide.
+  - The pane is a capsule whose radius is its own half height (29.5 pt lifted). It is drawn as two discs and the bar
+    between their centres, each scaled evenly; one box scaled unevenly would turn its ends into ellipses. The bar's
+    end is a semicircle of radius 32, and the band's inner curve one of 29.5 on the same centre. The pane's end disc
+    sits on the bar's centre line, with radius at most 29.5, and its outer edge is at most the inner curve's. Such a
+    disc lies inside the inner curve, so the clamp holds along the curve, not only in the bounding box.
+  - The neutral capsule shares the clamped rect.
 - **Two layers, the reference's path without Liquid Glass** (`FloatingTabBar` :409–410, :432–438). Both share the
-  travel and the growth, and both sit over the glass and under the tab items.
+  travel and the clamped growth, and both sit over the glass and under the tab items.
   - The neutral capsule (the black overlay above) has opacity (1 − lift) · its collapse fade, so it fades out as
     the capsule lifts.
-  - The lifted pane has opacity lift · the collapse fade. It is "a solid pane rather than a tint": the reference's
-    `bg-surface-pressed` (`#e6e1d8` light, `#3a3a3c` dark) with `shadow-float` (0 6 20, black at 0.14), both from
-    Cohub Mobile's `global.css` (`tokens::bar::PRESSED_PANE_*`). It is rounded to half its height.
+  - The lifted pane has opacity lift · the collapse fade, as one layer, so its pieces' overlaps never show. It is "a
+    solid pane rather than a tint": the reference's `bg-surface-pressed` (`#e6e1d8` light, `#3a3a3c` dark) with
+    `shadow-float` (0 6 20, black at 0.14), both from Cohub Mobile's `global.css` (`tokens::bar::PRESSED_PANE_*`).
 - **Release:**
-  - swell springs back to 0 on `dockPress`;
   - lift goes back to 0 on `dockLift`, no earlier than `LIFT_MIN_MS` 230 ms after the press began;
   - the tab is chosen on release, as before. A release outside the tab, or a cancel, chooses nothing, and the
     capsule travels back to the chosen tab.
@@ -651,13 +676,19 @@ or the pull.
 - **What differs from the reference:**
   - On iOS the reference's lifted lens is clear Liquid Glass. That is native only and not drawn here: no new glass
     layer, only the pane.
-  - The swell scales the tabs and the capsule but not the glass or its shadow. On the web the shader redraws a frame
-    after its canvas moves (see the one-frame lag above), so a scaled canvas would show its picture a frame late. The
-    shader is unchanged.
-  - Lifted and swollen, the pane reaches past the glass, as the reference's lens does, and stands over the page
-    there on its shadow.
-- **Reduce Motion:** no swell, lift or magnification, so the pane never shows. A press still moves the capsule, at
-  once.
+  - No swell, a pane at most 59 pt tall, and a pane that stops 2.5 pt inside the glass, where the reference's lens
+    reaches past it.
+  - The pane's soft shadow still falls across the rim onto the page. It darkens the rim; it does not cover it.
+- **Checked in the film.** `tools/tab-bar-film.mjs --scene tabs` measures every frame of every press
+  (`tools/tab-bar-press-geometry.mjs`). From the pixels it finds the glass's edge on two rays, the bar's right end
+  at its vertical centre and its top at its horizontal centre, by laying the rim's profile from the frame before the
+  press onto the frame's. From the page it reads the content's swell, the pane's rect and the glyphs. It flags a
+  frame whose clearance (the glass's inner edge to the pane, along the rounded ends and the straight sides) is below
+  0, or whose glass and content swells differ by more than 0.25 pt. Film run 46132775086 covered both themes and 4 tabs
+  × 2 presses (1275 frames, 560 of them with the pane). Glass and content swells differ by at most 0.033 pt, no frame
+  lags, and no frame is flagged. The least clearance is 0 pt: the pane sits on the band, 2.5 pt inside the glass's
+  edge (Me's right edge at 378.5 pt, the bar's at 381).
+- **Reduce Motion:** no lift or magnification, so the pane never shows. A press still moves the capsule, at once.
 - **At rest:** once the press is released and has settled, the frame is identical to the frame before the press. The
   capsule is laid out at the chosen tab and moved only by (lens − chosen) · tab width. At lift 0 the pane's opacity
   is 0 and the neutral capsule is as it was before the press existed.
