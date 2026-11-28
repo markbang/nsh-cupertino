@@ -495,36 +495,58 @@ against the shader's one-disc body. These are the limits that check met.
   - **The rule.** `sd_slope` keeps the central difference unless the forward and backward differences have
     opposite signs and the slope change the three samples imply, k = (s/e)/(2 − r) with
     s = |f − b| and r = |f + b| / max(|f|, |b|), is at least 0.45. There it takes the steeper one-sided difference.
-    Everywhere else the expression is the old central difference, bit for bit.
+    It also requires the central-difference gradient |(gx_c, gy_c)| / (2e) to be below 0.68. A distance field's
+    gradient has length 1 almost everywhere (the eikonal equation), so a value well below 1 means the stencil
+    straddles a kink, where the two sides' slopes cancel. Everywhere else the expression is the old central
+    difference, bit for bit.
   - **The calibration** (the shader's own SDF at e = 0.6, at the recorded pixel phases):
     - the lens axis at the tip of frames 4–6: k 0.484–0.741;
     - capsule centre lines (the tab bar at rest, the calibration capsule, the top bar): k = 1.000 at every phase;
-    - smooth extrema (a circle's centre lines at 1 pt or more from its centre, the disc's vertical line): k 0.006–0.410.
-  - **Scope.** Capsule centre lines are the same kink, so the rule applies there too. In a capsule's straight part
-    the SDF does not vary along the line, the normal stays (0, ±1), and the output changes by at most 1 level at
-    isolated pixels (CI run 46076542940 against 46054638029: calibration capsule 5 px, top bar 10–14 px, the tab
-    bar at rest 1 px under increased contrast, its standard stills byte-identical).
+    - smooth extrema (a circle's centre lines at 1 pt or more from its centre, the disc's vertical line): k 0.006–0.410;
+    - the gradient length where the slope test fires: the lens tip at most 0.567, a capsule's centre line 0–0.639
+      (the largest at a cap's centre), and a circle's centre line 0.5–0.83 pt from its centre at least 0.794. The
+      ceiling 0.68 sits in the gap of 0.23.
+  - **Scope.** Capsule centre lines are the same kink, so the rule applies there too. A capsule's straight part has
+    no collapse: the SDF does not vary along the line, so gx = 0 and the normal is already (0, ±1). The collapse
+    shows only at the lens tip, where gx ≠ 0. So capsule centre lines change only by rounding of at most 1 level at
+    isolated pixels (CI run 46085667716 against 46054638029):
+    - the calibration capsule: 4 px;
+    - the top bar: 2–5 px near its right cap;
+    - the tab bar at rest: 1–2 px in the one-disc and increased-contrast stills, its standard stills byte-identical.
   - **What it is not.** It does not cover the lens axis of frame 7 (k 0.37–0.38), and frame 7's red items are not
-    on the axis anyway. Within about 0.8 pt of a circle's centre (a cone point of the SDF) k exceeds 0.45; the
-    40 pt circle button's vertical centre line changes there by at most 1 level at a few pixels.
-  - **Numbers** (CI run 46076542940, against 46054638029):
+    on the axis anyway. A circle's centre is not touched in this version: there the gradient length is near 1
+    (0.79–0.98 at 0.5–0.83 pt from the centre), a smooth point for this rule. The circle button's centre and the
+    disc's centre are byte-identical to the render before the fix.
+  - **Numbers** (CI runs 46076542940 and 46085667716, identical in all 941 items, against 46054638029):
     - 24 of 941 items changed, all on the lens axis of frames 4–6 and of the pinned 0.25 / 0.5 stills;
     - light 4 step and ramp 13.92 → 9.37 (limits 13.70 / 12.83);
     - dark 4 step 98.15 → 74.45 (/ 87.36), ramp 71.05 → 41.52 (/ 43.88, the one-disc reference lost its line too);
     - no item went from ok to FAIL; two margins shrank by 0.05 and 0.07;
     - the time criteria, increased contrast (0.00 levels), the iOS checks and Reduce Transparency are unchanged.
 
-**What stays red.** Judged on the geometry the shader draws (run 46076542940: silhouette at frame k − 1's progress,
-each bar's own drop), with the limits unchanged (the larger of the two-scale end frames and the one-disc frame of
-the same index, + 1.98 light / 2.40 dark):
+**Known deviations.** Nine criteria stay over their limits. Judged on the geometry the shader draws (silhouette at
+frame k − 1's progress, each bar's own drop), with the limits unchanged (the larger of the two-scale end frames and
+the one-disc frame of the same index, + 1.98 light / 2.40 dark).
+
+They are listed in `tools/tab-bar-baseline.json`, and `tools/tab-bar-pixels.mjs` reports each as KNOWN while it is no
+worse than its listed value by more than 0.005:
+- **Counts:** the summary counts pass, known and fail separately, and a known item is never counted as a pass.
+- **What fails the job:** an item over its limit that is not listed, or one worse than its listed value.
+- **Tightening:** the known-deviations table marks "tighten" where an item measures better than its entry (or passes
+  now). The baseline only tightens; raising a value or adding an entry needs a reason in the pull request.
+
+Values from run 46081346295, 2026-11-27:
 
 | theme | frame | criterion | value / limit | where |
 |---|---|---|---|---|
 | light | 2 | box-edge jump | 8.06 / 7.48 | the layers' box top, 62 columns beside the lens tips |
-| light | 7 | step, ramp | 15.53 / 13.70, 15.53 / 8.44 | (160.0, 821.8), 3 pt inside the edge, 2.3 pt above the lens axis: 223 → 218 → 233 in the two-scale body |
-| light | 11 | step, ramp | 25.42 / 24.75 (both) | the disc's edge at (175.0, 820.3), 7.3 pt above the axis, beside the pill's edge |
+| light | 7 | step | 15.53 / 13.70 | (160.0, 821.8), 3 pt inside the edge, 2.3 pt above the lens axis: 223 → 218 → 233 in the two-scale body |
+| light | 7 | ramp | 15.53 / 8.44 | as the light 7 step |
+| light | 11 | step | 25.42 / 24.75 | the disc's edge at (175.0, 820.3), 7.3 pt above the axis, beside the pill's edge |
+| light | 11 | ramp | 25.42 / 24.75 | as the light 11 step |
 | dark | 2 | box-edge jump | 11.76 / 11.20 | as light 2 |
-| dark | 3 | ramp; box-edge step | 45.67 / 34.84; 99.07 / 98.01 | (73.0, 807.3), 1–1.3 pt inside: 147 → 193 (one-disc 159 → 185); the box top, 218 columns |
+| dark | 3 | ramp | 45.67 / 34.84 | (73.0, 807.3), 1–1.3 pt inside: 147 → 193 (one-disc 159 → 185) |
+| dark | 3 | box-edge step | 99.07 / 98.01 | the layers' box top, 218 columns |
 | dark | 11 | ramp | 67.28 / 65.95 | as light 11: 35 → 103 → 143 (one-disc 34 → 97 → 131) |
 
 - **Frame 11 is a separate defect,** not the crease: no frame 11 item changed with the fix.
