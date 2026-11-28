@@ -600,3 +600,24 @@ Values from run 46081346295, 2026-11-27:
 
 The four time criteria pass, as do increased contrast (0.00 levels from the one-disc body) and the two-scale checks
 against iOS.
+
+### The glass tab bar's selection capsule
+
+iOS draws the chosen tab in a neutral capsule that is darker than the glass, in both themes. The accent stays on the
+glyph and the label (Cohub Mobile's `FloatingTabBar`: "iOS selects with a neutral capsule; the accent stays on the
+glyph and label"). The measurement below is the capsule's effect on luma at the bar's end, over rows where the
+backdrop is flat. Ours comes from film v3, run 46117274134, rest frame 29, against the same region of the bare film.
+iOS comes from the iOS 27 simulator frames `tab-bar-{light,dark}-a.png` in `/fixtures`, the ones
+`tools/tab-bar-pixels.mjs` fetches.
+
+| | iOS 27 | before (white, α 0x99 light / 0x24 dark) |
+| --- | --- | --- |
+| light | 246.8 → 217.9 (−28.9) | 247.9 → 251.4 (+3.5, barely visible) |
+| dark | 48.8 → 43.4 (−5.5) | 50.4 → 75.2 (+24.8, a lighter grey block) |
+
+The capsule is now a black overlay of α = 1 − after / before: 1 − 217.9 / 246.8 = 0.117 light and
+1 − 43.4 / 48.8 = 0.111 dark (`tokens::bar::CAPSULE_ALPHA_LIGHT` / `_DARK`). The browser composites sRGB-encoded
+values, so a black overlay scales each channel, and the luma, by 1 − α. The capsule keeps its shape (the tab's box,
+radius 26) and its fade over progress 0–0.12. It ignored Reduce Transparency and increased contrast before, and it
+still does. Darkening the fill by 11 % leaves the blue glyph and label, and the secondary-label grey, legible over
+the opaque bar and the near-opaque increased-contrast glass.

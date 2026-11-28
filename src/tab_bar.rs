@@ -532,13 +532,14 @@ pub fn GlassTabBar(props: GlassTabBarProps, cx: Scope<GlassTabBarEvent>) -> impl
                         .inset_0()
                         .rounded(px(26.0))
                         .bg(move || {
-                            if !shown() {
-                                return rgba(0x0000_0000);
-                            }
-                            if nsh_core::element::dark() {
-                                rgba(0xffff_ff24)
-                            } else {
-                                rgba(0xffff_ff99)
+                            let black: Hsla = rgba(0x0000_00ff).into();
+                            Hsla {
+                                a: if shown() {
+                                    tokens::bar::capsule_alpha(nsh_core::element::dark())
+                                } else {
+                                    0.0
+                                },
+                                ..black
                             }
                         })
                         .bind_opacity(&capsule_opacity),

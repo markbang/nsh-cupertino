@@ -990,6 +990,25 @@ pub mod bar {
         if dark { DARK } else { LIGHT }
     }
 
+    /// The glass tab bar's selection capsule, light: a black overlay of this
+    /// opacity, 1 − after / before. Over flat rows at the bar's end, the
+    /// capsule takes the luma from 246.8 to 217.9 in the iOS 27 simulator's
+    /// `tab-bar-light-a.png` (`/fixtures`, as `tools/tab-bar-pixels.mjs`
+    /// fetches it): 0.117. The browser composites sRGB-encoded values, so a
+    /// black overlay scales them, and the luma, by 1 − α.
+    pub const CAPSULE_ALPHA_LIGHT: f32 = 1.0 - 217.9 / 246.8;
+    /// Dark: 48.8 to 43.4 in `tab-bar-dark-a.png`, 0.111.
+    pub const CAPSULE_ALPHA_DARK: f32 = 1.0 - 43.4 / 48.8;
+
+    /// The selection capsule's opacity for the appearance.
+    pub const fn capsule_alpha(dark: bool) -> f32 {
+        if dark {
+            CAPSULE_ALPHA_DARK
+        } else {
+            CAPSULE_ALPHA_LIGHT
+        }
+    }
+
     /// The opaque fill of Reduce Transparency, in levels: [`TwoScale::over`]
     /// the page, 255 × 0.33200 + 167.14 = 251.80 light, 36.58 dark.
     pub const fn reduced_level(dark: bool) -> f32 {
