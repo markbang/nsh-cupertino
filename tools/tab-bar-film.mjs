@@ -8,7 +8,7 @@
 //
 // `--from` is what `nsh package App.tsx --target web -o <dir>` wrote for
 // `examples/demo`. The path, per theme: rest 0.5 s; a press held 0.2 s on the
-// bar's selected tab (the fixture bar has no tabs: then on the bar's body);
+// bar's body (the fixture bar has no tabs; `--scene tabs` presses its tabs);
 // one wheel notch down (60 pt), until the spring rests, plus 0.5 s; minimised
 // 0.5 s; one notch back up, until it rests, plus 0.5 s. Writes, in `--out`:
 //
@@ -22,6 +22,14 @@
 // `tab-bar-morph-tabs-*`, and a contact strip per theme,
 // `tab-bar-morph-tabs-strip-{theme}.png`: the minimise's frames nearest to
 // `STRIP` progress, cropped to the bar, each labelled with its k and progress.
+// Its press beat presses each of `TABS` twice, which chooses it and then
+// presses it while chosen: held `PRESS` frames, released, until the frame
+// stays the same `PRESS_REST` frames, then `PRESS_AFTER` more. Each press in
+// progress.json's `presses` says how many held frames differ from the frame
+// before the press and whether the settled frame is that frame, pixel for
+// pixel. Then the minimise and restore with Me chosen.
+// `tab-bar-morph-tabs-press-{theme}.png` is Me's first press, at the
+// `PRESS_STRIP` frames.
 //
 // Needs ffmpeg (with libx264 and drawtext) and the DejaVu Sans font.
 import { spawnSync } from "node:child_process";
@@ -53,6 +61,14 @@ const CLIP = { x: 0, y: 700, width: IPHONE[0], height: 174, scale: 1 };
 const WHEEL = [201, 870];
 const HOLD = 30;
 const PRESS = 12;
+/** The tabs scene's tabs, pressed in this order, by their accessibility labels. */
+const TABS = ["Chats", "Spaces", "Activity", "Me"];
+/** A press has settled once the frame has not changed for this many frames. */
+const PRESS_REST = 10;
+/** Frames filmed after a press has settled. */
+const PRESS_AFTER = 15;
+/** Me's first press in its strip: frames after the press (0 is the last frame before it), after the release, and settled. */
+const PRESS_STRIP = [["press", 0], ["press", 2], ["press", 4], ["press", 8], ["press", 12], ["release", 4], ["release", 8], ["settled"]];
 /** A spring that has not rested after this many frames ends its beat anyway, and the json says so. */
 const CAP = 300;
 const WIDTH = 1080;
@@ -78,6 +94,15 @@ const PRESS_TARGET = `(() => {
   if (tab) return { at: centre(tab), label: tab.getAttribute("aria-label"), target: "selected tab " + JSON.stringify(tab.getAttribute("aria-label")) };
   if (bar) return { at: centre(bar), target: "bar body (the bar has no tab buttons)" };
   return null;
+})()`;
+
+/** The centre of the tab labelled `label`, and the label of the chosen tab. */
+const TAB_TARGET = (label) => `(() => {
+  const tab = document.querySelector(${JSON.stringify(`#app [role="button"][aria-label="${label}"]`)});
+  const chosen = document.querySelector('#app [role="button"][aria-selected="true"]');
+  if (!tab) return null;
+  const r = tab.getBoundingClientRect();
+  return { at: [r.left + r.width / 2, r.top + r.height / 2], chosen: chosen ? chosen.getAttribute("aria-label") : null };
 })()`;
 
 async function film(page, base, scheme) {
@@ -128,22 +153,72 @@ async function film(page, base, scheme) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
+  // The bare bar's one press, on its body, compared with rest.
+  const pressBody = async () => {
+    const target = await evaluate(page, PRESS_TARGET);
+    if (!target) throw new Error(`${name}: no tab and no bar to press`);
+    const [x, y] = target.at;
+    await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+    const pressFrom = frames.length;
+    let differing = 0;
+    for (let i = 0; i < PRESS; i++) if ((await capture("press", true)).data !== restFrame) differing += 1;
+    await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+    beats.push({ beat: "press", from: pressFrom, to: frames.length - 1 });
+    // 0 is a valid count: the held frames are compared with rest, pixel for pixel, and reported, not judged.
+    const press = { at: [x, y], target: target.target, label: target.label ?? null, heldFrames: PRESS, framesDifferingFromRest: differing };
+    console.log(`  ${name}: press on the ${target.target} at (${x.toFixed(1)}, ${y.toFixed(1)}): ${differing} of ${PRESS} held frames differ from rest`);
+    return press;
+  };
+  // A press on the tab labelled `tab`, held, released and settled.
+  const pressTab = async (tab, pass) => {
+    const target = await evaluate(page, TAB_TARGET(tab));
+    if (!target) throw new Error(`${name}: no tab labelled ${JSON.stringify(tab)} to press`);
+    const before = previous;
+    const beforeK = frames.length - 1;
+    const beat = `press ${tab} ${pass}`;
+    const [x, y] = target.at;
+    await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+    const from = frames.length;
+    let differing = 0;
+    for (let i = 0; i < PRESS; i++) if ((await capture(beat, true)).data !== before) differing += 1;
+    await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+    const releasedFrom = frames.length;
+    let unchanged = 0;
+    while (unchanged < PRESS_REST && frames.length - releasedFrom < CAP) unchanged = (await capture(beat, true)).same ? unchanged + 1 : 0;
+    const restAt = frames.length - 1 - unchanged;
+    const settled = previous;
+    for (let i = 0; i < PRESS_AFTER; i++) await capture(beat, true);
+    beats.push({ beat, from, to: frames.length - 1, restAt });
+    const after = await evaluate(page, TAB_TARGET(tab));
+    const entry = {
+      tab,
+      pass,
+      at: [x, y],
+      chosenBefore: target.chosen,
+      chosenAfter: after?.chosen ?? null,
+      beforeK,
+      held: [from, releasedFrom - 1],
+      releasedFrom,
+      restAt,
+      restBy: unchanged >= PRESS_REST ? `${PRESS_REST} frames unchanged` : `cap of ${CAP} frames`,
+      heldFrames: PRESS,
+      framesDifferingFromBefore: differing,
+      settledIdenticalToBefore: settled === before,
+    };
+    console.log(`  ${name}: ${beat} (${target.chosen} chosen, ${entry.chosenAfter} after): ${differing} of ${PRESS} held frames differ from frame ${beforeK}; settled at ${restAt}, ${entry.settledIdenticalToBefore ? "identical to" : "differs from"} frame ${beforeK}`);
+    return entry;
+  };
+  const pressTabs = async () => {
+    const list = [];
+    for (const tab of TABS) for (const pass of [1, 2]) list.push(await pressTab(tab, pass));
+    return list;
+  };
+
   await hold("rest", HOLD);
   const restFrame = previous;
 
-  const target = await evaluate(page, PRESS_TARGET);
-  if (!target) throw new Error(`${name}: no tab and no bar to press`);
-  if (SCENE === "tabs" && target.label === undefined) throw new Error(`${name}: the tabs scene has no selected tab to press (found the ${target.target})`);
-  const [x, y] = target.at;
-  await page.call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
-  const pressFrom = frames.length;
-  let differing = 0;
-  for (let i = 0; i < PRESS; i++) if ((await capture("press", true)).data !== restFrame) differing += 1;
-  await page.call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
-  beats.push({ beat: "press", from: pressFrom, to: frames.length - 1 });
-  // 0 is a valid count: the held frames are compared with rest, pixel for pixel, and reported, not judged.
-  const press = { at: [x, y], target: target.target, label: target.label ?? null, heldFrames: PRESS, framesDifferingFromRest: differing };
-  console.log(`  ${name}: press on the ${target.target} at (${x.toFixed(1)}, ${y.toFixed(1)}): ${differing} of ${PRESS} held frames differ from rest`);
+  const press = SCENE === "tabs" ? null : await pressBody();
+  const presses = SCENE === "tabs" ? await pressTabs() : null;
 
   await wheel(60);
   await untilRest("minimise", 1);
@@ -166,16 +241,24 @@ async function film(page, base, scheme) {
   const strip = STRIP.map((p) => ({ target: p, k: nearest(p).k, progress: value(nearest(p)) }));
   writeFileSync(
     join(dir, "progress.json"),
-    JSON.stringify({ name, scheme, scene: SCENE, stepMs: STEP_MS, clip: CLIP, deviceScale: SCALE, wheel: WHEEL, press, beats, stills, strip, frames }, null, 1),
+    JSON.stringify({ name, scheme, scene: SCENE, stepMs: STEP_MS, clip: CLIP, deviceScale: SCALE, wheel: WHEEL, ...(presses ? { presses } : { press }), beats, stills, strip, frames }, null, 1),
   );
   for (const b of beats) console.log(`  ${name}: ${b.beat} frames ${b.from}-${b.to}${b.restAt === undefined ? "" : `, at rest from ${b.restAt} (${b.restBy})`}`);
   for (const s of strip) console.log(`  ${name}: strip ${s.target} -> frame ${s.k}, progress ${s.progress.toFixed(4)}`);
-  return { dir, stills, strip, progress: { dropping: value(dropping) } };
+  const me = presses?.find((p) => p.tab === "Me" && p.pass === 1);
+  const pressStrip = me
+    ? PRESS_STRIP.map(([when, n]) => {
+        if (when === "settled") return { label: "settled", k: me.restAt };
+        const k = when === "press" ? (n === 0 ? me.beforeK : me.held[0] + n - 1) : me.releasedFrom + n - 1;
+        return { label: `${when} +${n}`, k };
+      })
+    : null;
+  return { dir, stills, strip, pressStrip, progress: { dropping: value(dropping) } };
 }
 
 const SCALED = `scale=${WIDTH}:-2:flags=lanczos`;
 
-function encode(scheme, { dir, stills, strip, progress }) {
+function encode(scheme, { dir, stills, strip, pressStrip, progress }) {
   const { prefix } = SCENES[SCENE];
   const input = join(dir, "%04d.png");
   const video = [`${SCALED}:out_color_matrix=bt709,format=yuv420p`];
@@ -205,6 +288,13 @@ function encode(scheme, { dir, stills, strip, progress }) {
     .join(";");
   const stacked = strip.map((_, i) => `[s${i}]`).join("");
   ffmpeg(...stripInputs, "-filter_complex", `${stripPanels};${stacked}vstack=inputs=${strip.length}`, "-frames:v", "1", join(OUT, `${prefix}-strip-${scheme}.png`));
+
+  const pressInputs = pressStrip.flatMap(({ k }) => ["-i", join(dir, `${String(k).padStart(4, "0")}.png`)]);
+  const pressPanels = pressStrip
+    .map(({ k, label }, i) => `[${i}:v]${crop},${SCALED},pad=iw:ih+64:0:64:color=${bg},drawtext=fontfile=${FONT}:text='${scheme} · Me · ${label} · k ${k}':x=32:y=14:fontsize=36:fontcolor=${fg}[q${i}]`)
+    .join(";");
+  const pressed = pressStrip.map((_, i) => `[q${i}]`).join("");
+  ffmpeg(...pressInputs, "-filter_complex", `${pressPanels};${pressed}vstack=inputs=${pressStrip.length}`, "-frames:v", "1", join(OUT, `${prefix}-press-${scheme}.png`));
 }
 
 async function main() {
