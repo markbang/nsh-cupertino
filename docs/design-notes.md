@@ -555,6 +555,23 @@ Values from run 46081346295, 2026-11-27:
     55.7–84.4, one-disc 52.0–79.6).
   - **What does not:** the two-scale terms are inert at that pixel (cover ring 1 with coverage 1, hand ramp 0).
   - **Unexplained:** the cause lies in what the shared surface reads there, and is not yet found.
+- **The dark 3 ramp is an inherent difference,** not a render defect (run 46086724556). The limit is the one-disc
+  frame 3's 32.44 + 2.40; the one-disc frame's own worst lies at (83.0, 806.5), at the same −1.33…−1.00 pt pair.
+  - **Where:** 3 of 162 profiles exceed 34.84, isolated columns, all on the rim's inner flank 1.0–1.33 pt inside:
+    x 53.0 (38.35), 73.0 (45.67) and 210.0 (36.48). Their neighbours read 21–31. On the 152 profiles right of
+    x 208, the two-scale median is 23.13 against the one-disc's 24.73.
+  - **No two-scale term there:** at the worst pixels (column 219, rows 2424–2425, inside 0.83 and 1.12 pt) the
+    hand ramp is 0 and the ring's cover is 0, so the opacity is 1. The two-scale-only luma is 0. The drop comes from
+    shared terms: the hairline ending (−13.5 levels), the rim light's core (−10.4), and the jittered backdrop sample
+    (−17.5).
+  - **The one-disc reference is resampled:** its 1.5627 pt DOM drop is 4.688 px, so the compositor blends each
+    pair of rows 0.312 / 0.688. Frame 1 shows it: the one-disc frame is its still translated 0.7235 px with linear
+    resampling (rms 0.49 levels); the two-scale frame equals its still (rms 0.00). Resampled the same way, the
+    two-scale frame 3 measures 41.52.
+  - **The rest is sample phase:** the ramp reads a 1-px flank at 1-px spacing. Over ±0.5 px of phase its maximum
+    runs 32.69–55.00 two-scale and 24.17–45.34 one-disc, and the two ranges overlap.
+  - **Without resampling they agree:** in frame 4 the one-disc drop is 7.060 px (fraction 0.06), and the two
+    renders measure 41.52 against 41.48.
 
 The four time criteria pass, as do increased contrast (0.00 levels from the one-disc body) and the two-scale checks
 against iOS.
